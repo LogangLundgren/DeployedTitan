@@ -3,6 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { WorkoutWithDetails } from "@shared/schema";
 import WorkoutForm from "@/components/workout/WorkoutForm";
 import RecentWorkouts from "@/components/workout/RecentWorkouts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 type TabType = 'log' | 'history' | 'templates';
 
@@ -16,7 +24,7 @@ export default function WorkoutLogger() {
     queryKey: ['/api/workouts/recent', userId],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/workouts/recent?userId=${userId}&limit=3`);
+        const res = await fetch(`/api/workouts/recent?userId=${userId}&limit=5`);
         if (!res.ok) throw new Error('Failed to fetch recent workouts');
         return res.json();
       } catch (error) {
@@ -29,50 +37,160 @@ export default function WorkoutLogger() {
   return (
     <main className="flex-grow container mx-auto px-4 py-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-500">Workout Logger</h2>
-        <p className="text-gray-400">Track your workouts and monitor your progress</p>
+        <h2 className="text-2xl font-bold text-gray-800">Workout Logger</h2>
+        <p className="text-gray-500">Track your workouts and monitor your progress</p>
       </div>
       
-      <div className="bg-white rounded-lg shadow-sm mb-6">
-        <div className="flex border-b">
-          <button 
-            className={`px-6 py-3 ${activeTab === 'log' ? 'text-primary border-b-2 border-primary font-medium' : 'text-gray-400 hover:text-primary'}`}
-            onClick={() => setActiveTab('log')}
-          >
-            Log Workout
-          </button>
-          <button 
-            className={`px-6 py-3 ${activeTab === 'history' ? 'text-primary border-b-2 border-primary font-medium' : 'text-gray-400 hover:text-primary'}`}
-            onClick={() => setActiveTab('history')}
-          >
-            History
-          </button>
-          <button 
-            className={`px-6 py-3 ${activeTab === 'templates' ? 'text-primary border-b-2 border-primary font-medium' : 'text-gray-400 hover:text-primary'}`}
-            onClick={() => setActiveTab('templates')}
-          >
-            Templates
-          </button>
-        </div>
+      <Card className="mb-6 border-0 shadow-sm overflow-hidden">
+        <CardHeader className="pb-0 pt-6 px-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-xl">Log Your Workout</CardTitle>
+              <CardDescription>
+                Record your sets, weights, and reps for each exercise
+              </CardDescription>
+            </div>
+            <div className="flex gap-1">
+              {activeTab === 'log' && (
+                <div className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                  In Progress
+                </div>
+              )}
+            </div>
+          </div>
+        </CardHeader>
         
-        <div className="p-6">
-          {activeTab === 'log' && <WorkoutForm />}
+        <Tabs 
+          value={activeTab} 
+          onValueChange={(value) => setActiveTab(value as TabType)}
+          className="w-full"
+        >
+          <div className="px-6 border-b">
+            <TabsList className="justify-start h-12 p-0 bg-transparent border-b-0 w-full">
+              <TabsTrigger 
+                value="log"
+                className="h-12 px-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none data-[state=active]:text-primary"
+              >
+                <div className="flex items-center gap-2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2v20"/>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                  </svg>
+                  Log Workout
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="history"
+                className="h-12 px-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none data-[state=active]:text-primary"
+              >
+                <div className="flex items-center gap-2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 8v4l2 2"/>
+                    <circle cx="12" cy="12" r="10"/>
+                  </svg>
+                  History
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="templates"
+                className="h-12 px-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none data-[state=active]:text-primary"
+              >
+                <div className="flex items-center gap-2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <line x1="10" y1="9" x2="8" y2="9"/>
+                  </svg>
+                  Templates
+                </div>
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
-          {activeTab === 'history' && (
-            <div className="text-center py-8">
-              <p className="text-gray-400">History will be implemented in a future update</p>
-            </div>
-          )}
-          
-          {activeTab === 'templates' && (
-            <div className="text-center py-8">
-              <p className="text-gray-400">Templates will be implemented in a future update</p>
-            </div>
-          )}
-        </div>
-      </div>
+          <CardContent className="p-0">
+            <TabsContent value="log" className="p-0 m-0">
+              <div className="p-6">
+                <WorkoutForm />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="history" className="p-0 m-0">
+              <div className="flex items-center justify-center p-12 min-h-[300px]">
+                <div className="text-center max-w-md">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="48" 
+                    height="48" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="1" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className="mx-auto mb-4 text-gray-300"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">Workout History</h3>
+                  <p className="text-gray-500 mb-4">This feature will be available in the next update. Your complete workout history will be viewable with detailed analytics.</p>
+                  <button className="px-4 py-2 bg-primary/10 text-primary rounded-md font-medium hover:bg-primary/20 transition-colors">
+                    Coming Soon
+                  </button>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="templates" className="p-0 m-0">
+              <div className="flex items-center justify-center p-12 min-h-[300px]">
+                <div className="text-center max-w-md">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="48" 
+                    height="48" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="1" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className="mx-auto mb-4 text-gray-300"
+                  >
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <line x1="10" y1="9" x2="8" y2="9"></line>
+                  </svg>
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">Workout Templates</h3>
+                  <p className="text-gray-500 mb-4">Save your favorite workouts as templates to quickly start a session. This feature will be available in the next update.</p>
+                  <button className="px-4 py-2 bg-primary/10 text-primary rounded-md font-medium hover:bg-primary/20 transition-colors">
+                    Coming Soon
+                  </button>
+                </div>
+              </div>
+            </TabsContent>
+          </CardContent>
+        </Tabs>
+      </Card>
       
-      <RecentWorkouts workouts={recentWorkouts || []} isLoading={isLoading} />
+      {/* Recent Workouts Section */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <h3 className="text-lg font-medium mb-4 flex items-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-primary">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Recent Workouts
+        </h3>
+        <RecentWorkouts workouts={recentWorkouts || []} isLoading={isLoading} />
+      </div>
     </main>
   );
 }
