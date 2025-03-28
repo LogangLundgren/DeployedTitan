@@ -1,7 +1,16 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertWorkoutSchema, insertWorkoutExerciseSchema, insertSetSchema, insertExerciseSchema } from "@shared/schema";
+import { 
+  insertUserSchema, 
+  insertWorkoutSchema, 
+  insertWorkoutExerciseSchema, 
+  insertSetSchema, 
+  insertExerciseSchema,
+  insertTemplateSchema,
+  insertTemplateExerciseSchema,
+  Workout
+} from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -174,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updateSchema = z.object({
         name: z.string().optional(),
-        date: z.string().or(z.date()).optional(),
+        date: z.coerce.date().optional(),
         notes: z.string().optional(),
         duration: z.number().optional(),
         category: z.string().optional()
@@ -186,7 +195,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
       }
       
-      const updatedWorkout = await storage.updateWorkout(id, updateData.data);
+      // Transform the validated data to ensure proper types
+      const updatePayload: Partial<Workout> = {
+        ...updateData.data,
+        // If date is provided, ensure it's a Date object
+        ...(updateData.data.date && { date: new Date(updateData.data.date) })
+      };
+      
+      const updatedWorkout = await storage.updateWorkout(id, updatePayload);
       
       if (!updatedWorkout) {
         return res.status(404).json({ message: "Workout not found" });
@@ -328,6 +344,256 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).end();
     } catch (error) {
       console.error("Delete set error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Template routes
+  app.get("/api/templates", async (req, res) => {
+    try {
+      const userId = parseInt(req.query.userId as string);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
+      }
+      
+      const templates = await storage.getTemplates(userId);
+      
+      res.status(200).json(templates);
+    } catch (error) {
+      console.error("Get templates error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/templates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid template ID is required" });
+      }
+      
+      const template = await storage.getTemplateWithExercises(id);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.status(200).json(template);
+    } catch (error) {
+      console.error("Get template details error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/templates", async (req, res) => {
+    try {
+      const templateData = insertTemplateSchema.safeParse(req.body);
+      
+      if (!templateData.success) {
+        return res.status(400).json({ message: "Invalid template data", errors: templateData.error.errors });
+      }
+      
+      const template = await storage.createTemplate(templateData.data);
+      
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Create template error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.put("/api/templates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid template ID is required" });
+      }
+      
+      const updateSchema = z.object({
+        name: z.string().optional(),
+        description: z.string().optional(),
+        category: z.string().optional()
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      const updatedTemplate = await storage.updateTemplate(id, updateData.data);
+      
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.status(200).json(updatedTemplate);
+    } catch (error) {
+      console.error("Update template error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.delete("/api/templates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid template ID is required" });
+      }
+      
+      const deleted = await storage.deleteTemplate(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete template error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Template Exercise routes
+  app.post("/api/template-exercises", async (req, res) => {
+    try {
+      const templateExerciseData = insertTemplateExerciseSchema.safeParse(req.body);
+      
+      if (!templateExerciseData.success) {
+        return res.status(400).json({ 
+          message: "Invalid template exercise data", 
+          errors: templateExerciseData.error.errors 
+        });
+      }
+      
+      const templateExercise = await storage.createTemplateExercise(templateExerciseData.data);
+      
+      res.status(201).json(templateExercise);
+    } catch (error) {
+      console.error("Create template exercise error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.put("/api/template-exercises/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid template exercise ID is required" });
+      }
+      
+      const updateSchema = z.object({
+        order: z.number().optional(),
+        defaultSets: z.number().optional(),
+        defaultReps: z.number().optional(),
+        defaultWeight: z.number().optional(),
+        notes: z.string().optional()
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      const updatedTemplateExercise = await storage.updateTemplateExercise(id, updateData.data);
+      
+      if (!updatedTemplateExercise) {
+        return res.status(404).json({ message: "Template exercise not found" });
+      }
+      
+      res.status(200).json(updatedTemplateExercise);
+    } catch (error) {
+      console.error("Update template exercise error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.delete("/api/template-exercises/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid template exercise ID is required" });
+      }
+      
+      const deleted = await storage.deleteTemplateExercise(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Template exercise not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete template exercise error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Create workout from template
+  app.post("/api/templates/:id/create-workout", async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      
+      if (isNaN(templateId)) {
+        return res.status(400).json({ message: "Valid template ID is required" });
+      }
+      
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      // Get template with exercises
+      const template = await storage.getTemplateWithExercises(templateId);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Create new workout
+      const workout = await storage.createWorkout({
+        name: template.name,
+        date: new Date(),
+        userId: userId,
+        category: template.category,
+        notes: `Created from template: ${template.name}`
+      });
+      
+      // Add exercises from template to the workout
+      for (const templateExercise of template.exercises) {
+        const workoutExercise = await storage.createWorkoutExercise({
+          workoutId: workout.id,
+          exerciseId: templateExercise.exerciseId,
+          order: templateExercise.order
+        });
+        
+        // Create default sets if specified in template
+        if (templateExercise.defaultSets) {
+          for (let i = 0; i < templateExercise.defaultSets; i++) {
+            await storage.createSet({
+              workoutExerciseId: workoutExercise.id,
+              weight: templateExercise.defaultWeight || null,
+              reps: templateExercise.defaultReps || null,
+              order: i,
+              notes: null
+            });
+          }
+        }
+      }
+      
+      // Get the complete workout with all details
+      const workoutWithDetails = await storage.getWorkoutWithDetails(workout.id);
+      
+      res.status(201).json(workoutWithDetails);
+    } catch (error) {
+      console.error("Create workout from template error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

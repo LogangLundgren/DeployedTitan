@@ -4,7 +4,9 @@ import {
   workouts, type Workout, type InsertWorkout,
   workoutExercises, type WorkoutExercise, type InsertWorkoutExercise,
   sets, type Set, type InsertSet,
-  type WorkoutWithDetails
+  templates, type Template, type InsertTemplate,
+  templateExercises, type TemplateExercise, type InsertTemplateExercise,
+  type WorkoutWithDetails, type TemplateWithExercises
 } from "@shared/schema";
 import { eq, desc, and } from 'drizzle-orm';
 import { db } from './db';
@@ -38,6 +40,18 @@ export interface IStorage {
   updateSet(id: number, set: Partial<Set>): Promise<Set | undefined>;
   deleteSet(id: number): Promise<boolean>;
   
+  // Template operations
+  getTemplates(userId: number): Promise<Template[]>;
+  getTemplateWithExercises(id: number): Promise<TemplateWithExercises | undefined>;
+  createTemplate(template: InsertTemplate): Promise<Template>;
+  updateTemplate(id: number, template: Partial<Template>): Promise<Template | undefined>;
+  deleteTemplate(id: number): Promise<boolean>;
+  
+  // Template Exercise operations
+  createTemplateExercise(templateExercise: InsertTemplateExercise): Promise<TemplateExercise>;
+  deleteTemplateExercise(id: number): Promise<boolean>;
+  updateTemplateExercise(id: number, templateExercise: Partial<TemplateExercise>): Promise<TemplateExercise | undefined>;
+  
   // DB-specific method
   initialize?(): Promise<void>;
 }
@@ -48,12 +62,16 @@ export class MemStorage implements IStorage {
   private workouts: Map<number, Workout>;
   private workoutExercises: Map<number, WorkoutExercise>;
   private sets: Map<number, Set>;
+  private templates: Map<number, Template>;
+  private templateExercises: Map<number, TemplateExercise>;
   
   private userCurrentId: number;
   private exerciseCurrentId: number;
   private workoutCurrentId: number;
   private workoutExerciseCurrentId: number;
   private setCurrentId: number;
+  private templateCurrentId: number;
+  private templateExerciseCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -61,12 +79,16 @@ export class MemStorage implements IStorage {
     this.workouts = new Map();
     this.workoutExercises = new Map();
     this.sets = new Map();
+    this.templates = new Map();
+    this.templateExercises = new Map();
     
     this.userCurrentId = 1;
     this.exerciseCurrentId = 1;
     this.workoutCurrentId = 1;
     this.workoutExerciseCurrentId = 1;
     this.setCurrentId = 1;
+    this.templateCurrentId = 1;
+    this.templateExerciseCurrentId = 1;
     
     // Add some default exercises
     this.seedDefaultExercises();
@@ -277,6 +299,101 @@ export class MemStorage implements IStorage {
   
   async deleteSet(id: number): Promise<boolean> {
     return this.sets.delete(id);
+  }
+  
+  // Template operations
+  async getTemplates(userId: number): Promise<Template[]> {
+    return Array.from(this.templates.values())
+      .filter(template => template.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getTemplateWithExercises(id: number): Promise<TemplateWithExercises | undefined> {
+    const template = this.templates.get(id);
+    if (!template) return undefined;
+    
+    const templateExercisesForTemplate = Array.from(this.templateExercises.values())
+      .filter(te => te.templateId === id)
+      .sort((a, b) => a.order - b.order);
+    
+    const exercises = templateExercisesForTemplate.map(te => {
+      const exerciseDetails = this.exercises.get(te.exerciseId);
+      if (!exerciseDetails) {
+        throw new Error(`Exercise with ID ${te.exerciseId} not found`);
+      }
+      
+      return {
+        ...te,
+        exerciseDetails
+      };
+    });
+    
+    return {
+      ...template,
+      exercises
+    };
+  }
+  
+  async createTemplate(insertTemplate: InsertTemplate): Promise<Template> {
+    const id = this.templateCurrentId++;
+    const template: Template = { 
+      ...insertTemplate, 
+      id,
+      description: insertTemplate.description ?? null,
+      category: insertTemplate.category ?? null,
+      createdAt: new Date()
+    };
+    this.templates.set(id, template);
+    return template;
+  }
+  
+  async updateTemplate(id: number, templateUpdate: Partial<Template>): Promise<Template | undefined> {
+    const template = this.templates.get(id);
+    if (!template) return undefined;
+    
+    const updatedTemplate = { ...template, ...templateUpdate };
+    this.templates.set(id, updatedTemplate);
+    return updatedTemplate;
+  }
+  
+  async deleteTemplate(id: number): Promise<boolean> {
+    // Delete all template exercises for this template
+    const templateExercisesToDelete = Array.from(this.templateExercises.values())
+      .filter(te => te.templateId === id);
+    
+    for (const te of templateExercisesToDelete) {
+      this.templateExercises.delete(te.id);
+    }
+    
+    return this.templates.delete(id);
+  }
+  
+  // Template Exercise operations
+  async createTemplateExercise(insertTemplateExercise: InsertTemplateExercise): Promise<TemplateExercise> {
+    const id = this.templateExerciseCurrentId++;
+    const templateExercise: TemplateExercise = {
+      ...insertTemplateExercise,
+      id,
+      defaultSets: insertTemplateExercise.defaultSets ?? null,
+      defaultReps: insertTemplateExercise.defaultReps ?? null,
+      defaultWeight: insertTemplateExercise.defaultWeight ?? null,
+      notes: insertTemplateExercise.notes ?? null
+    };
+    this.templateExercises.set(id, templateExercise);
+    return templateExercise;
+  }
+  
+  async updateTemplateExercise(id: number, templateExerciseUpdate: Partial<TemplateExercise>): Promise<TemplateExercise | undefined> {
+    const templateExercise = this.templateExercises.get(id);
+    if (!templateExercise) return undefined;
+    
+    const updatedTemplateExercise = { ...templateExercise, ...templateExerciseUpdate };
+    this.templateExercises.set(id, updatedTemplateExercise);
+    return updatedTemplateExercise;
+  }
+  
+  async deleteTemplateExercise(id: number): Promise<boolean> {
+    return this.templateExercises.delete(id);
   }
   
   // Seed default exercises
@@ -569,6 +686,110 @@ export class DbStorage implements IStorage {
       .returning();
     
     return result.length > 0;
+  }
+  
+  // Template operations
+  async getTemplates(userId: number): Promise<Template[]> {
+    return await db
+      .select()
+      .from(templates)
+      .where(eq(templates.userId, userId))
+      .orderBy(desc(templates.createdAt));
+  }
+  
+  async getTemplateWithExercises(id: number): Promise<TemplateWithExercises | undefined> {
+    // First, get the template
+    const templateResult = await db.select().from(templates).where(eq(templates.id, id));
+    
+    if (templateResult.length === 0) return undefined;
+    const template = templateResult[0];
+    
+    // Get template exercises
+    const templateExercisesResult = await db
+      .select()
+      .from(templateExercises)
+      .where(eq(templateExercises.templateId, id))
+      .orderBy(templateExercises.order);
+    
+    // Process each template exercise
+    const exercisesWithDetails = await Promise.all(
+      templateExercisesResult.map(async (te: TemplateExercise) => {
+        // Get exercise details
+        const exerciseResult = await db
+          .select()
+          .from(exercises)
+          .where(eq(exercises.id, te.exerciseId));
+        
+        if (exerciseResult.length === 0) {
+          throw new Error(`Exercise with ID ${te.exerciseId} not found`);
+        }
+        
+        return {
+          ...te,
+          exerciseDetails: exerciseResult[0],
+        };
+      })
+    );
+    
+    return {
+      ...template,
+      exercises: exercisesWithDetails,
+    };
+  }
+  
+  async createTemplate(template: InsertTemplate): Promise<Template> {
+    const result = await db.insert(templates).values(template).returning();
+    return result[0];
+  }
+  
+  async updateTemplate(id: number, template: Partial<Template>): Promise<Template | undefined> {
+    const result = await db
+      .update(templates)
+      .set(template)
+      .where(eq(templates.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async deleteTemplate(id: number): Promise<boolean> {
+    try {
+      // First, delete all template exercises
+      await db.delete(templateExercises).where(eq(templateExercises.templateId, id));
+      
+      // Then delete the template
+      const result = await db.delete(templates).where(eq(templates.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      return false;
+    }
+  }
+  
+  // Template Exercise operations
+  async createTemplateExercise(templateExercise: InsertTemplateExercise): Promise<TemplateExercise> {
+    const result = await db.insert(templateExercises).values(templateExercise).returning();
+    return result[0];
+  }
+  
+  async updateTemplateExercise(id: number, templateExercise: Partial<TemplateExercise>): Promise<TemplateExercise | undefined> {
+    const result = await db
+      .update(templateExercises)
+      .set(templateExercise)
+      .where(eq(templateExercises.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async deleteTemplateExercise(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(templateExercises).where(eq(templateExercises.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting template exercise:', error);
+      return false;
+    }
   }
   
   // Initialization function to set up the database with default data

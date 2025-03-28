@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import WorkoutLogger from "@/pages/WorkoutLogger";
+import Templates from "@/pages/Templates";
+import TemplateDetail from "@/pages/TemplateDetail";
 import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
@@ -17,6 +19,8 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/workouts" component={WorkoutLogger} />
+        <Route path="/templates" component={Templates} />
+        <Route path="/templates/:id" component={TemplateDetail} />
         {/* Fallback to 404 */}
         <Route component={NotFound} />
       </Switch>

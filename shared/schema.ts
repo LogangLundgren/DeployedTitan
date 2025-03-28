@@ -83,6 +83,45 @@ export const insertSetSchema = createInsertSchema(sets).pick({
   order: true,
 });
 
+// Workout template model
+export const templates = pgTable("templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  category: text("category"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertTemplateSchema = createInsertSchema(templates).pick({
+  name: true,
+  description: true,
+  userId: true,
+  category: true,
+});
+
+// Template exercises model
+export const templateExercises = pgTable("template_exercises", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id").references(() => templates.id).notNull(),
+  exerciseId: integer("exercise_id").references(() => exercises.id).notNull(),
+  order: integer("order").notNull(),
+  defaultSets: integer("default_sets"),
+  defaultReps: integer("default_reps"),
+  defaultWeight: real("default_weight"),
+  notes: text("notes"),
+});
+
+export const insertTemplateExerciseSchema = createInsertSchema(templateExercises).pick({
+  templateId: true,
+  exerciseId: true,
+  order: true,
+  defaultSets: true,
+  defaultReps: true,
+  defaultWeight: true,
+  notes: true,
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
@@ -98,6 +137,12 @@ export type InsertWorkoutExercise = z.infer<typeof insertWorkoutExerciseSchema>;
 export type Set = typeof sets.$inferSelect;
 export type InsertSet = z.infer<typeof insertSetSchema>;
 
+export type Template = typeof templates.$inferSelect;
+export type InsertTemplate = z.infer<typeof insertTemplateSchema>;
+
+export type TemplateExercise = typeof templateExercises.$inferSelect;
+export type InsertTemplateExercise = z.infer<typeof insertTemplateExerciseSchema>;
+
 export interface WorkoutWithDetails extends Workout {
   exercises: (WorkoutExercise & {
     exerciseDetails: Exercise;
@@ -106,4 +151,10 @@ export interface WorkoutWithDetails extends Workout {
   totalSets: number;
   totalExercises: number;
   volume: number;
+}
+
+export interface TemplateWithExercises extends Template {
+  exercises: (TemplateExercise & {
+    exerciseDetails: Exercise;
+  })[];
 }
