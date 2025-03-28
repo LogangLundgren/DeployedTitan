@@ -6,6 +6,8 @@ import {
   sets, type Set, type InsertSet,
   type WorkoutWithDetails
 } from "@shared/schema";
+import { eq, desc, and } from 'drizzle-orm';
+import { db } from './db';
 
 export interface IStorage {
   // User operations
@@ -35,6 +37,9 @@ export interface IStorage {
   createSet(set: InsertSet): Promise<Set>;
   updateSet(id: number, set: Partial<Set>): Promise<Set | undefined>;
   deleteSet(id: number): Promise<boolean>;
+  
+  // DB-specific method
+  initialize?(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -80,7 +85,12 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userCurrentId++;
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      name: insertUser.name ?? null,
+      email: insertUser.email ?? null
+    };
     this.users.set(id, user);
     return user;
   }
@@ -102,7 +112,13 @@ export class MemStorage implements IStorage {
   
   async createExercise(insertExercise: InsertExercise): Promise<Exercise> {
     const id = this.exerciseCurrentId++;
-    const exercise: Exercise = { ...insertExercise, id };
+    const exercise: Exercise = { 
+      ...insertExercise, 
+      id,
+      subcategory: insertExercise.subcategory ?? null,
+      userId: insertExercise.userId ?? null,
+      isCustom: insertExercise.isCustom ?? null
+    };
     this.exercises.set(id, exercise);
     return exercise;
   }
@@ -175,7 +191,14 @@ export class MemStorage implements IStorage {
   
   async createWorkout(insertWorkout: InsertWorkout): Promise<Workout> {
     const id = this.workoutCurrentId++;
-    const workout: Workout = { ...insertWorkout, id };
+    const workout: Workout = { 
+      ...insertWorkout, 
+      id,
+      date: insertWorkout.date || new Date(),
+      category: insertWorkout.category ?? null,
+      notes: insertWorkout.notes ?? null,
+      duration: insertWorkout.duration ?? null
+    };
     this.workouts.set(id, workout);
     return workout;
   }
@@ -232,7 +255,13 @@ export class MemStorage implements IStorage {
   // Set methods
   async createSet(insertSet: InsertSet): Promise<Set> {
     const id = this.setCurrentId++;
-    const set: Set = { ...insertSet, id };
+    const set: Set = { 
+      ...insertSet, 
+      id,
+      notes: insertSet.notes ?? null,
+      weight: insertSet.weight ?? null,
+      reps: insertSet.reps ?? null
+    };
     this.sets.set(id, set);
     return set;
   }
@@ -325,4 +354,301 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database implementation
+
+export class DbStorage implements IStorage {
+  constructor() {
+    // The db is imported from server/db.ts
+  }
+  
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
+  }
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result[0];
+  }
+  
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+  
+  // Exercise operations
+  async getExercises(): Promise<Exercise[]> {
+    return await db.select().from(exercises);
+  }
+  
+  async getExercisesByCategory(category: string): Promise<Exercise[]> {
+    return await db.select().from(exercises).where(eq(exercises.category, category));
+  }
+  
+  async getExercise(id: number): Promise<Exercise | undefined> {
+    const result = await db.select().from(exercises).where(eq(exercises.id, id));
+    return result[0];
+  }
+  
+  async createExercise(exercise: InsertExercise): Promise<Exercise> {
+    const result = await db.insert(exercises).values(exercise).returning();
+    return result[0];
+  }
+  
+  // Workout operations
+  async getWorkouts(userId: number): Promise<Workout[]> {
+    return await db.select().from(workouts).where(eq(workouts.userId, userId));
+  }
+  
+  async getWorkoutWithDetails(id: number): Promise<WorkoutWithDetails | undefined> {
+    // First, get the workout
+    const workoutResult = await db.select().from(workouts).where(eq(workouts.id, id));
+    
+    if (workoutResult.length === 0) return undefined;
+    const workout = workoutResult[0];
+    
+    // Get workout exercises
+    const workoutExercisesResult = await db
+      .select()
+      .from(workoutExercises)
+      .where(eq(workoutExercises.workoutId, id))
+      .orderBy(workoutExercises.order);
+    
+    // Process each workout exercise
+    const exercisesWithDetails = await Promise.all(
+      workoutExercisesResult.map(async (we: WorkoutExercise) => {
+        // Get exercise details
+        const exerciseResult = await db
+          .select()
+          .from(exercises)
+          .where(eq(exercises.id, we.exerciseId));
+        
+        if (exerciseResult.length === 0) {
+          throw new Error(`Exercise with ID ${we.exerciseId} not found`);
+        }
+        
+        // Get sets for this workout exercise
+        const setsResult = await db
+          .select()
+          .from(sets)
+          .where(eq(sets.workoutExerciseId, we.id))
+          .orderBy(sets.order);
+        
+        return {
+          ...we,
+          exerciseDetails: exerciseResult[0],
+          sets: setsResult,
+        };
+      })
+    );
+    
+    // Calculate statistics
+    let totalSets = 0;
+    let volume = 0;
+    
+    exercisesWithDetails.forEach((exercise: any) => {
+      totalSets += exercise.sets.length;
+      exercise.sets.forEach((set: any) => {
+        if (set.weight && set.reps) {
+          volume += set.weight * set.reps;
+        }
+      });
+    });
+    
+    return {
+      ...workout,
+      exercises: exercisesWithDetails,
+      totalSets,
+      totalExercises: exercisesWithDetails.length,
+      volume
+    };
+  }
+  
+  async getRecentWorkouts(userId: number, limit: number): Promise<WorkoutWithDetails[]> {
+    // Get workouts for the user, sorted by date
+    const workoutResults = await db
+      .select()
+      .from(workouts)
+      .where(eq(workouts.userId, userId))
+      .orderBy(desc(workouts.date))
+      .limit(limit);
+    
+    // Get details for each workout
+    const workoutsWithDetails = await Promise.all(
+      workoutResults.map((workout: Workout) => this.getWorkoutWithDetails(workout.id))
+    );
+    
+    return workoutsWithDetails.filter((w): w is WorkoutWithDetails => w !== undefined);
+  }
+  
+  async createWorkout(workout: InsertWorkout): Promise<Workout> {
+    const result = await db.insert(workouts).values(workout).returning();
+    return result[0];
+  }
+  
+  async updateWorkout(id: number, workout: Partial<Workout>): Promise<Workout | undefined> {
+    const result = await db
+      .update(workouts)
+      .set(workout)
+      .where(eq(workouts.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async deleteWorkout(id: number): Promise<boolean> {
+    // First, get the workout exercises to delete
+    const workoutExercisesResult = await db
+      .select()
+      .from(workoutExercises)
+      .where(eq(workoutExercises.workoutId, id));
+    
+    // Delete sets for each workout exercise
+    for (const we of workoutExercisesResult) {
+      await db
+        .delete(sets)
+        .where(eq(sets.workoutExerciseId, we.id));
+    }
+    
+    // Delete workout exercises
+    await db
+      .delete(workoutExercises)
+      .where(eq(workoutExercises.workoutId, id));
+    
+    // Delete workout
+    const result = await db
+      .delete(workouts)
+      .where(eq(workouts.id, id))
+      .returning();
+    
+    return result.length > 0;
+  }
+  
+  // Workout Exercise operations
+  async createWorkoutExercise(workoutExercise: InsertWorkoutExercise): Promise<WorkoutExercise> {
+    const result = await db.insert(workoutExercises).values(workoutExercise).returning();
+    return result[0];
+  }
+  
+  async deleteWorkoutExercise(id: number): Promise<boolean> {
+    // Delete sets first
+    await db
+      .delete(sets)
+      .where(eq(sets.workoutExerciseId, id));
+    
+    // Delete workout exercise
+    const result = await db
+      .delete(workoutExercises)
+      .where(eq(workoutExercises.id, id))
+      .returning();
+    
+    return result.length > 0;
+  }
+  
+  // Set operations
+  async createSet(set: InsertSet): Promise<Set> {
+    const result = await db.insert(sets).values(set).returning();
+    return result[0];
+  }
+  
+  async updateSet(id: number, set: Partial<Set>): Promise<Set | undefined> {
+    const result = await db
+      .update(sets)
+      .set(set)
+      .where(eq(sets.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async deleteSet(id: number): Promise<boolean> {
+    const result = await db
+      .delete(sets)
+      .where(eq(sets.id, id))
+      .returning();
+    
+    return result.length > 0;
+  }
+  
+  // Initialization function to set up the database with default data
+  async initialize(): Promise<void> {
+    // Check if we have any users
+    const userCount = await db.select().from(users);
+    
+    if (userCount.length === 0) {
+      // Create a test user
+      const testUser = await this.createUser({
+        username: 'demo',
+        password: 'password',
+        name: 'John Smith',
+        email: 'demo@example.com'
+      });
+      
+      // Add default exercises
+      const defaultExercises: InsertExercise[] = [
+        { name: 'Bench Press', category: 'Chest', subcategory: 'Strength', isCustom: false, userId: null },
+        { name: 'Incline Dumbbell Press', category: 'Chest', subcategory: 'Hypertrophy', isCustom: false, userId: null },
+        { name: 'Barbell Squat', category: 'Legs', subcategory: 'Compound', isCustom: false, userId: null },
+        { name: 'Cable Fly', category: 'Chest', subcategory: 'Isolation', isCustom: false, userId: null },
+        { name: 'Lat Pulldown', category: 'Back', subcategory: 'Compound', isCustom: false, userId: null },
+        { name: 'Overhead Press', category: 'Shoulders', subcategory: 'Compound', isCustom: false, userId: null },
+        { name: 'Deadlift', category: 'Back', subcategory: 'Compound', isCustom: false, userId: null },
+        { name: 'Bicep Curl', category: 'Arms', subcategory: 'Isolation', isCustom: false, userId: null },
+        { name: 'Tricep Extension', category: 'Arms', subcategory: 'Isolation', isCustom: false, userId: null },
+        { name: 'Leg Press', category: 'Legs', subcategory: 'Compound', isCustom: false, userId: null },
+        { name: 'Plank', category: 'Core', subcategory: 'Isometric', isCustom: false, userId: null },
+        { name: 'Russian Twist', category: 'Core', subcategory: 'Rotational', isCustom: false, userId: null }
+      ];
+      
+      for (const exercise of defaultExercises) {
+        await this.createExercise(exercise);
+      }
+      
+      // Add sample workouts
+      const sampleWorkouts: InsertWorkout[] = [
+        {
+          name: 'Monday Push Day',
+          date: new Date('2023-07-24T10:00:00Z'),
+          notes: 'Feeling strong today',
+          userId: testUser.id,
+          category: 'Strength',
+          duration: 45
+        },
+        {
+          name: 'Leg Day',
+          date: new Date('2023-07-22T15:30:00Z'),
+          notes: 'Recovery from last session',
+          userId: testUser.id,
+          category: 'Strength',
+          duration: 53
+        },
+        {
+          name: 'Upper Body',
+          date: new Date('2023-07-20T09:00:00Z'),
+          notes: 'Focus on form',
+          userId: testUser.id,
+          category: 'Hypertrophy',
+          duration: 45
+        },
+        {
+          name: 'Core & Cardio',
+          date: new Date('2023-07-19T17:00:00Z'),
+          notes: 'Quick session',
+          userId: testUser.id,
+          category: 'HIIT',
+          duration: 30
+        }
+      ];
+      
+      for (const workout of sampleWorkouts) {
+        await this.createWorkout(workout);
+      }
+    }
+  }
+}
+
+// Use in-memory storage during development, database storage in production
+export const storage = process.env.DATABASE_URL 
+  ? new DbStorage() 
+  : new MemStorage();
