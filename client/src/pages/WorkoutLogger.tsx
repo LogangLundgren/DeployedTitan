@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { WorkoutWithDetails } from "@shared/schema";
 import WorkoutForm from "@/components/workout/WorkoutForm";
-import RecentWorkouts from "@/components/workout/RecentWorkouts";
 import WorkoutHistory from "@/components/workout/WorkoutHistory";
 import TemplateSelector from "@/components/workout/TemplateSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,25 +23,10 @@ export default function WorkoutLogger() {
   // In a real app, this would use the authenticated user's ID
   const userId = 1;
   
-  const { data: recentWorkouts, isLoading, refetch } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts/recent', userId],
-    queryFn: async () => {
-      try {
-        const res = await fetch(`/api/workouts/recent?userId=${userId}&limit=5`);
-        if (!res.ok) throw new Error('Failed to fetch recent workouts');
-        return res.json();
-      } catch (error) {
-        console.error('Error fetching recent workouts:', error);
-        return [];
-      }
-    }
-  });
-  
   // Handle when a new workout is created from template
   const handleWorkoutCreated = (workout: WorkoutWithDetails) => {
     setCurrentWorkout(workout);
     setActiveTab('log');
-    refetch(); // Refresh the recent workouts list
   };
   
   return (
@@ -190,20 +173,6 @@ export default function WorkoutLogger() {
           </CardContent>
         </Tabs>
       </Card>
-      
-      {/* Recent Workouts Section */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <h3 className="text-lg font-medium mb-4 flex items-center">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-primary">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-          </svg>
-          Recent Workouts
-        </h3>
-        <RecentWorkouts workouts={recentWorkouts || []} isLoading={isLoading} />
-      </div>
     </main>
   );
 }
