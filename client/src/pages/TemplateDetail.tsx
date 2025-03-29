@@ -280,15 +280,41 @@ export default function TemplateDetail() {
   // Handle editing an exercise
   const onEditExercise = (values: ExerciseFormValues) => {
     if (selectedExercise) {
-      updateExerciseMutation.mutate({ 
-        id: selectedExercise.id, 
-        values: {
-          defaultSets: values.defaultSets,
-          defaultReps: values.defaultReps,
-          defaultWeight: values.defaultWeight,
-          notes: values.notes
-        } 
-      });
+      console.log('Editing exercise with values:', values);
+      // Create an object with only the fields that have values
+      const updateData: Partial<TemplateExercise> = {};
+      
+      if (values.defaultSets !== undefined && values.defaultSets !== null) {
+        updateData.defaultSets = values.defaultSets;
+      }
+      
+      if (values.defaultReps !== undefined && values.defaultReps !== null) {
+        updateData.defaultReps = values.defaultReps;
+      }
+      
+      if (values.defaultWeight !== undefined && values.defaultWeight !== null) {
+        updateData.defaultWeight = values.defaultWeight;
+      }
+      
+      if (values.notes !== undefined) {
+        updateData.notes = values.notes;
+      }
+      
+      console.log('Update data:', updateData);
+      
+      // Only proceed if we have at least one field to update
+      if (Object.keys(updateData).length > 0) {
+        updateExerciseMutation.mutate({ 
+          id: selectedExercise.id, 
+          values: updateData
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Please change at least one field to update',
+          variant: 'destructive',
+        });
+      }
     }
   };
 

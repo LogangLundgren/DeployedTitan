@@ -165,7 +165,7 @@ export default function Dashboard() {
           <h3 className="text-lg font-medium mb-4">Quick Actions</h3>
           <div className="space-y-2">
             <Link href="/workouts">
-              <a className="flex items-center justify-between w-full p-3 bg-primary/5 hover:bg-primary/10 text-primary rounded-md transition-colors">
+              <button className="flex items-center justify-between w-full p-3 bg-primary/5 hover:bg-primary/10 text-primary rounded-md transition-colors">
                 <span className="font-medium">Log Workout</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -182,10 +182,10 @@ export default function Dashboard() {
                   <path d="M15 3h6v6" />
                   <path d="M10 14 21 3" />
                 </svg>
-              </a>
+              </button>
             </Link>
             <Link href="/progress">
-              <a className="flex items-center justify-between w-full p-3 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">
+              <button className="flex items-center justify-between w-full p-3 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">
                 <span className="font-medium">Track Progress</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -201,10 +201,10 @@ export default function Dashboard() {
                   <path d="M3 3v18h18" />
                   <path d="m19 9-5 5-4-4-3 3" />
                 </svg>
-              </a>
+              </button>
             </Link>
             <Link href="/nutrition">
-              <a className="flex items-center justify-between w-full p-3 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">
+              <button className="flex items-center justify-between w-full p-3 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">
                 <span className="font-medium">Log Nutrition</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -221,7 +221,7 @@ export default function Dashboard() {
                   <path d="M3 7.6v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8" />
                   <path d="M15 2v5h5" />
                 </svg>
-              </a>
+              </button>
             </Link>
           </div>
         </div>
@@ -272,7 +272,7 @@ export default function Dashboard() {
               </svg>
               <p className="text-gray-400 mb-2">No active program</p>
               <Link href="/programs">
-                <a className="text-primary text-sm">Browse Programs</a>
+                <button className="text-primary text-sm hover:underline">Browse Programs</button>
               </Link>
             </div>
           </div>

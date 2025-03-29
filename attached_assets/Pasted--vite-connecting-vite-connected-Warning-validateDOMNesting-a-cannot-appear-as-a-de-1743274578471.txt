@@ -1,0 +1,35 @@
+[vite] connecting...
+[vite] connected.
+Warning: validateDOMNesting(...): <a> cannot appear as a descendant of &lt;a&gt;.
+    at a
+    at a
+    at https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=9ffc9af5:337:18
+    at div
+    at div
+    at div
+    at main
+    at Dashboard (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/pages/Dashboard.tsx:52:51)
+    at Route (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=9ffc9af5:323:16)
+    at Switch (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=9ffc9af5:379:17)
+    at div
+    at Router
+    at QueryClientProvider (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=9ffc9af5:2805:3)
+    at App
+at a
+at a
+at https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=9ffc9af5:337:18
+at div
+at div
+at div
+at main
+at Dashboard (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/pages/Dashboard.tsx:52:51)
+at Route (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=9ffc9af5:323:16)
+at Switch (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=9ffc9af5:379:17)
+at div
+at Router
+at QueryClientProvider (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=9ffc9af5:2805:3)
+at App
+at t.value (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400

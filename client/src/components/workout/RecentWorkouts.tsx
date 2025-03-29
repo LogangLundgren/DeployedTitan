@@ -64,13 +64,13 @@ export default function RecentWorkouts({ workouts, isLoading }: RecentWorkoutsPr
           </svg>
           <p className="text-gray-500 mb-4">You haven't logged any workouts yet.</p>
           <Link href="/workouts">
-            <a className="inline-flex items-center justify-center gap-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors">
+            <button className="inline-flex items-center justify-center gap-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
               Log Your First Workout
-            </a>
+            </button>
           </Link>
         </div>
       </div>
@@ -90,8 +90,8 @@ export default function RecentWorkouts({ workouts, isLoading }: RecentWorkoutsPr
           }
           
           return (
-            <Link key={workout.id} href={`/workouts/${workout.id}`}>
-              <a className="group bg-white rounded-lg shadow-sm p-5 hover:shadow-md transition-all duration-200 border border-transparent hover:border-gray-100">
+            <div key={workout.id} className="cursor-pointer" onClick={() => window.location.href = `/workouts/${workout.id}`}>
+              <div className="group bg-white rounded-lg shadow-sm p-5 hover:shadow-md transition-all duration-200 border border-transparent hover:border-gray-100">
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h4 className="font-semibold text-gray-800 group-hover:text-primary transition-colors">{workout.name}</h4>
@@ -163,8 +163,8 @@ export default function RecentWorkouts({ workouts, isLoading }: RecentWorkoutsPr
                 <div className="mt-4 text-xs text-right">
                   <span className="text-primary group-hover:underline">View details →</span>
                 </div>
-              </a>
-            </Link>
+              </div>
+            </div>
           );
         })}
       </div>

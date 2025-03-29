@@ -487,6 +487,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid template exercise ID is required" });
       }
       
+      console.log("Update template exercise request body:", req.body);
+      console.log("Content-Type:", req.headers['content-type']);
+      
       const updateSchema = z.object({
         order: z.number().optional(),
         defaultSets: z.number().optional(),
@@ -499,6 +502,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updateData.success) {
         return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      console.log("Validated update data:", updateData.data);
+      // Ensure at least one field is present to update
+      if (Object.keys(updateData.data).length === 0) {
+        return res.status(400).json({ message: "At least one field must be provided for update" });
       }
       
       const updatedTemplateExercise = await storage.updateTemplateExercise(id, updateData.data);
