@@ -126,7 +126,10 @@ export default function TemplateDetail() {
     mutationFn: async (values: ExerciseFormValues) => {
       return await apiRequest<TemplateExercise>('/api/template-exercises', {
         method: 'POST',
-        body: JSON.stringify(values)
+        body: JSON.stringify(values),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
     },
     onSuccess: () => {
@@ -151,7 +154,10 @@ export default function TemplateDetail() {
     mutationFn: async ({ id, values }: { id: number; values: Partial<TemplateExercise> }) => {
       return await apiRequest<TemplateExercise>(`/api/template-exercises/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(values)
+        body: JSON.stringify(values),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
     },
     onSuccess: () => {
