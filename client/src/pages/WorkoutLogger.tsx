@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, FileText, DollarSign, AlertTriangle } from "lucide-react";
+import { Clock, FileText, DollarSign } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type TabType = 'new' | 'history';
@@ -28,6 +28,13 @@ export default function WorkoutLogger() {
   const handleWorkoutCreated = (workout: WorkoutWithDetails) => {
     setCurrentWorkout(workout);
     setIsWorkoutStarted(true);
+  };
+  
+  // Handle when a workout is saved and redirect to history
+  const handleWorkoutSaved = () => {
+    setActiveTab('history');
+    setIsWorkoutStarted(false);
+    setCurrentWorkout(null);
   };
   
   return (
@@ -135,7 +142,10 @@ export default function WorkoutLogger() {
                         </div>
                       </div>
                     </div>
-                    <WorkoutForm workout={currentWorkout} />
+                    <WorkoutForm 
+                      workout={currentWorkout}
+                      onWorkoutSaved={handleWorkoutSaved}
+                    />
                   </div>
                 </div>
               ) : (

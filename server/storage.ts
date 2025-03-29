@@ -427,47 +427,6 @@ export class MemStorage implements IStorage {
       email: 'demo@example.com'
     };
     this.users.set(testUser.id, testUser);
-    
-    // Add some sample workouts for the test user
-    const sampleWorkouts = [
-      {
-        name: 'Monday Push Day',
-        date: new Date('2023-07-24T10:00:00Z'),
-        notes: 'Feeling strong today',
-        userId: testUser.id,
-        category: 'Strength',
-        duration: 45
-      },
-      {
-        name: 'Leg Day',
-        date: new Date('2023-07-22T15:30:00Z'),
-        notes: 'Recovery from last session',
-        userId: testUser.id,
-        category: 'Strength',
-        duration: 53
-      },
-      {
-        name: 'Upper Body',
-        date: new Date('2023-07-20T09:00:00Z'),
-        notes: 'Focus on form',
-        userId: testUser.id,
-        category: 'Hypertrophy',
-        duration: 45
-      },
-      {
-        name: 'Core & Cardio',
-        date: new Date('2023-07-19T17:00:00Z'),
-        notes: 'Quick session',
-        userId: testUser.id,
-        category: 'HIIT',
-        duration: 30
-      }
-    ];
-    
-    sampleWorkouts.forEach(workout => {
-      const id = this.workoutCurrentId++;
-      this.workouts.set(id, { ...workout, id });
-    });
   }
 }
 
@@ -826,45 +785,7 @@ export class DbStorage implements IStorage {
         await this.createExercise(exercise);
       }
       
-      // Add sample workouts
-      const sampleWorkouts: InsertWorkout[] = [
-        {
-          name: 'Monday Push Day',
-          date: new Date('2023-07-24T10:00:00Z'),
-          notes: 'Feeling strong today',
-          userId: testUser.id,
-          category: 'Strength',
-          duration: 45
-        },
-        {
-          name: 'Leg Day',
-          date: new Date('2023-07-22T15:30:00Z'),
-          notes: 'Recovery from last session',
-          userId: testUser.id,
-          category: 'Strength',
-          duration: 53
-        },
-        {
-          name: 'Upper Body',
-          date: new Date('2023-07-20T09:00:00Z'),
-          notes: 'Focus on form',
-          userId: testUser.id,
-          category: 'Hypertrophy',
-          duration: 45
-        },
-        {
-          name: 'Core & Cardio',
-          date: new Date('2023-07-19T17:00:00Z'),
-          notes: 'Quick session',
-          userId: testUser.id,
-          category: 'HIIT',
-          duration: 30
-        }
-      ];
-      
-      for (const workout of sampleWorkouts) {
-        await this.createWorkout(workout);
-      }
+      // No sample workouts - let users create their own
     }
   }
 }

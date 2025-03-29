@@ -33,9 +33,10 @@ export interface ExerciseWithSets {
 interface WorkoutFormProps {
   workout?: WorkoutWithDetails;
   onWorkoutCreated?: (workout: WorkoutWithDetails) => void;
+  onWorkoutSaved?: () => void;
 }
 
-export default function WorkoutForm({ workout, onWorkoutCreated }: WorkoutFormProps) {
+export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved }: WorkoutFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -234,6 +235,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated }: WorkoutFormPr
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/workouts/recent', userId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workouts'] });
       
       // If we have a callback, get the full workout details and pass them back
       if (onWorkoutCreated) {
@@ -246,6 +248,11 @@ export default function WorkoutForm({ workout, onWorkoutCreated }: WorkoutFormPr
         } catch (error) {
           console.error("Error fetching complete workout details:", error);
         }
+      }
+      
+      // Navigate to history tab after saving
+      if (onWorkoutSaved) {
+        onWorkoutSaved();
       }
     },
     onError: (error) => {
