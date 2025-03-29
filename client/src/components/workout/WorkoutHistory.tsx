@@ -53,7 +53,7 @@ interface WorkoutHistoryProps {
 
 export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistoryProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [workoutToDelete, setWorkoutToDelete] = useState<WorkoutWithDetails | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -126,7 +126,7 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
     const matchesSearch = searchTerm === "" || 
       workout.name.toLowerCase().includes(searchTerm.toLowerCase());
       
-    const matchesCategory = !categoryFilter || 
+    const matchesCategory = !categoryFilter || categoryFilter === "all" || 
       workout.category === categoryFilter;
       
     return matchesSearch && matchesCategory;
@@ -195,7 +195,7 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
           </div>
           
           {categories && categories.length > 0 && (
-            <Select value={categoryFilter || ""} onValueChange={(value) => setCategoryFilter(value || null)}>
+            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
               <SelectTrigger className="w-[180px]">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4" />
@@ -205,7 +205,7 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
               <SelectContent>
                 <SelectGroup>
                   <SelectLabel>Categories</SelectLabel>
-                  <SelectItem value="">All categories</SelectItem>
+                  <SelectItem value="all">All categories</SelectItem>
                   {categories.map(category => (
                     <SelectItem key={category} value={category}>
                       {category}
@@ -221,7 +221,7 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
           <div className="text-center max-w-md">
             <Dumbbell className="mx-auto mb-4 text-gray-300 h-12 w-12" />
             <h3 className="text-lg font-medium text-gray-900 mb-1">No workouts found</h3>
-            {searchTerm || categoryFilter ? (
+            {searchTerm || categoryFilter !== "all" ? (
               <p className="text-gray-500 mb-4">
                 No workouts match your search criteria. Try adjusting your filters.
               </p>
@@ -234,7 +234,7 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
               variant="outline" 
               onClick={() => {
                 setSearchTerm("");
-                setCategoryFilter(null);
+                setCategoryFilter("all");
               }}
             >
               Clear Filters
@@ -259,7 +259,7 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
         </div>
         
         {categories && categories.length > 0 && (
-          <Select value={categoryFilter || ""} onValueChange={(value) => setCategoryFilter(value || null)}>
+          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
             <SelectTrigger className="w-[180px]">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4" />
@@ -269,7 +269,7 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>Categories</SelectLabel>
-                <SelectItem value="">All categories</SelectItem>
+                <SelectItem value="all">All categories</SelectItem>
                 {categories.map(category => (
                   <SelectItem key={category} value={category}>
                     {category}

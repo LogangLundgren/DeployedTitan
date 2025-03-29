@@ -10,7 +10,8 @@ import {
   insertTemplateSchema,
   insertTemplateExerciseSchema,
   Workout,
-  TemplateExercise
+  TemplateExercise,
+  WorkoutWithDetails
 } from "@shared/schema";
 import { z } from "zod";
 
