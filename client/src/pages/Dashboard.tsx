@@ -184,9 +184,9 @@ export default function Dashboard() {
                 </svg>
               </button>
             </Link>
-            <Link href="/progress">
+            <Link href="/workouts">
               <button className="flex items-center justify-between w-full p-3 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">
-                <span className="font-medium">Track Progress</span>
+                <span className="font-medium">View Analytics</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="20"

@@ -3,6 +3,7 @@ import { WorkoutWithDetails } from "@shared/schema";
 import WorkoutForm from "@/components/workout/WorkoutForm";
 import WorkoutHistory from "@/components/workout/WorkoutHistory";
 import TemplateSelector from "@/components/workout/TemplateSelector";
+import WorkoutAnalytics from "@/components/workout/WorkoutAnalytics";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -14,7 +15,7 @@ import {
 import { Clock, FileText, DollarSign } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-type TabType = 'new' | 'history';
+type TabType = 'new' | 'history' | 'analytics';
 
 export default function WorkoutLogger() {
   const [activeTab, setActiveTab] = useState<TabType>('new');
@@ -120,6 +121,18 @@ export default function WorkoutLogger() {
                   History
                 </div>
               </TabsTrigger>
+              <TabsTrigger 
+                value="analytics"
+                className="h-12 px-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none data-[state=active]:text-primary"
+              >
+                <div className="flex items-center gap-2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 3v18h18"/>
+                    <path d="m19 9-5 5-4-4-3 3"/>
+                  </svg>
+                  Analytics
+                </div>
+              </TabsTrigger>
             </TabsList>
           </div>
           
@@ -168,6 +181,10 @@ export default function WorkoutLogger() {
                   setActiveTab('new');
                 }}
               />
+            </TabsContent>
+            
+            <TabsContent value="analytics" className="p-0 m-0">
+              <WorkoutAnalytics userId={userId} />
             </TabsContent>
           </CardContent>
         </Tabs>
