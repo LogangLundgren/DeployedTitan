@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { WorkoutWithDetails } from "@shared/schema";
 import WorkoutForm from "@/components/workout/WorkoutForm";
 import RecentWorkouts from "@/components/workout/RecentWorkouts";
+import WorkoutHistory from "@/components/workout/WorkoutHistory";
 import TemplateSelector from "@/components/workout/TemplateSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -171,32 +172,13 @@ export default function WorkoutLogger() {
             </TabsContent>
             
             <TabsContent value="history" className="p-0 m-0">
-              <div className="flex items-center justify-center p-12 min-h-[300px]">
-                <div className="text-center max-w-md">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="48" 
-                    height="48" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="1" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    className="mx-auto mb-4 text-gray-300"
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                  </svg>
-                  <h3 className="text-lg font-medium text-gray-900 mb-1">Workout History</h3>
-                  <p className="text-gray-500 mb-4">This feature will be available in the next update. Your complete workout history will be viewable with detailed analytics.</p>
-                  <button className="px-4 py-2 bg-primary/10 text-primary rounded-md font-medium hover:bg-primary/20 transition-colors">
-                    Coming Soon
-                  </button>
-                </div>
-              </div>
+              <WorkoutHistory 
+                userId={userId} 
+                onViewWorkout={(workout) => {
+                  setCurrentWorkout(workout);
+                  setActiveTab('log');
+                }}
+              />
             </TabsContent>
             
             <TabsContent value="templates" className="p-0 m-0">

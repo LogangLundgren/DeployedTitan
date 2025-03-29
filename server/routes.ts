@@ -109,9 +109,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid user ID is required" });
       }
       
-      const workouts = await storage.getWorkouts(userId);
+      // We should return full workout details when getting all workouts
+      const workoutBasics = await storage.getWorkouts(userId);
       
-      res.status(200).json(workouts);
+      // Get full details for each workout
+      const workoutsWithDetails = await Promise.all(
+        workoutBasics.map(workout => storage.getWorkoutWithDetails(workout.id))
+      );
+      
+      // Filter out any undefined results
+      const validWorkouts = workoutsWithDetails.filter(workout => workout !== undefined) as WorkoutWithDetails[];
+      
+      res.status(200).json(validWorkouts);
     } catch (error) {
       console.error("Get workouts error:", error);
       res.status(500).json({ message: "Internal server error" });
