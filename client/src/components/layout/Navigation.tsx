@@ -76,22 +76,22 @@ export default function Navigation() {
             const isActive = location === link.href;
             
             return (
-              <Link key={link.href} href={link.href}>
-                <a
-                  className={`flex items-center gap-2 px-4 py-3.5 whitespace-nowrap transition-colors duration-200 ${
-                    isActive
-                      ? 'text-primary font-medium relative'
-                      : 'text-gray-500 hover:text-primary hover:bg-gray-50'
-                  }`}
-                >
-                  <span className={`${isActive ? 'text-primary' : 'text-gray-400'}`}>
-                    {link.icon}
-                  </span>
-                  {link.label}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></span>
-                  )}
-                </a>
+              <Link 
+                key={link.href} 
+                href={link.href}
+                className={`flex items-center gap-2 px-4 py-3.5 whitespace-nowrap transition-colors duration-200 ${
+                  isActive
+                    ? 'text-primary font-medium relative'
+                    : 'text-gray-500 hover:text-primary hover:bg-gray-50'
+                }`}
+              >
+                <span className={`${isActive ? 'text-primary' : 'text-gray-400'}`}>
+                  {link.icon}
+                </span>
+                {link.label}
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></span>
+                )}
               </Link>
             );
           })}
