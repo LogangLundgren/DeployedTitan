@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { WorkoutWithDetails } from "@shared/schema";
 import WorkoutForm from "@/components/workout/WorkoutForm";
 import RecentWorkouts from "@/components/workout/RecentWorkouts";
+import TemplateSelector from "@/components/workout/TemplateSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -11,16 +12,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Clock, FileText, DollarSign, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type TabType = 'log' | 'history' | 'templates';
 
 export default function WorkoutLogger() {
   const [activeTab, setActiveTab] = useState<TabType>('log');
+  const [currentWorkout, setCurrentWorkout] = useState<WorkoutWithDetails | null>(null);
   
   // In a real app, this would use the authenticated user's ID
   const userId = 1;
   
-  const { data: recentWorkouts, isLoading } = useQuery<WorkoutWithDetails[]>({
+  const { data: recentWorkouts, isLoading, refetch } = useQuery<WorkoutWithDetails[]>({
     queryKey: ['/api/workouts/recent', userId],
     queryFn: async () => {
       try {
@@ -34,12 +38,29 @@ export default function WorkoutLogger() {
     }
   });
   
+  // Handle when a new workout is created from template
+  const handleWorkoutCreated = (workout: WorkoutWithDetails) => {
+    setCurrentWorkout(workout);
+    setActiveTab('log');
+    refetch(); // Refresh the recent workouts list
+  };
+  
   return (
     <main className="flex-grow container mx-auto px-4 py-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Workout Logger</h2>
         <p className="text-gray-500">Track your workouts and monitor your progress</p>
       </div>
+      
+      {currentWorkout && (
+        <Alert className="mb-6 border-green-100 bg-green-50">
+          <Clock className="h-4 w-4 text-green-600" />
+          <AlertTitle className="text-green-800">Workout Started!</AlertTitle>
+          <AlertDescription className="text-green-700">
+            Your workout "{currentWorkout.name}" has been created from template with {currentWorkout.exercises.length} exercises.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <Card className="mb-6 border-0 shadow-sm overflow-hidden">
         <CardHeader className="pb-0 pt-6 px-6">
@@ -51,9 +72,14 @@ export default function WorkoutLogger() {
               </CardDescription>
             </div>
             <div className="flex gap-1">
-              {activeTab === 'log' && (
+              {activeTab === 'log' && currentWorkout && (
+                <div className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 font-medium">
+                  Workout Active
+                </div>
+              )}
+              {activeTab === 'log' && !currentWorkout && (
                 <div className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                  In Progress
+                  Ready to start
                 </div>
               )}
             </div>
@@ -112,7 +138,35 @@ export default function WorkoutLogger() {
           <CardContent className="p-0">
             <TabsContent value="log" className="p-0 m-0">
               <div className="p-6">
-                <WorkoutForm />
+                {currentWorkout ? (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-medium">{currentWorkout.name}</h3>
+                      <div className="flex items-center space-x-2 text-sm text-gray-500">
+                        <div className="flex items-center">
+                          <FileText className="w-4 h-4 mr-1" />
+                          <span>{currentWorkout.exercises.length} exercises</span>
+                        </div>
+                        <div className="flex items-center">
+                          <DollarSign className="w-4 h-4 mr-1" />
+                          <span>{currentWorkout.totalSets} sets</span>
+                        </div>
+                      </div>
+                    </div>
+                    <WorkoutForm workout={currentWorkout} />
+                  </div>
+                ) : (
+                  <div className="mb-4">
+                    <Alert className="mb-4">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>No active workout</AlertTitle>
+                      <AlertDescription>
+                        Start a new workout manually or quickly begin one from your saved templates.
+                      </AlertDescription>
+                    </Alert>
+                    <WorkoutForm />
+                  </div>
+                )}
               </div>
             </TabsContent>
             
@@ -146,33 +200,10 @@ export default function WorkoutLogger() {
             </TabsContent>
             
             <TabsContent value="templates" className="p-0 m-0">
-              <div className="flex items-center justify-center p-12 min-h-[300px]">
-                <div className="text-center max-w-md">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="48" 
-                    height="48" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="1" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    className="mx-auto mb-4 text-gray-300"
-                  >
-                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <line x1="10" y1="9" x2="8" y2="9"></line>
-                  </svg>
-                  <h3 className="text-lg font-medium text-gray-900 mb-1">Workout Templates</h3>
-                  <p className="text-gray-500 mb-4">Save your favorite workouts as templates to quickly start a session. This feature will be available in the next update.</p>
-                  <button className="px-4 py-2 bg-primary/10 text-primary rounded-md font-medium hover:bg-primary/20 transition-colors">
-                    Coming Soon
-                  </button>
-                </div>
-              </div>
+              <TemplateSelector 
+                userId={userId} 
+                onWorkoutCreated={handleWorkoutCreated} 
+              />
             </TabsContent>
           </CardContent>
         </Tabs>

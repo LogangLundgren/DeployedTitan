@@ -1,12 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { Exercise, InsertWorkout, WorkoutWithDetails } from "@shared/schema";
+import { format, parseISO } from "date-fns";
+import { 
+  Exercise, 
+  InsertWorkout, 
+  WorkoutWithDetails, 
+  Workout, 
+  WorkoutExercise 
+} from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ExerciseCard from "./ExerciseCard";
 import AddExerciseModal from "./AddExerciseModal";
 import WorkoutSummary from "./WorkoutSummary";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 export interface ExerciseWithSets {
   id?: number;
@@ -22,7 +30,11 @@ export interface ExerciseWithSets {
   order: number;
 }
 
-export default function WorkoutForm() {
+interface WorkoutFormProps {
+  workout?: WorkoutWithDetails;
+}
+
+export default function WorkoutForm({ workout }: WorkoutFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -30,11 +42,16 @@ export default function WorkoutForm() {
   const userId = 1;
   
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
-  const [workoutName, setWorkoutName] = useState("Monday Push Day");
-  const [workoutDate, setWorkoutDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [workoutNotes, setWorkoutNotes] = useState("");
+  const [workoutName, setWorkoutName] = useState(workout?.name || "Monday Push Day");
+  const [workoutDate, setWorkoutDate] = useState(
+    workout?.date 
+      ? format(new Date(workout.date), "yyyy-MM-dd") 
+      : format(new Date(), "yyyy-MM-dd")
+  );
+  const [workoutNotes, setWorkoutNotes] = useState(workout?.notes || "");
   const [exercises, setExercises] = useState<ExerciseWithSets[]>([]);
-  const [duration, setDuration] = useState(45);
+  const [duration, setDuration] = useState(workout?.duration || 45);
+  const [workoutId, setWorkoutId] = useState<number | undefined>(workout?.id);
   
   // Fetch exercises for the modal
   const { data: availableExercises } = useQuery<Exercise[]>({
@@ -46,6 +63,29 @@ export default function WorkoutForm() {
     }
   });
   
+  // Initialize exercises from workout if provided
+  useEffect(() => {
+    if (workout) {
+      const formattedExercises: ExerciseWithSets[] = workout.exercises.map(ex => ({
+        id: ex.id,
+        exerciseId: ex.exerciseId,
+        exerciseDetails: ex.exerciseDetails,
+        sets: ex.sets.map(set => ({
+          id: set.id,
+          weight: set.weight,
+          reps: set.reps,
+          notes: set.notes,
+          order: set.order
+        })),
+        order: ex.order
+      }));
+      
+      setExercises(formattedExercises);
+      setWorkoutId(workout.id);
+    }
+  }, [workout]);
+  
+  // Handling saving or updating workout
   const saveWorkoutMutation = useMutation({
     mutationFn: async () => {
       if (!workoutName.trim()) {
@@ -56,65 +96,147 @@ export default function WorkoutForm() {
         throw new Error('Please add at least one exercise');
       }
       
-      // 1. Create the workout
-      const workoutData: InsertWorkout = {
-        name: workoutName,
-        date: new Date(workoutDate),
-        notes: workoutNotes || null,
-        duration,
-        userId,
-        category: 'Strength'  // Could be made dynamic in a more complete implementation
-      };
-      
-      const workoutRes = await apiRequest('POST', '/api/workouts', workoutData);
-      const workout = await workoutRes.json();
-      
-      // 2. Create workout exercises and sets
-      for (const exercise of exercises) {
-        const workoutExerciseData = {
-          workoutId: workout.id,
-          exerciseId: exercise.exerciseId,
-          order: exercise.order
+      // If workout already exists (created from template), update it
+      if (workoutId) {
+        // Update basic workout info
+        const workoutUpdateData = {
+          name: workoutName,
+          date: new Date(workoutDate), // Convert string date to Date object
+          notes: workoutNotes || null,
+          duration,
+          category: workout?.category || 'Strength'
         };
         
-        const workoutExerciseRes = await apiRequest('POST', '/api/workout-exercises', workoutExerciseData);
-        const workoutExercise = await workoutExerciseRes.json();
+        await apiRequest(`/api/workouts/${workoutId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(workoutUpdateData)
+        });
         
-        // 3. Create sets for each workout exercise
-        for (const set of exercise.sets) {
-          const setData = {
-            workoutExerciseId: workoutExercise.id,
-            weight: set.weight,
-            reps: set.reps,
-            notes: set.notes || null,
-            order: set.order
+        // Update sets (this is simplified - in a more complete implementation, we would
+        // track which sets are new, updated, or deleted)
+        for (const exercise of exercises) {
+          for (const set of exercise.sets) {
+            if (set.id) {
+              // Update existing set
+              const setData = {
+                weight: set.weight,
+                reps: set.reps,
+                notes: set.notes || null
+              };
+              
+              await apiRequest(`/api/sets/${set.id}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(setData)
+              });
+            } else {
+              // Create new set
+              const setData = {
+                workoutExerciseId: exercise.id,
+                weight: set.weight,
+                reps: set.reps,
+                notes: set.notes || null,
+                order: set.order
+              };
+              
+              await apiRequest('/api/sets', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(setData)
+              });
+            }
+          }
+        }
+        
+        // Fetch the updated workout
+        const response = await apiRequest<WorkoutWithDetails>(`/api/workouts/${workoutId}`);
+        return response;
+      } else {
+        // Create a new workout
+        const workoutData: InsertWorkout = {
+          name: workoutName,
+          date: new Date(workoutDate), // Convert string date to Date object
+          notes: workoutNotes || null,
+          duration,
+          userId,
+          category: 'Strength'  // Could be made dynamic in a more complete implementation
+        };
+        
+        const workout = await apiRequest<Workout>('/api/workouts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(workoutData)
+        });
+        
+        // Create workout exercises and sets
+        for (const exercise of exercises) {
+          const workoutExerciseData = {
+            workoutId: workout.id,
+            exerciseId: exercise.exerciseId,
+            order: exercise.order
           };
           
-          await apiRequest('POST', '/api/sets', setData);
+          const workoutExercise = await apiRequest<WorkoutExercise>('/api/workout-exercises', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(workoutExerciseData)
+          });
+          
+          // Create sets for each workout exercise
+          for (const set of exercise.sets) {
+            const setData = {
+              workoutExerciseId: workoutExercise.id,
+              weight: set.weight,
+              reps: set.reps,
+              notes: set.notes || null,
+              order: set.order
+            };
+            
+            await apiRequest('/api/sets', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(setData)
+            });
+          }
         }
+        
+        return workout;
       }
-      
-      return workout;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "Workout saved successfully",
-        description: "Your workout has been logged",
+        title: workoutId ? "Workout updated successfully" : "Workout saved successfully",
+        description: workoutId ? "Your changes have been saved" : "Your workout has been logged",
         variant: "default",
       });
       
-      // Reset form or redirect
-      setExercises([]);
-      setWorkoutName("");
-      setWorkoutNotes("");
-      setWorkoutDate(format(new Date(), "yyyy-MM-dd"));
+      // If it's a new workout, reset the form
+      if (!workoutId) {
+        setExercises([]);
+        setWorkoutName("");
+        setWorkoutNotes("");
+        setWorkoutDate(format(new Date(), "yyyy-MM-dd"));
+      }
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/workouts/recent', userId] });
     },
     onError: (error) => {
       toast({
-        title: "Failed to save workout",
+        title: workoutId ? "Failed to update workout" : "Failed to save workout",
         description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
@@ -244,27 +366,12 @@ export default function WorkoutForm() {
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Exercises</h3>
-          <button 
-            className="flex items-center bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
+          <Button 
             onClick={() => setShowAddExerciseModal(true)}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="mr-1"
-            >
-              <path d="M5 12h14" />
-              <path d="M12 5v14" />
-            </svg>
+            <Plus className="mr-2 h-4 w-4" />
             Add Exercise
-          </button>
+          </Button>
         </div>
         
         {exercises.length > 0 ? (
@@ -301,27 +408,12 @@ export default function WorkoutForm() {
               <path d="M12.5 7v5.25L15 15" />
             </svg>
             <p className="text-gray-400 mb-4 text-center">Add exercises to your workout</p>
-            <button 
-              className="flex items-center bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
+            <Button
               onClick={() => setShowAddExerciseModal(true)}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="mr-1"
-              >
-                <path d="M5 12h14" />
-                <path d="M12 5v14" />
-              </svg>
+              <Plus className="mr-2 h-4 w-4" />
               Add Exercise
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -339,16 +431,15 @@ export default function WorkoutForm() {
       
       {/* Form Actions */}
       <div className="flex flex-col sm:flex-row-reverse gap-3">
-        <button 
-          className="bg-primary text-white px-6 py-3 rounded-md hover:bg-primary/90 transition-colors font-medium"
+        <Button 
           onClick={() => saveWorkoutMutation.mutate()}
           disabled={saveWorkoutMutation.isPending}
         >
-          {saveWorkoutMutation.isPending ? "Saving..." : "Save Workout"}
-        </button>
-        <button className="text-gray-400 px-6 py-3 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors">
+          {saveWorkoutMutation.isPending ? "Saving..." : workoutId ? "Update Workout" : "Save Workout"}
+        </Button>
+        <Button variant="outline">
           Cancel
-        </button>
+        </Button>
       </div>
       
       {/* Exercise Modal */}
