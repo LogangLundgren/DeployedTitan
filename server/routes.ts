@@ -9,7 +9,8 @@ import {
   insertExerciseSchema,
   insertTemplateSchema,
   insertTemplateExerciseSchema,
-  Workout
+  Workout,
+  TemplateExercise
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -491,11 +492,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Content-Type:", req.headers['content-type']);
       
       const updateSchema = z.object({
-        order: z.number().optional(),
-        defaultSets: z.number().optional(),
-        defaultReps: z.number().optional(),
-        defaultWeight: z.number().optional(),
-        notes: z.string().optional()
+        order: z.number().nullable().optional(),
+        defaultSets: z.number().nullable().optional(),
+        defaultReps: z.number().nullable().optional(),
+        defaultWeight: z.number().nullable().optional(),
+        notes: z.string().nullable().optional()
       });
       
       const updateData = updateSchema.safeParse(req.body);
@@ -510,7 +511,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "At least one field must be provided for update" });
       }
       
-      const updatedTemplateExercise = await storage.updateTemplateExercise(id, updateData.data);
+      // Filter out undefined values and ensure proper typing
+      const filteredUpdateData: Partial<TemplateExercise> = {};
+      
+      if (updateData.data.defaultSets !== undefined) {
+        filteredUpdateData.defaultSets = updateData.data.defaultSets;
+      }
+      
+      if (updateData.data.defaultReps !== undefined) {
+        filteredUpdateData.defaultReps = updateData.data.defaultReps;
+      }
+      
+      if (updateData.data.defaultWeight !== undefined) {
+        filteredUpdateData.defaultWeight = updateData.data.defaultWeight;
+      }
+      
+      if (updateData.data.notes !== undefined) {
+        filteredUpdateData.notes = updateData.data.notes;
+      }
+      
+      if (updateData.data.order !== undefined && updateData.data.order !== null) {
+        filteredUpdateData.order = updateData.data.order;
+      }
+      
+      console.log("Filtered update data:", filteredUpdateData);
+      
+      const updatedTemplateExercise = await storage.updateTemplateExercise(id, filteredUpdateData);
       
       if (!updatedTemplateExercise) {
         return res.status(404).json({ message: "Template exercise not found" });

@@ -44,7 +44,7 @@ export const getQueryFn: <T>(options: {
     
     // For 204 No Content responses, return undefined as there is no body to parse
     if (res.status === 204) {
-      return undefined as unknown as T;
+      return undefined as unknown as any;
     }
     
     return await res.json();
