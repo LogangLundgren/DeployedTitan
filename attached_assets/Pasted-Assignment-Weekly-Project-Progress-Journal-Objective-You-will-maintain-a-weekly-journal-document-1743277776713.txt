@@ -1,0 +1,39 @@
+Assignment: Weekly Project Progress Journal
+Objective:
+You will maintain a weekly journal documenting your progress on your project, detailing completed tasks, challenges faced, solutions found, and plans for the following week. This will help develop project management, self-reflection, and accountability skills.
+
+Instructions:
+Each week, you must write a journal entry (minimum 250 words) summarizing your work on the project.
+Entries should include:
+Tasks Completed – Describe what was accomplished that week.
+Challenges & Solutions – Discuss any obstacles and how they were addressed.
+Next Steps – Outline the plan for the following week.
+Reflections & Insights – Share lessons learned, improvements, or changes in approach.
+Use a consistent format for each entry (template provided below).
+Journal entries must be submitted weekly (due every Sunday by 11:59 PM).
+Entries will be graded on detail, clarity, organization, and reflection (see rubric below).
+Journal Entry Template
+Week #: [Insert Week Number]
+Date: [Insert Date]
+
+Tasks Completed:
+
+[List and describe tasks completed in detail]
+Challenges & Solutions:
+
+[Describe any issues faced and how they were resolved]
+Next Steps:
+
+[Outline the plan for the upcoming week]
+Reflections & Insights:
+
+[What did you learn? What would you do differently?]
+Grading Rubric
+Criteria	Excellent (10 pts)	Proficient (7-9 pts)	Needs Improvement (4-6 pts)	Unacceptable (0-3 pts)
+Detail & Completeness (30 pts)	Provides thorough, detailed descriptions of tasks, challenges, solutions, and reflections	Covers all sections but lacks depth in some areas	Some sections incomplete or vague	Minimal effort, missing sections
+Clarity & Organization (20 pts)	Clearly written, easy to follow, logical structure	Mostly clear, minor organization issues	Somewhat difficult to follow, disorganized sections	Disorganized, difficult to understand
+Reflection & Analysis (25 pts)	Provides deep insight into challenges, solutions, and learning experiences	Reflects on progress but lacks deeper analysis	Some reflection, but mostly a list of tasks	Little or no reflection, just lists tasks
+Consistency & Timeliness (15 pts)	Submitted on time each week, follows format	Mostly on time, minor format issues	Late submissions or inconsistent formatting	Frequently late or missing entries
+Grammar & Writing Quality (10 pts)	Well-written with minimal errors	Some grammar issues but readable	Noticeable grammar mistakes affecting clarity	Poor grammar, difficult to understand
+Total Score (100 pts)	/100	 	 	 
+This journal will help you track progress, reflect on your work, and improve project management skills. 

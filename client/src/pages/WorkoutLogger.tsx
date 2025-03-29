@@ -145,16 +145,6 @@ export default function WorkoutLogger() {
                     userId={userId}
                     onWorkoutCreated={handleWorkoutCreated} 
                   />
-                  <div className="p-6 border-t">
-                    <Alert className="mb-4">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>No Template? Start from Scratch</AlertTitle>
-                      <AlertDescription>
-                        You can also create a new workout without using a template.
-                      </AlertDescription>
-                    </Alert>
-                    <WorkoutForm onWorkoutCreated={handleWorkoutCreated} />
-                  </div>
                 </div>
               )}
             </TabsContent>
