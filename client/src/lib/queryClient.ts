@@ -17,6 +17,12 @@ export async function apiRequest<T = any>(
   });
 
   await throwIfResNotOk(res);
+  
+  // For 204 No Content responses, return undefined as there is no body to parse
+  if (res.status === 204) {
+    return undefined as unknown as T;
+  }
+  
   return await res.json() as T;
 }
 
@@ -35,6 +41,12 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
+    
+    // For 204 No Content responses, return undefined as there is no body to parse
+    if (res.status === 204) {
+      return undefined as unknown as T;
+    }
+    
     return await res.json();
   };
 
