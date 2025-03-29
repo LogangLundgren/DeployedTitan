@@ -121,9 +121,13 @@ export default function Templates() {
   // Create template mutation
   const createTemplateMutation = useMutation({
     mutationFn: async (values: TemplateFormValues) => { 
+      console.log('API request with values:', JSON.stringify(values));
       return await apiRequest<Template>('/api/templates', {
         method: 'POST',
-        body: JSON.stringify(values)
+        body: JSON.stringify(values),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
     },
     onSuccess: () => {
@@ -148,7 +152,10 @@ export default function Templates() {
     mutationFn: async ({ id, values }: { id: number; values: Partial<Template> }) => {
       return await apiRequest(`/api/templates/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(values)
+        body: JSON.stringify(values),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
     },
     onSuccess: () => {
@@ -197,7 +204,10 @@ export default function Templates() {
     mutationFn: async (templateId: number) => {
       const response = await apiRequest(`/api/templates/${templateId}/create-workout`, {
         method: 'POST',
-        body: JSON.stringify({ userId: DEMO_USER_ID })
+        body: JSON.stringify({ userId: DEMO_USER_ID }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       return response as WorkoutWithDetails;
     },
@@ -264,6 +274,7 @@ export default function Templates() {
 
   // Handler for create template form submission
   const onCreateSubmit = (values: TemplateFormValues) => {
+    console.log('Creating template with values:', values);
     createTemplateMutation.mutate(values);
   };
 
