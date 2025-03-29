@@ -14,11 +14,12 @@ import {
 import { Clock, FileText, DollarSign, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-type TabType = 'log' | 'history' | 'templates';
+type TabType = 'new' | 'history';
 
 export default function WorkoutLogger() {
-  const [activeTab, setActiveTab] = useState<TabType>('log');
+  const [activeTab, setActiveTab] = useState<TabType>('new');
   const [currentWorkout, setCurrentWorkout] = useState<WorkoutWithDetails | null>(null);
+  const [isWorkoutStarted, setIsWorkoutStarted] = useState(false);
   
   // In a real app, this would use the authenticated user's ID
   const userId = 1;
@@ -26,7 +27,7 @@ export default function WorkoutLogger() {
   // Handle when a new workout is created from template
   const handleWorkoutCreated = (workout: WorkoutWithDetails) => {
     setCurrentWorkout(workout);
-    setActiveTab('log');
+    setIsWorkoutStarted(true);
   };
   
   return (
@@ -50,20 +51,19 @@ export default function WorkoutLogger() {
         <CardHeader className="pb-0 pt-6 px-6">
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle className="text-xl">Log Your Workout</CardTitle>
+              <CardTitle className="text-xl">
+                {currentWorkout && isWorkoutStarted ? "Log Your Workout" : "Start a Workout"}
+              </CardTitle>
               <CardDescription>
-                Record your sets, weights, and reps for each exercise
+                {currentWorkout && isWorkoutStarted 
+                  ? "Record your sets, weights, and reps for each exercise" 
+                  : "Choose a template or create a new workout from scratch"}
               </CardDescription>
             </div>
             <div className="flex gap-1">
-              {activeTab === 'log' && currentWorkout && (
+              {currentWorkout && isWorkoutStarted && (
                 <div className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 font-medium">
                   Workout Active
-                </div>
-              )}
-              {activeTab === 'log' && !currentWorkout && (
-                <div className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                  Ready to start
                 </div>
               )}
             </div>
@@ -72,13 +72,25 @@ export default function WorkoutLogger() {
         
         <Tabs 
           value={activeTab} 
-          onValueChange={(value) => setActiveTab(value as TabType)}
+          onValueChange={(value) => {
+            if (currentWorkout && isWorkoutStarted && value === 'new') {
+              // If trying to go back to new tab while workout is in progress,
+              // show a confirm dialog (this would be better with a real dialog)
+              if (confirm("Are you sure you want to abandon your current workout?")) {
+                setCurrentWorkout(null);
+                setIsWorkoutStarted(false);
+                setActiveTab(value);
+              }
+            } else {
+              setActiveTab(value as TabType);
+            }
+          }}
           className="w-full"
         >
           <div className="px-6 border-b">
             <TabsList className="justify-start h-12 p-0 bg-transparent border-b-0 w-full">
               <TabsTrigger 
-                value="log"
+                value="new"
                 className="h-12 px-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none data-[state=active]:text-primary"
               >
                 <div className="flex items-center gap-2">
@@ -86,7 +98,7 @@ export default function WorkoutLogger() {
                     <path d="M12 2v20"/>
                     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                   </svg>
-                  Log Workout
+                  New Workout
                 </div>
               </TabsTrigger>
               <TabsTrigger 
@@ -101,28 +113,14 @@ export default function WorkoutLogger() {
                   History
                 </div>
               </TabsTrigger>
-              <TabsTrigger 
-                value="templates"
-                className="h-12 px-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none data-[state=active]:text-primary"
-              >
-                <div className="flex items-center gap-2">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                    <line x1="10" y1="9" x2="8" y2="9"/>
-                  </svg>
-                  Templates
-                </div>
-              </TabsTrigger>
             </TabsList>
           </div>
           
           <CardContent className="p-0">
-            <TabsContent value="log" className="p-0 m-0">
-              <div className="p-6">
-                {currentWorkout ? (
+            <TabsContent value="new" className="p-0 m-0">
+              {currentWorkout && isWorkoutStarted ? (
+                // When a workout is started, show the workout form
+                <div className="p-6">
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-medium">{currentWorkout.name}</h3>
@@ -139,19 +137,26 @@ export default function WorkoutLogger() {
                     </div>
                     <WorkoutForm workout={currentWorkout} />
                   </div>
-                ) : (
-                  <div className="mb-4">
+                </div>
+              ) : (
+                // When no workout is started, show the template selector
+                <div>
+                  <TemplateSelector 
+                    userId={userId}
+                    onWorkoutCreated={handleWorkoutCreated} 
+                  />
+                  <div className="p-6 border-t">
                     <Alert className="mb-4">
                       <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>No active workout</AlertTitle>
+                      <AlertTitle>No Template? Start from Scratch</AlertTitle>
                       <AlertDescription>
-                        Start a new workout manually or quickly begin one from your saved templates.
+                        You can also create a new workout without using a template.
                       </AlertDescription>
                     </Alert>
-                    <WorkoutForm />
+                    <WorkoutForm onWorkoutCreated={handleWorkoutCreated} />
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="history" className="p-0 m-0">
@@ -159,15 +164,9 @@ export default function WorkoutLogger() {
                 userId={userId} 
                 onViewWorkout={(workout) => {
                   setCurrentWorkout(workout);
-                  setActiveTab('log');
+                  setIsWorkoutStarted(true);
+                  setActiveTab('new');
                 }}
-              />
-            </TabsContent>
-            
-            <TabsContent value="templates" className="p-0 m-0">
-              <TemplateSelector 
-                userId={userId} 
-                onWorkoutCreated={handleWorkoutCreated} 
               />
             </TabsContent>
           </CardContent>

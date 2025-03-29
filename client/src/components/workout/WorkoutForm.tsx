@@ -32,9 +32,10 @@ export interface ExerciseWithSets {
 
 interface WorkoutFormProps {
   workout?: WorkoutWithDetails;
+  onWorkoutCreated?: (workout: WorkoutWithDetails) => void;
 }
 
-export default function WorkoutForm({ workout }: WorkoutFormProps) {
+export default function WorkoutForm({ workout, onWorkoutCreated }: WorkoutFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -216,7 +217,7 @@ export default function WorkoutForm({ workout }: WorkoutFormProps) {
         return workout;
       }
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast({
         title: workoutId ? "Workout updated successfully" : "Workout saved successfully",
         description: workoutId ? "Your changes have been saved" : "Your workout has been logged",
@@ -233,6 +234,19 @@ export default function WorkoutForm({ workout }: WorkoutFormProps) {
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/workouts/recent', userId] });
+      
+      // If we have a callback, get the full workout details and pass them back
+      if (onWorkoutCreated) {
+        try {
+          // Fetch the complete workout details with exercises and sets
+          const workoutWithDetails = await apiRequest<WorkoutWithDetails>(
+            `/api/workouts/${data.id}`
+          );
+          onWorkoutCreated(workoutWithDetails);
+        } catch (error) {
+          console.error("Error fetching complete workout details:", error);
+        }
+      }
     },
     onError: (error) => {
       toast({
