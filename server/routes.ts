@@ -303,9 +303,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updateSchema = z.object({
-        weight: z.number().optional(),
-        reps: z.number().optional(),
-        notes: z.string().optional(),
+        weight: z.number().nullable().optional(),
+        reps: z.number().nullable().optional(),
+        notes: z.string().nullable().optional(),
         order: z.number().optional()
       });
       
