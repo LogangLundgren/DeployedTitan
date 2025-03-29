@@ -1,91 +1,86 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { User } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
 } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { 
   Edit, 
-  User as UserIcon, 
-  FileText, 
-  Dumbbell, 
-  Calendar, 
-  CheckCircle, 
-  Trophy,
-  BarChart 
+  User as UserIcon,
+  Instagram,
+  Twitter,
+  Facebook,
+  Linkedin,
+  Github,
+  Camera,
+  Upload
 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 export default function Profile() {
-  // In a real app, this would use the authenticated user's ID from context/state
-  const userId = 1;
-  
-  // State for profile view/edit mode
   const [isEditing, setIsEditing] = useState(false);
   
-  // Fetch user data
-  const { data: user, isLoading } = useQuery<Omit<User, 'password'>>({
-    queryKey: ['/api/users', userId],
-    queryFn: async () => {
-      try {
-        return await apiRequest(`/api/users/${userId}`);
-      } catch (error) {
-        console.error('Error fetching user:', error);
-        throw error;
+  // Get the user's profile information
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['/api/auth/user'],
+    queryFn: () => ({ 
+      id: 1, 
+      username: 'demo', 
+      name: 'John Smith', 
+      email: 'demo@example.com',
+      password: '',
+      // Additional user fields
+      bio: 'Fitness enthusiast focused on strength training and nutrition. Always looking to push my limits and achieve new personal records.',
+      fitnessLevel: 'Intermediate',
+      experienceYears: 3,
+      goals: 'Build muscle mass and improve overall strength',
+      location: 'New York, NY',
+      socialMedia: {
+        instagram: 'johnsmith_fitness',
+        twitter: 'jsmith_lift',
+        facebook: '',
+        linkedin: 'john-smith-fitness',
+        github: ''
       }
-    }
+    }),
+    refetchOnWindowFocus: false
   });
   
-  // Fetch workout stats
+  // Get the user's recent workouts for displaying stats
   const { data: workouts } = useQuery({
-    queryKey: ['/api/workouts', userId],
+    queryKey: ['/api/workouts/recent'],
     queryFn: async () => {
-      try {
-        return await apiRequest(`/api/workouts?userId=${userId}`);
-      } catch (error) {
-        console.error('Error fetching workouts:', error);
-        return [];
+      const response = await fetch('/api/workouts/recent');
+      if (!response.ok) {
+        throw new Error('Failed to fetch recent workouts');
       }
-    }
+      return response.json();
+    },
+    refetchOnWindowFocus: false,
+    enabled: !!user
   });
   
-  // Fetch template stats
+  // Get the user's templates for displaying stats
   const { data: templates } = useQuery({
-    queryKey: ['/api/templates', userId],
+    queryKey: ['/api/templates'],
     queryFn: async () => {
-      try {
-        return await apiRequest(`/api/templates?userId=${userId}`);
-      } catch (error) {
-        console.error('Error fetching templates:', error);
-        return [];
+      const response = await fetch('/api/templates');
+      if (!response.ok) {
+        throw new Error('Failed to fetch templates');
       }
-    }
+      return response.json();
+    },
+    refetchOnWindowFocus: false,
+    enabled: !!user
   });
-  
-  // Calculate statistics
-  const stats = {
-    totalWorkouts: workouts?.length || 0,
-    totalTemplates: templates?.length || 0,
-    // In a real app these would be calculated properly from actual data
-    totalVolume: workouts?.reduce((sum: number, workout: any) => sum + (workout.volume || 0), 0) || 0,
-    longestStreak: 5,
-    favoriteExercise: "Bench Press",
-    averageWorkoutDuration: 45
-  };
   
   if (isLoading) {
     return (
@@ -117,7 +112,7 @@ export default function Profile() {
     <main className="flex-grow container mx-auto px-4 py-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Profile</h2>
-        <p className="text-gray-500">Manage your profile and view your fitness statistics</p>
+        <p className="text-gray-500">Manage your profile and personal information</p>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -139,216 +134,242 @@ export default function Profile() {
           </CardHeader>
           <CardContent className="pt-4">
             <div className="flex flex-col items-center mb-6">
-              <Avatar className="h-24 w-24 mb-4">
-                <AvatarImage src="" alt={user.name || user.username} />
-                <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                  {(user.name || user.username || "U").charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              
-              <h3 className="text-xl font-semibold">{user.name || user.username}</h3>
-              {user.name && <p className="text-gray-500">@{user.username}</p>}
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Email</p>
-                <p>{user.email || "Not provided"}</p>
+              <div className="relative mb-4">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src="" alt={user.name || user.username} />
+                  <AvatarFallback className="text-lg bg-primary/10 text-primary">
+                    {(user.name || user.username || "U").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {isEditing && (
+                  <div className="absolute -right-2 bottom-0 bg-primary text-white p-1.5 rounded-full shadow-md cursor-pointer">
+                    <Camera className="h-4 w-4" />
+                  </div>
+                )}
               </div>
               
-              <div>
-                <p className="text-sm font-medium text-gray-500">Member Since</p>
-                <p>March 25, 2025</p>
-              </div>
+              {isEditing ? (
+                <div className="w-full space-y-2">
+                  <div>
+                    <Label htmlFor="fullName">Full Name</Label>
+                    <Input id="fullName" defaultValue={user.name} placeholder="Your full name" />
+                  </div>
+                  <div>
+                    <Label htmlFor="username">Username</Label>
+                    <Input id="username" defaultValue={user.username} placeholder="Username" />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-xl font-semibold">{user.name || user.username}</h3>
+                  {user.name && <p className="text-gray-500">@{user.username}</p>}
+                </>
+              )}
             </div>
             
-            {isEditing && (
-              <div className="mt-6">
-                <Button className="w-full">Save Changes</Button>
+            <div className="space-y-4">
+              {isEditing ? (
+                <>
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" defaultValue={user.email} placeholder="Your email" />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="location">Location</Label>
+                    <Input id="location" defaultValue={user.location} placeholder="City, State" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Email</p>
+                    <p>{user.email || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Location</p>
+                    <p>{user.location || "Not specified"}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Member Since</p>
+                    <p>March 25, 2025</p>
+                  </div>
+                </>
+              )}
+              
+              {/* Quick Stats */}
+              <Separator />
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-2">Quick Stats</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-gray-50 p-2 rounded-lg text-center">
+                    <p className="text-lg font-bold">{workouts?.length || 0}</p>
+                    <p className="text-xs text-gray-500">Workouts</p>
+                  </div>
+                  <div className="bg-gray-50 p-2 rounded-lg text-center">
+                    <p className="text-lg font-bold">{templates?.length || 0}</p>
+                    <p className="text-xs text-gray-500">Templates</p>
+                  </div>
+                </div>
               </div>
-            )}
+              
+              {isEditing && (
+                <div className="mt-4">
+                  <Button className="w-full">Save Profile</Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
         
-        {/* Statistics and Activity Tabs */}
+        {/* User Information */}
         <Card className="lg:col-span-2">
-          <Tabs defaultValue="statistics">
-            <CardHeader className="pb-0">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-xl">Fitness Dashboard</CardTitle>
-                <TabsList>
-                  <TabsTrigger value="statistics">Statistics</TabsTrigger>
-                  <TabsTrigger value="activity">Activity</TabsTrigger>
-                  <TabsTrigger value="achievements">Achievements</TabsTrigger>
-                </TabsList>
-              </div>
-              <CardDescription>
-                Track your fitness progress and achievements
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="pt-6">
-              <TabsContent value="statistics" className="mt-0">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <Calendar className="w-5 h-5 text-primary mr-2" />
-                      <h4 className="text-sm font-medium text-gray-500">Total Workouts</h4>
-                    </div>
-                    <p className="text-2xl font-bold">{stats.totalWorkouts}</p>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <FileText className="w-5 h-5 text-primary mr-2" />
-                      <h4 className="text-sm font-medium text-gray-500">Templates</h4>
-                    </div>
-                    <p className="text-2xl font-bold">{stats.totalTemplates}</p>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <Dumbbell className="w-5 h-5 text-primary mr-2" />
-                      <h4 className="text-sm font-medium text-gray-500">Total Volume</h4>
-                    </div>
-                    <p className="text-2xl font-bold">{stats.totalVolume.toLocaleString()} lbs</p>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <CheckCircle className="w-5 h-5 text-primary mr-2" />
-                      <h4 className="text-sm font-medium text-gray-500">Longest Streak</h4>
-                    </div>
-                    <p className="text-2xl font-bold">{stats.longestStreak} days</p>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <Trophy className="w-5 h-5 text-primary mr-2" />
-                      <h4 className="text-sm font-medium text-gray-500">Favorite Exercise</h4>
-                    </div>
-                    <p className="text-2xl font-bold">{stats.favoriteExercise}</p>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <BarChart className="w-5 h-5 text-primary mr-2" />
-                      <h4 className="text-sm font-medium text-gray-500">Avg. Duration</h4>
-                    </div>
-                    <p className="text-2xl font-bold">{stats.averageWorkoutDuration} min</p>
-                  </div>
+          <CardHeader>
+            <CardTitle className="text-xl">Personal Information</CardTitle>
+            <CardDescription>
+              Your fitness profile and experience
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Bio Section */}
+              <div>
+                <div className="flex justify-between mb-2">
+                  <h3 className="font-medium">About Me</h3>
+                  {isEditing && <Edit className="h-4 w-4 text-gray-400" />}
                 </div>
                 
-                <div>
-                  <h3 className="font-medium mb-4">Workout Distribution</h3>
-                  <div className="h-48 flex items-center justify-center bg-gray-50 rounded-lg">
-                    <p className="text-gray-400">Charts coming soon</p>
-                  </div>
-                </div>
-              </TabsContent>
+                {isEditing ? (
+                  <Textarea
+                    placeholder="Tell the community about yourself, your fitness journey, and your goals"
+                    defaultValue={user.bio}
+                    className="min-h-[100px]"
+                  />
+                ) : (
+                  <p className="text-gray-700">{user.bio || "No bio provided."}</p>
+                )}
+              </div>
               
-              <TabsContent value="activity" className="mt-0">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="font-medium mb-4">Recent Activity</h3>
-                    {workouts && workouts.length > 0 ? (
-                      <div className="space-y-4">
-                        {workouts.slice(0, 5).map((workout: any, index: number) => (
-                          <div key={index} className="flex items-start gap-4">
-                            <div className="bg-primary/10 text-primary rounded-full p-2">
-                              <Dumbbell className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-medium">{workout.name}</p>
-                              <p className="text-sm text-gray-500">
-                                {new Date(workout.date).toLocaleDateString()} · {workout.exercises.length} exercises
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+              <Separator />
+              
+              {/* Fitness Experience */}
+              <div>
+                <div className="flex justify-between mb-2">
+                  <h3 className="font-medium">Fitness Experience</h3>
+                  {isEditing && <Edit className="h-4 w-4 text-gray-400" />}
+                </div>
+                
+                {isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="fitnessLevel">Fitness Level</Label>
+                      <Input id="fitnessLevel" defaultValue={user.fitnessLevel} placeholder="Beginner, Intermediate, Advanced" />
+                    </div>
+                    <div>
+                      <Label htmlFor="experienceYears">Years of Experience</Label>
+                      <Input id="experienceYears" type="number" defaultValue={user.experienceYears} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="goals">Fitness Goals</Label>
+                      <Textarea id="goals" defaultValue={user.goals} placeholder="What are your fitness goals?" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Fitness Level</p>
+                        <p>{user.fitnessLevel || "Not specified"}</p>
                       </div>
-                    ) : (
-                      <div className="text-center py-6 bg-gray-50 rounded-lg">
-                        <p className="text-gray-400">No recent activity</p>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Years of Experience</p>
+                        <p>{user.experienceYears || "Not specified"}</p>
                       </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Fitness Goals</p>
+                      <p>{user.goals || "No goals specified"}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <Separator />
+              
+              {/* Social Media Links */}
+              <div>
+                <div className="flex justify-between mb-4">
+                  <h3 className="font-medium">Social Media</h3>
+                  {isEditing && <Edit className="h-4 w-4 text-gray-400" />}
+                </div>
+                
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <Instagram className="h-5 w-5 mr-2 text-pink-600" />
+                      <Input placeholder="Instagram username" defaultValue={user.socialMedia?.instagram} />
+                    </div>
+                    <div className="flex items-center">
+                      <Twitter className="h-5 w-5 mr-2 text-blue-400" />
+                      <Input placeholder="Twitter username" defaultValue={user.socialMedia?.twitter} />
+                    </div>
+                    <div className="flex items-center">
+                      <Facebook className="h-5 w-5 mr-2 text-blue-600" />
+                      <Input placeholder="Facebook profile" defaultValue={user.socialMedia?.facebook} />
+                    </div>
+                    <div className="flex items-center">
+                      <Linkedin className="h-5 w-5 mr-2 text-blue-700" />
+                      <Input placeholder="LinkedIn profile" defaultValue={user.socialMedia?.linkedin} />
+                    </div>
+                    <div className="flex items-center">
+                      <Github className="h-5 w-5 mr-2 text-gray-800" />
+                      <Input placeholder="GitHub username" defaultValue={user.socialMedia?.github} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {user.socialMedia?.instagram && (
+                      <a href={`https://instagram.com/${user.socialMedia.instagram}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-gray-50">
+                        <Instagram className="h-5 w-5 mr-2 text-pink-600" />
+                        <span>@{user.socialMedia.instagram}</span>
+                      </a>
+                    )}
+                    {user.socialMedia?.twitter && (
+                      <a href={`https://twitter.com/${user.socialMedia.twitter}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-gray-50">
+                        <Twitter className="h-5 w-5 mr-2 text-blue-400" />
+                        <span>@{user.socialMedia.twitter}</span>
+                      </a>
+                    )}
+                    {user.socialMedia?.facebook && (
+                      <a href={`https://facebook.com/${user.socialMedia.facebook}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-gray-50">
+                        <Facebook className="h-5 w-5 mr-2 text-blue-600" />
+                        <span>{user.socialMedia.facebook}</span>
+                      </a>
+                    )}
+                    {user.socialMedia?.linkedin && (
+                      <a href={`https://linkedin.com/in/${user.socialMedia.linkedin}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-gray-50">
+                        <Linkedin className="h-5 w-5 mr-2 text-blue-700" />
+                        <span>{user.socialMedia.linkedin}</span>
+                      </a>
+                    )}
+                    {user.socialMedia?.github && (
+                      <a href={`https://github.com/${user.socialMedia.github}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-gray-50">
+                        <Github className="h-5 w-5 mr-2 text-gray-800" />
+                        <span>{user.socialMedia.github}</span>
+                      </a>
+                    )}
+                    {!user.socialMedia?.instagram && !user.socialMedia?.twitter && 
+                     !user.socialMedia?.facebook && !user.socialMedia?.linkedin && 
+                     !user.socialMedia?.github && (
+                      <p className="text-gray-500 col-span-full">No social media profiles linked</p>
                     )}
                   </div>
-                  
-                  <div>
-                    <h3 className="font-medium mb-4">Your Streak</h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-gray-500">Current Streak</span>
-                        <span className="text-sm font-medium">3 days</span>
-                      </div>
-                      <div className="grid grid-cols-7 gap-2">
-                        {[...Array(7)].map((_, i) => (
-                          <div 
-                            key={i} 
-                            className={`h-8 rounded-md flex items-center justify-center ${
-                              i < 3 ? 'bg-primary/90 text-white' : 'bg-gray-200 text-gray-400'
-                            }`}
-                          >
-                            {i < 3 && <CheckCircle className="h-4 w-4" />}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="achievements" className="mt-0">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="font-medium mb-4">Earned Achievements</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {[
-                        { title: "First Workout", icon: <CheckCircle className="h-5 w-5" />, date: "Mar 25, 2025" },
-                        { title: "Consistent", icon: <Calendar className="h-5 w-5" />, date: "Mar 28, 2025" },
-                        { title: "1000lb Club", icon: <Trophy className="h-5 w-5" />, date: "Coming soon" }
-                      ].map((achievement, index) => (
-                        <div key={index} className={`p-4 rounded-lg ${achievement.date === "Coming soon" ? "bg-gray-100" : "bg-primary/10"}`}>
-                          <div className={`flex items-center mb-2 ${achievement.date === "Coming soon" ? "text-gray-400" : "text-primary"}`}>
-                            {achievement.icon}
-                            <h4 className="text-sm font-medium ml-2">{achievement.title}</h4>
-                          </div>
-                          <p className={`text-xs ${achievement.date === "Coming soon" ? "text-gray-400" : "text-gray-500"}`}>
-                            {achievement.date}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-medium mb-4">Upcoming Achievements</h3>
-                    <div className="space-y-3">
-                      {[
-                        { title: "Volume King", description: "Reach 100,000 lbs total volume", progress: 45 },
-                        { title: "Consistency Master", description: "Workout 10 days in a row", progress: 30 },
-                        { title: "Exercise Explorer", description: "Try 20 different exercises", progress: 60 }
-                      ].map((achievement, index) => (
-                        <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                          <div className="flex justify-between items-center mb-1">
-                            <h4 className="font-medium">{achievement.title}</h4>
-                            <span className="text-sm text-gray-500">{achievement.progress}%</span>
-                          </div>
-                          <p className="text-sm text-gray-500 mb-2">{achievement.description}</p>
-                          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-primary rounded-full" 
-                              style={{ width: `${achievement.progress}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-            </CardContent>
-          </Tabs>
+                )}
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
       
@@ -386,9 +407,35 @@ export default function Profile() {
             <Separator />
             
             <div>
+              <h3 className="font-medium mb-4">Privacy Settings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-500">Profile Visibility</h4>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" className="bg-primary/5 text-primary" size="sm">Public</Button>
+                    <Button variant="outline" size="sm">Friends Only</Button>
+                    <Button variant="outline" size="sm">Private</Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-500">Workout Sharing</h4>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" className="bg-primary/5 text-primary" size="sm">Enabled</Button>
+                    <Button variant="outline" size="sm">Disabled</Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div>
               <h3 className="font-medium mb-4">Account Actions</h3>
               <div className="flex flex-wrap gap-3">
-                <Button variant="outline" size="sm">Export Data</Button>
+                <Button variant="outline" size="sm" className="flex items-center">
+                  <Upload className="h-4 w-4 mr-1" />
+                  Export Data
+                </Button>
                 <Button variant="outline" size="sm">Change Password</Button>
                 <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50">
                   Delete Account
