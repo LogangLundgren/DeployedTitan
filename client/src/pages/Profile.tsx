@@ -98,27 +98,56 @@ export default function Profile() {
   const facebookRef = useRef<HTMLInputElement>(null);
   
   // Get the user's profile information
-  const { data: user, isLoading } = useQuery({
-    queryKey: ['/api/auth/user'],
-    queryFn: () => ({ 
-      id: 1, 
-      username: 'demo', 
-      name: 'John Smith', 
-      email: 'demo@example.com',
-      password: '',
-      // Additional user fields
-      bio: 'Fitness enthusiast focused on strength training and nutrition. Always looking to push my limits and achieve new personal records.',
-      fitnessLevel: 'Intermediate',
-      experienceYears: 3,
-      goals: 'Build muscle mass and improve overall strength',
-      location: 'New York, NY',
-      socialMedia: {
-        instagram: 'johnsmith_fitness',
-        twitter: 'jsmith_lift',
-        facebook: ''
-      },
-      certifications: 'Certified Personal Trainer (CPT), Strength and Conditioning Specialist'
-    }),
+  const { data: user, isLoading, refetch } = useQuery({
+    queryKey: ['/api/users/1'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/users/1');
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+        const userData = await response.json();
+        return userData || { 
+          id: 1, 
+          username: 'demo', 
+          name: 'John Smith', 
+          email: 'demo@example.com',
+          // Additional user fields
+          bio: 'Fitness enthusiast focused on strength training and nutrition. Always looking to push my limits and achieve new personal records.',
+          fitnessLevel: 'Intermediate',
+          experienceYears: 3,
+          goals: 'Build muscle mass and improve overall strength',
+          location: 'New York, NY',
+          socialMedia: {
+            instagram: 'johnsmith_fitness',
+            twitter: 'jsmith_lift',
+            facebook: ''
+          },
+          certifications: 'Certified Personal Trainer (CPT), Strength and Conditioning Specialist'
+        };
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        // Return demo data if the API fails
+        return { 
+          id: 1, 
+          username: 'demo', 
+          name: 'John Smith', 
+          email: 'demo@example.com',
+          // Additional user fields
+          bio: 'Fitness enthusiast focused on strength training and nutrition. Always looking to push my limits and achieve new personal records.',
+          fitnessLevel: 'Intermediate',
+          experienceYears: 3,
+          goals: 'Build muscle mass and improve overall strength',
+          location: 'New York, NY',
+          socialMedia: {
+            instagram: 'johnsmith_fitness',
+            twitter: 'jsmith_lift',
+            facebook: ''
+          },
+          certifications: 'Certified Personal Trainer (CPT), Strength and Conditioning Specialist'
+        };
+      }
+    },
     refetchOnWindowFocus: false
   });
   
@@ -135,7 +164,9 @@ export default function Profile() {
     },
     onSuccess: () => {
       // Invalidate the user query to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users/1'] });
+      // Also explicitly refetch
+      refetch();
       
       setIsEditing(false);
       setIsSaving(false);
@@ -191,9 +222,9 @@ export default function Profile() {
   
   // Get the user's recent workouts for displaying stats
   const { data: workouts } = useQuery({
-    queryKey: ['/api/workouts/recent'],
+    queryKey: ['/api/workouts/recent', user?.id],
     queryFn: async () => {
-      const response = await fetch('/api/workouts/recent');
+      const response = await fetch(`/api/workouts/recent?userId=${user?.id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch recent workouts');
       }
@@ -205,9 +236,9 @@ export default function Profile() {
   
   // Get the user's templates for displaying stats
   const { data: templates } = useQuery({
-    queryKey: ['/api/templates'],
+    queryKey: ['/api/templates', user?.id],
     queryFn: async () => {
-      const response = await fetch('/api/templates');
+      const response = await fetch(`/api/templates?userId=${user?.id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch templates');
       }
