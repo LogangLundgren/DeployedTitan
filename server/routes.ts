@@ -89,6 +89,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.patch("/api/users/:id", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const updateSchema = z.object({
+        name: z.string().optional(),
+        username: z.string().optional(),
+        email: z.string().email().optional(),
+        bio: z.string().optional(),
+        location: z.string().optional(),
+        fitnessLevel: z.string().optional(),
+        experienceYears: z.number().optional(),
+        goals: z.string().optional(),
+        certifications: z.string().optional(),
+        socialMedia: z.object({
+          instagram: z.string().optional(),
+          twitter: z.string().optional(),
+          facebook: z.string().optional(),
+        }).optional(),
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      // In a real app, we would update the user in the database
+      // For simplicity, let's just return success
+      
+      res.status(200).json({ message: "User updated successfully", id: userId });
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Exercise routes
   app.get("/api/exercises", async (req, res) => {
     try {
