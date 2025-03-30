@@ -16,6 +16,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
   
   // Exercise operations
   getExercises(): Promise<Exercise[]>;
@@ -111,10 +112,26 @@ export class MemStorage implements IStorage {
       ...insertUser, 
       id,
       name: insertUser.name ?? null,
-      email: insertUser.email ?? null
+      email: insertUser.email ?? null,
+      bio: insertUser.bio ?? null,
+      location: insertUser.location ?? null,
+      fitnessLevel: insertUser.fitnessLevel ?? null,
+      experienceYears: insertUser.experienceYears ?? null,
+      goals: insertUser.goals ?? null,
+      certifications: insertUser.certifications ?? null,
+      socialMedia: insertUser.socialMedia ?? null
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUser(id: number, userUpdate: Partial<User>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    
+    const updatedUser = { ...user, ...userUpdate };
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
   
   // Exercise methods
@@ -424,7 +441,14 @@ export class MemStorage implements IStorage {
       username: 'demo',
       password: 'password',
       name: 'John Smith',
-      email: 'demo@example.com'
+      email: 'demo@example.com',
+      bio: null,
+      location: null,
+      fitnessLevel: null,
+      experienceYears: null,
+      goals: null,
+      certifications: null,
+      socialMedia: null
     };
     this.users.set(testUser.id, testUser);
   }
@@ -450,6 +474,19 @@ export class DbStorage implements IStorage {
   
   async createUser(user: InsertUser): Promise<User> {
     const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+  
+  async updateUser(id: number, userUpdate: Partial<User>): Promise<User | undefined> {
+    // Remove password from update if it exists (we wouldn't update password this way in a real app)
+    const { password, ...updateData } = userUpdate;
+    
+    const result = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+      .returning();
+      
     return result[0];
   }
   
@@ -762,7 +799,14 @@ export class DbStorage implements IStorage {
         username: 'demo',
         password: 'password',
         name: 'John Smith',
-        email: 'demo@example.com'
+        email: 'demo@example.com',
+        bio: null,
+        location: null,
+        fitnessLevel: null,
+        experienceYears: null, 
+        goals: null,
+        certifications: null,
+        socialMedia: null
       });
       
       // Add default exercises

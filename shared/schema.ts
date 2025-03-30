@@ -8,6 +8,14 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name"),
   email: text("email"),
+  bio: text("bio"),
+  location: text("location"),
+  fitnessLevel: text("fitness_level"),
+  experienceYears: integer("experience_years"),
+  goals: text("goals"),
+  certifications: text("certifications"),
+  // Store social media as JSON in a text field
+  socialMedia: text("social_media"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -15,6 +23,13 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   name: true,
   email: true,
+  bio: true,
+  location: true,
+  fitnessLevel: true,
+  experienceYears: true,
+  goals: true,
+  certifications: true,
+  socialMedia: true,
 });
 
 export const exercises = pgTable("exercises", {

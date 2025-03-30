@@ -80,7 +80,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Remove password from response
-      const { password: _, ...userWithoutPassword } = user;
+      const { password: _, ...userDataWithoutPassword } = user;
+      
+      // Parse socialMedia JSON string if it exists
+      const userWithoutPassword = {
+        ...userDataWithoutPassword,
+        socialMedia: userDataWithoutPassword.socialMedia ? JSON.parse(userDataWithoutPassword.socialMedia) : null
+      };
       
       res.status(200).json(userWithoutPassword);
     } catch (error) {
@@ -126,10 +132,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
       }
       
-      // In a real app, we would update the user in the database
-      // For simplicity, let's just return success
+      // Convert socialMedia object to string if it exists
+      const dataToUpdate = { 
+        ...updateData.data,
+        socialMedia: updateData.data.socialMedia ? JSON.stringify(updateData.data.socialMedia) : undefined
+      };
       
-      res.status(200).json({ message: "User updated successfully", id: userId });
+      // Update the user in the database
+      const updatedUser = await storage.updateUser(userId, dataToUpdate);
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to update user" });
+      }
+      
+      // Remove password from response
+      const { password: _, ...userDataWithoutPassword } = updatedUser;
+      
+      // Parse socialMedia JSON string if it exists
+      const userWithoutPassword = {
+        ...userDataWithoutPassword,
+        socialMedia: userDataWithoutPassword.socialMedia ? JSON.parse(userDataWithoutPassword.socialMedia) : null
+      };
+      
+      res.status(200).json(userWithoutPassword);
     } catch (error) {
       console.error("Update user error:", error);
       res.status(500).json({ message: "Internal server error" });
