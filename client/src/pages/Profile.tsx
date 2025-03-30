@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Card, 
@@ -16,8 +16,7 @@ import {
   Instagram,
   Twitter,
   Facebook,
-  Linkedin,
-  Github,
+  Award,
   Camera,
   Upload,
   Check
@@ -31,8 +30,58 @@ import { apiRequest } from "@/lib/queryClient";
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Theme management
+  useEffect(() => {
+    // Get the current theme from localStorage or default to light
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system' || 'light';
+    setTheme(savedTheme);
+    
+    // Apply the theme to the document
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (savedTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else if (savedTheme === 'system') {
+      // Check system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, []);
+  
+  // Handle theme change
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (newTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else if (newTheme === 'system') {
+      // Check system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+    
+    // Show toast notification
+    toast({
+      title: "Theme updated",
+      description: `Theme set to ${newTheme === 'system' ? 'system default' : newTheme} mode.`,
+      variant: "default",
+    });
+  };
   
   // Form refs for the different sections
   const nameRef = useRef<HTMLInputElement>(null);
@@ -43,11 +92,10 @@ export default function Profile() {
   const fitnessLevelRef = useRef<HTMLInputElement>(null);
   const experienceYearsRef = useRef<HTMLInputElement>(null);
   const goalsRef = useRef<HTMLTextAreaElement>(null);
+  const certificationsRef = useRef<HTMLTextAreaElement>(null);
   const instagramRef = useRef<HTMLInputElement>(null);
   const twitterRef = useRef<HTMLInputElement>(null);
   const facebookRef = useRef<HTMLInputElement>(null);
-  const linkedinRef = useRef<HTMLInputElement>(null);
-  const githubRef = useRef<HTMLInputElement>(null);
   
   // Get the user's profile information
   const { data: user, isLoading } = useQuery({
@@ -67,10 +115,9 @@ export default function Profile() {
       socialMedia: {
         instagram: 'johnsmith_fitness',
         twitter: 'jsmith_lift',
-        facebook: '',
-        linkedin: 'john-smith-fitness',
-        github: ''
-      }
+        facebook: ''
+      },
+      certifications: 'Certified Personal Trainer (CPT), Strength and Conditioning Specialist'
     }),
     refetchOnWindowFocus: false
   });
@@ -80,6 +127,9 @@ export default function Profile() {
     mutationFn: async (userData: any) => {
       return await apiRequest(`/api/users/${user?.id}`, {
         method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(userData)
       });
     },
@@ -125,12 +175,11 @@ export default function Profile() {
       experienceYears: experienceYearsRef.current?.value ? 
         parseInt(experienceYearsRef.current.value) : user.experienceYears,
       goals: goalsRef.current?.value || user.goals,
+      certifications: certificationsRef.current?.value || user.certifications || '',
       socialMedia: {
         instagram: instagramRef.current?.value || user.socialMedia?.instagram || '',
         twitter: twitterRef.current?.value || user.socialMedia?.twitter || '',
-        facebook: facebookRef.current?.value || user.socialMedia?.facebook || '',
-        linkedin: linkedinRef.current?.value || user.socialMedia?.linkedin || '',
-        github: githubRef.current?.value || user.socialMedia?.github || ''
+        facebook: facebookRef.current?.value || user.socialMedia?.facebook || ''
       }
     };
     
@@ -285,22 +334,6 @@ export default function Profile() {
                 </>
               )}
               
-              {/* Quick Stats */}
-              <Separator />
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-2">Quick Stats</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-gray-50 p-2 rounded-lg text-center">
-                    <p className="text-lg font-bold">{workouts?.length || 0}</p>
-                    <p className="text-xs text-gray-500">Workouts</p>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded-lg text-center">
-                    <p className="text-lg font-bold">{templates?.length || 0}</p>
-                    <p className="text-xs text-gray-500">Templates</p>
-                  </div>
-                </div>
-              </div>
-              
               {isEditing && (
                 <div className="mt-4">
                   <Button 
@@ -383,6 +416,15 @@ export default function Profile() {
                         placeholder="What are your fitness goals?" 
                       />
                     </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="certifications">Certifications</Label>
+                      <Textarea 
+                        id="certifications" 
+                        ref={certificationsRef} 
+                        defaultValue={user.certifications} 
+                        placeholder="List your fitness certifications" 
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -399,6 +441,17 @@ export default function Profile() {
                     <div>
                       <p className="text-sm font-medium text-gray-500">Fitness Goals</p>
                       <p>{user.goals || "No goals specified"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Certifications</p>
+                      <p className="flex items-center">
+                        {user.certifications ? (
+                          <>
+                            <Award className="h-4 w-4 mr-1 text-amber-500" />
+                            {user.certifications}
+                          </>
+                        ) : "No certifications listed"}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -439,22 +492,7 @@ export default function Profile() {
                         defaultValue={user.socialMedia?.facebook} 
                       />
                     </div>
-                    <div className="flex items-center">
-                      <Linkedin className="h-5 w-5 mr-2 text-blue-700" />
-                      <Input 
-                        ref={linkedinRef} 
-                        placeholder="LinkedIn profile" 
-                        defaultValue={user.socialMedia?.linkedin} 
-                      />
-                    </div>
-                    <div className="flex items-center">
-                      <Github className="h-5 w-5 mr-2 text-gray-800" />
-                      <Input 
-                        ref={githubRef} 
-                        placeholder="GitHub username" 
-                        defaultValue={user.socialMedia?.github} 
-                      />
-                    </div>
+
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -476,21 +514,8 @@ export default function Profile() {
                         <span>{user.socialMedia.facebook}</span>
                       </a>
                     )}
-                    {user.socialMedia?.linkedin && (
-                      <a href={`https://linkedin.com/in/${user.socialMedia.linkedin}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-gray-50">
-                        <Linkedin className="h-5 w-5 mr-2 text-blue-700" />
-                        <span>{user.socialMedia.linkedin}</span>
-                      </a>
-                    )}
-                    {user.socialMedia?.github && (
-                      <a href={`https://github.com/${user.socialMedia.github}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-gray-50">
-                        <Github className="h-5 w-5 mr-2 text-gray-800" />
-                        <span>{user.socialMedia.github}</span>
-                      </a>
-                    )}
                     {!user.socialMedia?.instagram && !user.socialMedia?.twitter && 
-                     !user.socialMedia?.facebook && !user.socialMedia?.linkedin && 
-                     !user.socialMedia?.github && (
+                     !user.socialMedia?.facebook && (
                       <p className="text-gray-500 col-span-full">No social media profiles linked</p>
                     )}
                   </div>
@@ -524,9 +549,30 @@ export default function Profile() {
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-gray-500">Theme</h4>
                   <div className="flex space-x-2">
-                    <Button variant="outline" className="bg-primary/5 text-primary" size="sm">Light</Button>
-                    <Button variant="outline" size="sm">Dark</Button>
-                    <Button variant="outline" size="sm">System</Button>
+                    <Button 
+                      variant="outline" 
+                      className={theme === 'light' ? "bg-primary/5 text-primary" : ""} 
+                      size="sm"
+                      onClick={() => handleThemeChange('light')}
+                    >
+                      Light
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className={theme === 'dark' ? "bg-primary/5 text-primary" : ""} 
+                      size="sm"
+                      onClick={() => handleThemeChange('dark')}
+                    >
+                      Dark
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className={theme === 'system' ? "bg-primary/5 text-primary" : ""} 
+                      size="sm"
+                      onClick={() => handleThemeChange('system')}
+                    >
+                      System
+                    </Button>
                   </div>
                 </div>
               </div>
