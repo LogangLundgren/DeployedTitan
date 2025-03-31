@@ -219,13 +219,13 @@ function ActivityFeed() {
                       </div>
                       <div>
                         <div className="text-xl font-semibold">
-                          {"?"}
+                          {typeof workout.totalExercises === 'number' ? workout.totalExercises : '0'}
                         </div>
                         <div className="text-xs text-muted-foreground">Exercises</div>
                       </div>
                       <div>
                         <div className="text-xl font-semibold">
-                          {"?"}
+                          {typeof workout.volume === 'number' ? `${workout.volume} lbs` : '0 lbs'}
                         </div>
                         <div className="text-xs text-muted-foreground">Volume</div>
                       </div>
@@ -541,13 +541,13 @@ function ActivityFeed() {
                 </div>
                 <div className="p-3 bg-muted/20 rounded-md">
                   <div className="text-xl font-semibold">
-                    {selectedWorkout.totalExercises || "?"}
+                    {typeof selectedWorkout.totalExercises === 'number' ? selectedWorkout.totalExercises : '0'}
                   </div>
                   <div className="text-xs text-muted-foreground">Exercises</div>
                 </div>
                 <div className="p-3 bg-muted/20 rounded-md">
                   <div className="text-xl font-semibold">
-                    {selectedWorkout.volume ? `${selectedWorkout.volume} lbs` : "?"}
+                    {typeof selectedWorkout.volume === 'number' ? `${selectedWorkout.volume} lbs` : '0 lbs'}
                   </div>
                   <div className="text-xs text-muted-foreground">Volume</div>
                 </div>

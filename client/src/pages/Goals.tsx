@@ -129,6 +129,7 @@ export default function Goals() {
   const createGoalMutation = useMutation({
     mutationFn: (data: z.infer<typeof goalFormSchema>) => {
       // Ensure all required fields are present and properly formatted
+      // Make sure dates are formatted correctly as ISO strings
       const goalData = {
         userId,
         title: data.title,
@@ -138,8 +139,8 @@ export default function Goals() {
         metricType: data.metricType,
         exerciseId: data.exerciseId,
         category: data.category,
-        startDate: new Date(),
-        targetDate: data.targetDate,
+        startDate: new Date().toISOString(), // Convert to ISO string for API
+        targetDate: data.targetDate.toISOString(), // Convert to ISO string for API
         isPublic: data.isPublic,
         isCompleted: false,
       };

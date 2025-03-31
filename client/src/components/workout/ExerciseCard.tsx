@@ -68,7 +68,7 @@ export default function ExerciseCard({ exercise, onRemove, onAddSet, onRemoveSet
 
         {exercise.sets.map((set, setIndex) => (
           <div key={setIndex} className="grid grid-cols-12 gap-2 mb-2 items-center">
-            <div className="col-span-1 text-center font-medium">{set.order}</div>
+            <div className="col-span-1 text-center font-medium">{set.order + 1}</div>
             <div className="col-span-4 sm:col-span-3">
               <div className="flex">
                 <input 
