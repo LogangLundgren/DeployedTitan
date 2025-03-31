@@ -3,6 +3,10 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { WorkoutWithDetails, Exercise } from "@shared/schema";
 import RecentWorkouts from "@/components/workout/RecentWorkouts";
+import PersonalRecords from "@/components/workout/PersonalRecords";
+import MonthlyComparison from "@/components/workout/MonthlyComparison";
+import WorkoutHeatmap from "@/components/workout/WorkoutHeatmap";
+import ExerciseFrequency from "@/components/workout/ExerciseFrequency";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, 
   Tooltip, Legend, ResponsiveContainer, Label
@@ -279,149 +283,191 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Progress Chart */}
-      <Card className="mb-6">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl">Exercise Progress</CardTitle>
-          <CardDescription>Track your progress over time</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {/* Exercise Selection */}
-            <div>
-              <label className="text-sm font-medium mb-1.5 text-gray-500 block">Select Exercise</label>
-              <Select
-                value={selectedExercise?.toString() || ''}
-                onValueChange={(value) => setSelectedExercise(parseInt(value))}
-                disabled={exercisesLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Exercise" />
-                </SelectTrigger>
-                <SelectContent>
-                  {exercises?.map(exercise => (
-                    <SelectItem key={exercise.id} value={exercise.id.toString()}>
-                      {exercise.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {/* Enhanced Analytics Dashboard */}
+      <Tabs defaultValue="progress" className="mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <CardTitle className="text-xl">Fitness Analytics</CardTitle>
+                <CardDescription>Advanced insights into your training data</CardDescription>
+              </div>
+              <TabsList>
+                <TabsTrigger value="progress">Progress</TabsTrigger>
+                <TabsTrigger value="records">Records</TabsTrigger>
+                <TabsTrigger value="comparison">Comparison</TabsTrigger>
+                <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
+                <TabsTrigger value="frequency">Frequency</TabsTrigger>
+              </TabsList>
             </div>
-            
-            {/* Date Range */}
-            <div>
-              <label className="text-sm font-medium mb-1.5 text-gray-500 block">Date Range</label>
-              <Select
-                value={dateRange.toString()}
-                onValueChange={(value) => setDateRange(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Date Range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">Last 7 days</SelectItem>
-                  <SelectItem value="30">Last 30 days</SelectItem>
-                  <SelectItem value="90">Last 90 days</SelectItem>
-                  <SelectItem value="365">Last year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          {/* Metrics Tabs */}
-          <Tabs
-            defaultValue="weight"
-            value={selectedMetric}
-            onValueChange={(value) => setSelectedMetric(value as MetricType)}
-            className="mb-6"
-          >
-            <TabsList className="grid grid-cols-3 mb-2">
-              <TabsTrigger value="weight">Weight</TabsTrigger>
-              <TabsTrigger value="reps">Reps</TabsTrigger>
-              <TabsTrigger value="volume">Volume</TabsTrigger>
-            </TabsList>
-            
-            <div className="h-72">
-              {chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={formatChartData()}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+          </CardHeader>
+          <CardContent className="pt-2 pb-4">
+            <TabsContent value="progress" className="mt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {/* Exercise Selection */}
+                <div>
+                  <label className="text-sm font-medium mb-1.5 text-gray-500 block">Select Exercise</label>
+                  <Select
+                    value={selectedExercise?.toString() || ''}
+                    onValueChange={(value) => setSelectedExercise(parseInt(value))}
+                    disabled={exercisesLoading}
                   >
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis 
-                      dataKey="formattedDate"
-                      stroke="#888888"
-                      fontSize={12}
-                    />
-                    <YAxis 
-                      stroke="#888888"
-                      fontSize={12}
-                      tickFormatter={(value) => 
-                        selectedMetric === 'volume' && value > 1000 
-                          ? `${(value/1000).toFixed(1)}k` 
-                          : value.toString()
-                      }
-                    >
-                      <Label
-                        value={selectedMetric === 'weight' ? 'Weight (lbs)' : selectedMetric === 'reps' ? 'Total Reps' : 'Volume'}
-                        angle={-90}
-                        position="insideLeft"
-                        style={{ textAnchor: 'middle', fontSize: '12px', fill: '#888888' }}
-                      />
-                    </YAxis>
-                    <Tooltip
-                      formatter={(value: number) => [
-                        value, 
-                        selectedMetric === 'weight' 
-                          ? 'Avg Weight (lbs)' 
-                          : selectedMetric === 'reps' 
-                            ? 'Total Reps' 
-                            : 'Volume (lbs)'
-                      ]}
-                    />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey={selectedMetric}
-                      stroke="hsl(240, 50%, 30%)"
-                      strokeWidth={2.5}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                      name={currentExerciseName}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center flex-col">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="48"
-                    height="48"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-gray-300 mb-2"
-                  >
-                    <path d="M3 3v18h18" />
-                    <path d="m19 9-5 5-4-4-3 3" />
-                  </svg>
-                  <p className="text-gray-400">
-                    {exercisesLoading || workoutsLoading
-                      ? "Loading data..."
-                      : selectedExercise 
-                        ? "No data available for selected exercise"
-                        : "Select an exercise to view progress"}
-                  </p>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Exercise" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {exercises?.map(exercise => (
+                        <SelectItem key={exercise.id} value={exercise.id.toString()}>
+                          {exercise.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </div>
-          </Tabs>
-        </CardContent>
-      </Card>
+                
+                {/* Date Range */}
+                <div>
+                  <label className="text-sm font-medium mb-1.5 text-gray-500 block">Date Range</label>
+                  <Select
+                    value={dateRange.toString()}
+                    onValueChange={(value) => setDateRange(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Date Range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7">Last 7 days</SelectItem>
+                      <SelectItem value="30">Last 30 days</SelectItem>
+                      <SelectItem value="90">Last 90 days</SelectItem>
+                      <SelectItem value="365">Last year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Metrics Selection */}
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium mb-1.5 text-gray-500 block">Metrics</label>
+                  <Tabs
+                    defaultValue="weight"
+                    value={selectedMetric}
+                    onValueChange={(value) => setSelectedMetric(value as MetricType)}
+                    className="w-full"
+                  >
+                    <TabsList className="grid grid-cols-3 w-full">
+                      <TabsTrigger value="weight">Weight</TabsTrigger>
+                      <TabsTrigger value="reps">Reps</TabsTrigger>
+                      <TabsTrigger value="volume">Volume</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+              </div>
+              
+              <div className="h-72">
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={formatChartData()}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis 
+                        dataKey="formattedDate"
+                        stroke="#888888"
+                        fontSize={12}
+                      />
+                      <YAxis 
+                        stroke="#888888"
+                        fontSize={12}
+                        tickFormatter={(value) => 
+                          selectedMetric === 'volume' && value > 1000 
+                            ? `${(value/1000).toFixed(1)}k` 
+                            : value.toString()
+                        }
+                      >
+                        <Label
+                          value={selectedMetric === 'weight' ? 'Weight (lbs)' : selectedMetric === 'reps' ? 'Total Reps' : 'Volume'}
+                          angle={-90}
+                          position="insideLeft"
+                          style={{ textAnchor: 'middle', fontSize: '12px', fill: '#888888' }}
+                        />
+                      </YAxis>
+                      <Tooltip
+                        formatter={(value: number) => [
+                          value, 
+                          selectedMetric === 'weight' 
+                            ? 'Avg Weight (lbs)' 
+                            : selectedMetric === 'reps' 
+                              ? 'Total Reps' 
+                              : 'Volume (lbs)'
+                        ]}
+                      />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey={selectedMetric}
+                        stroke="hsl(240, 50%, 30%)"
+                        strokeWidth={2.5}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                        name={currentExerciseName}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center flex-col">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="48"
+                      height="48"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-gray-300 mb-2"
+                    >
+                      <path d="M3 3v18h18" />
+                      <path d="m19 9-5 5-4-4-3 3" />
+                    </svg>
+                    <p className="text-gray-400">
+                      {exercisesLoading || workoutsLoading
+                        ? "Loading data..."
+                        : selectedExercise 
+                          ? "No data available for selected exercise"
+                          : "Select an exercise to view progress"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="records" className="mt-0">
+              <div className="py-2">
+                <PersonalRecords userId={userId} />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="comparison" className="mt-0">
+              <div className="py-2">
+                <MonthlyComparison userId={userId} />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="heatmap" className="mt-0">
+              <div className="py-2">
+                <WorkoutHeatmap userId={userId} />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="frequency" className="mt-0">
+              <div className="py-2">
+                <ExerciseFrequency userId={userId} />
+              </div>
+            </TabsContent>
+          </CardContent>
+        </Card>
+      </Tabs>
 
       <RecentWorkouts workouts={recentWorkouts?.slice(0, 3) || []} isLoading={workoutsLoading} />
     </main>
