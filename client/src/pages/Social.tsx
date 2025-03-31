@@ -92,7 +92,7 @@ function ActivityFeed() {
     queryFn: () => 
       // In a real implementation, this would fetch from a real endpoint
       // Here we'll use the user's workouts as demo data
-      fetch(`/api/workouts`).then(res => res.json()),
+      fetch(`/api/workouts?userId=1`).then(res => res.json()),
   });
 
   // Query public goals
@@ -218,13 +218,13 @@ function ActivityFeed() {
                       </div>
                       <div>
                         <div className="text-xl font-semibold">
-                          {workout.totalExercises || "?"}
+                          {"?"}
                         </div>
                         <div className="text-xs text-muted-foreground">Exercises</div>
                       </div>
                       <div>
                         <div className="text-xl font-semibold">
-                          {workout.volume ? `${workout.volume} lbs` : "?"}
+                          {"?"}
                         </div>
                         <div className="text-xs text-muted-foreground">Volume</div>
                       </div>
@@ -349,7 +349,7 @@ function ActivityFeed() {
                       <div className="flex justify-between text-sm mb-1">
                         <span>Progress</span>
                         <span>
-                          {goal.currentValue} / {goal.targetValue} {goal.metric}
+                          {goal.currentValue} / {goal.targetValue}
                         </span>
                       </div>
                       <Progress
@@ -358,8 +358,8 @@ function ActivityFeed() {
                       />
                     </div>
                     <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Started: {formatDate(goal.startDate)}</span>
-                      <span>Target: {formatDate(goal.targetDate)}</span>
+                      <span>Started: {goal.startDate ? formatDate(goal.startDate) : 'N/A'}</span>
+                      <span>Target: {goal.targetDate ? formatDate(goal.targetDate) : 'N/A'}</span>
                     </div>
                   </CardContent>
                   <CardFooter className="border-t pt-4 bg-muted/20">

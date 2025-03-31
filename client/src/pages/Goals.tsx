@@ -10,12 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -65,13 +59,24 @@ const GOAL_CATEGORIES = [
   { value: "performance", label: "Performance" },
 ];
 
+// Constants for goal metric types
+const METRIC_TYPES = [
+  { value: "weight", label: "Weight (lbs/kg)" },
+  { value: "reps", label: "Repetitions" },
+  { value: "sets", label: "Sets" },
+  { value: "time", label: "Time (minutes)" },
+  { value: "distance", label: "Distance (miles/km)" },
+  { value: "workouts", label: "Number of Workouts" },
+];
+
 // Form schema for creating a new goal
 const goalFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
   currentValue: z.coerce.number().min(0, "Current value must be 0 or higher"),
   targetValue: z.coerce.number().min(1, "Target value must be at least 1"),
-  metric: z.string().min(1, "Please specify a metric"),
+  exerciseId: z.number().nullable(),
+  metricType: z.string().min(1, "Please select a metric type"),
   targetDate: z.date({
     required_error: "Please select a target date",
   }),
@@ -92,7 +97,7 @@ export default function Goals() {
   const [isAddingMilestone, setIsAddingMilestone] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   
-  // Query goals
+  // Query all goals (both user's goals and public goals)
   const { data: goals = [], isLoading: goalsLoading } = useQuery({
     queryKey: ['/api/goals', userId],
     queryFn: () => fetch(`/api/goals?userId=${userId}`).then(res => res.json()),
@@ -108,7 +113,13 @@ export default function Goals() {
     enabled: !!selectedGoal,
   });
 
-  // Query public goals
+  // Query exercises for goal form
+  const { data: exercises = [], isLoading: exercisesLoading } = useQuery({
+    queryKey: ['/api/exercises'],
+    queryFn: () => fetch('/api/exercises').then(res => res.json()),
+  });
+
+  // Query public goals to include in the main list
   const { data: publicGoals = [], isLoading: publicGoalsLoading } = useQuery({
     queryKey: ['/api/goals/public'],
     queryFn: () => fetch('/api/goals/public').then(res => res.json()),
@@ -229,7 +240,8 @@ export default function Goals() {
       description: "",
       currentValue: 0,
       targetValue: 100,
-      metric: "",
+      exerciseId: null,
+      metricType: "",
       category: "",
       isPublic: false,
     },
@@ -283,7 +295,8 @@ export default function Goals() {
   };
 
   // Function to format dates
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | null) => {
+    if (!date) return 'No date set';
     return format(new Date(date), "MMM d, yyyy");
   };
 
@@ -293,579 +306,562 @@ export default function Goals() {
     progressForm.setValue("currentValue", goal.currentValue);
   };
 
+  // Helper function to get the metric type label
+  const getMetricTypeLabel = (type: string) => {
+    const metricType = METRIC_TYPES.find(m => m.value === type);
+    return metricType ? metricType.label.split(' ')[0] : type;
+  };
+
+  // Helper function to find exercise name
+  const getExerciseName = (exerciseId: number | null) => {
+    if (!exerciseId) return null;
+    const exercise = exercises.find((e: any) => e.id === exerciseId);
+    return exercise ? exercise.name : null;
+  };
+
+  // Combine user goals and public goals, removing duplicates
+  const allGoals = [...goals];
+  if (publicGoals.length > 0) {
+    publicGoals.forEach((publicGoal: any) => {
+      if (!allGoals.some(g => g.id === publicGoal.id)) {
+        allGoals.push(publicGoal);
+      }
+    });
+  }
+
   return (
     <main className="container py-6">
       <h1 className="text-3xl font-bold mb-8">Goals & Progress Tracking</h1>
       
-      <Tabs defaultValue="my-goals" className="mb-6">
-        <TabsList className="mb-4">
-          <TabsTrigger value="my-goals">My Goals</TabsTrigger>
-          <TabsTrigger value="discover">Discover</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="my-goals">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Your Active Goals</h2>
-            <Dialog open={isAddingGoal} onOpenChange={setIsAddingGoal}>
-              <DialogTrigger asChild>
-                <Button>Create New Goal</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Create New Goal</DialogTitle>
-                  <DialogDescription>
-                    Set a new fitness goal to track your progress over time.
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...goalForm}>
-                  <form onSubmit={goalForm.handleSubmit(onGoalSubmit)} className="space-y-4">
-                    <FormField
-                      control={goalForm.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Goal Title</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Squat 300 lbs" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={goalForm.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description (Optional)</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Add details about your goal..." 
-                              {...field} 
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={goalForm.control}
-                        name="currentValue"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Current Value</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={goalForm.control}
-                        name="targetValue"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Target Value</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={goalForm.control}
-                      name="metric"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Metric</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., pounds, miles, workouts" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={goalForm.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Category</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {GOAL_CATEGORIES.map((category) => (
-                                <SelectItem key={category.value} value={category.value}>
-                                  {category.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={goalForm.control}
-                      name="targetDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Target Date</FormLabel>
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
-                            className="rounded-md border"
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold">All Goals</h2>
+          <Dialog open={isAddingGoal} onOpenChange={setIsAddingGoal}>
+            <DialogTrigger asChild>
+              <Button>Create New Goal</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Create New Goal</DialogTitle>
+                <DialogDescription>
+                  Set a new fitness goal to track your progress over time.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...goalForm}>
+                <form onSubmit={goalForm.handleSubmit(onGoalSubmit)} className="space-y-4">
+                  <FormField
+                    control={goalForm.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Goal Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Squat 300 lbs" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={goalForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Add details about your goal..." 
+                            {...field} 
+                            value={field.value || ""}
                           />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={goalForm.control}
+                      name="currentValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Current Value</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     <FormField
                       control={goalForm.control}
-                      name="isPublic"
+                      name="targetValue"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormItem>
+                          <FormLabel>Target Value</FormLabel>
                           <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
+                            <Input type="number" {...field} />
                           </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>Make this goal public</FormLabel>
-                            <FormDescription>
-                              Public goals are visible to others and can inspire the community.
-                            </FormDescription>
-                          </div>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <DialogFooter>
-                      <Button 
-                        type="submit" 
-                        disabled={createGoalMutation.isPending}
-                      >
-                        {createGoalMutation.isPending ? "Creating..." : "Create Goal"}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {goalsLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader className="h-32 bg-gray-100"></CardHeader>
-                  <CardContent className="h-24 py-4">
-                    <div className="h-4 bg-gray-100 mb-2 rounded"></div>
-                    <div className="h-4 bg-gray-100 w-3/4 rounded"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : goals.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <div className="rounded-full bg-primary/10 p-6 mb-4">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-primary"
-                  >
-                    <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium mb-2">No Active Goals</h3>
-                <p className="text-center text-muted-foreground mb-6">
-                  Create your first fitness goal to start tracking your progress.
-                </p>
-                <Button onClick={() => setIsAddingGoal(true)}>
-                  Create Your First Goal
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {goals.map((goal: Goal) => (
-                <Card key={goal.id} className="overflow-hidden">
-                  <CardHeader className="pb-4">
-                    <div className="flex justify-between">
-                      <Badge variant={goal.isPublic ? "default" : "outline"}>
-                        {goal.isPublic ? "Public" : "Private"}
-                      </Badge>
-                      <Badge variant="secondary">{goal.category}</Badge>
-                    </div>
-                    <CardTitle className="mt-2">{goal.title}</CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {goal.description || "No description provided"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pb-4">
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Progress</span>
-                        <span>
-                          {goal.currentValue} / {goal.targetValue} {goal.metric}
-                        </span>
-                      </div>
-                      <Progress
-                        value={calculateProgress(goal.currentValue, goal.targetValue)}
-                        className="h-2"
-                      />
-                    </div>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Started: {formatDate(goal.startDate)}</span>
-                      <span>Target: {formatDate(goal.targetDate)}</span>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="border-t pt-4 bg-muted/20">
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => viewGoalDetails(goal)}
-                    >
-                      View Details
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {selectedGoal && (
-            <Dialog 
-              open={!!selectedGoal} 
-              onOpenChange={(open) => !open && setSelectedGoal(null)}
-            >
-              <DialogContent className="sm:max-w-[700px]">
-                <DialogHeader>
-                  <div className="flex items-center justify-between">
-                    <DialogTitle className="text-xl">{selectedGoal.title}</DialogTitle>
-                    <Badge variant={selectedGoal.isPublic ? "default" : "outline"}>
-                      {selectedGoal.isPublic ? "Public" : "Private"}
-                    </Badge>
                   </div>
-                  <DialogDescription>
-                    {selectedGoal.description || "No description provided"}
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-6">
-                  {/* Progress section */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-3">Current Progress</h3>
-                    <div className="mb-3">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>
-                          {calculateProgress(selectedGoal.currentValue, selectedGoal.targetValue)}% Complete
-                        </span>
-                        <span>
-                          {selectedGoal.currentValue} / {selectedGoal.targetValue} {selectedGoal.metric}
-                        </span>
-                      </div>
-                      <Progress
-                        value={calculateProgress(selectedGoal.currentValue, selectedGoal.targetValue)}
-                      />
-                    </div>
-                    <div className="flex gap-4 text-sm text-muted-foreground">
-                      <span>Started: {formatDate(selectedGoal.startDate)}</span>
-                      <span>Target: {formatDate(selectedGoal.targetDate)}</span>
-                      <span>Category: {selectedGoal.category}</span>
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  {/* Update progress form */}
-                  <div>
-                    <h3 className="text-lg font-medium mb-3">Update Progress</h3>
-                    <form 
-                      onSubmit={progressForm.handleSubmit(onProgressSubmit)}
-                      className="flex items-end gap-4"
-                    >
-                      <div className="flex-1">
-                        <label className="text-sm font-medium mb-1.5 block">
-                          Current Value
-                        </label>
-                        <Input
-                          type="number"
-                          {...progressForm.register("currentValue")}
-                          defaultValue={selectedGoal.currentValue}
+                  <FormField
+                    control={goalForm.control}
+                    name="exerciseId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Exercise (Optional)</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(value ? parseInt(value) : null)} 
+                          value={field.value?.toString() || ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an exercise (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">No specific exercise</SelectItem>
+                            {exercisesLoading ? (
+                              <SelectItem value="" disabled>Loading exercises...</SelectItem>
+                            ) : exercises.map((exercise: any) => (
+                              <SelectItem key={exercise.id} value={exercise.id.toString()}>
+                                {exercise.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Select a specific exercise to track or leave blank for general goals
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={goalForm.control}
+                    name="metricType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Metric Type</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a metric type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {METRIC_TYPES.map((metric) => (
+                              <SelectItem key={metric.value} value={metric.value}>
+                                {metric.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={goalForm.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {GOAL_CATEGORIES.map((category) => (
+                              <SelectItem key={category.value} value={category.value}>
+                                {category.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={goalForm.control}
+                    name="targetDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Target Date</FormLabel>
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date()}
+                          className="rounded-md border"
                         />
-                      </div>
-                      <Button 
-                        type="submit" 
-                        disabled={updateGoalProgressMutation.isPending}
-                        className="mb-0"
-                      >
-                        {updateGoalProgressMutation.isPending ? "Updating..." : "Update Progress"}
-                      </Button>
-                    </form>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={goalForm.control}
+                    name="isPublic"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Make this goal public</FormLabel>
+                          <FormDescription>
+                            Public goals are visible to others and can inspire the community.
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button 
+                      type="submit" 
+                      disabled={createGoalMutation.isPending}
+                    >
+                      {createGoalMutation.isPending ? "Creating..." : "Create Goal"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {goalsLoading || publicGoalsLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader className="h-32 bg-gray-100"></CardHeader>
+                <CardContent className="h-24 py-4">
+                  <div className="h-4 bg-gray-100 mb-2 rounded"></div>
+                  <div className="h-4 bg-gray-100 w-3/4 rounded"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : allGoals.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <div className="rounded-full bg-primary/10 p-6 mb-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-primary"
+                >
+                  <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium mb-2">No Goals Found</h3>
+              <p className="text-center text-muted-foreground mb-6">
+                Create your first fitness goal to start tracking your progress.
+              </p>
+              <Button onClick={() => setIsAddingGoal(true)}>
+                Create Your First Goal
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {allGoals.map((goal: Goal) => (
+              <Card key={goal.id} className="overflow-hidden">
+                <CardHeader className="pb-4">
+                  <div className="flex justify-between">
+                    <Badge variant={goal.isPublic ? "default" : "outline"}>
+                      {goal.isPublic ? "Public" : "Private"}
+                    </Badge>
+                    <Badge variant="secondary">{goal.category}</Badge>
                   </div>
-                  
-                  <Separator />
-                  
-                  {/* Milestones section */}
-                  <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="text-lg font-medium">Milestones</h3>
-                      <Dialog open={isAddingMilestone} onOpenChange={setIsAddingMilestone}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            Add Milestone
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Add Milestone</DialogTitle>
-                            <DialogDescription>
-                              Create a milestone to track key achievements toward your goal.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <Form {...milestoneForm}>
-                            <form onSubmit={milestoneForm.handleSubmit(onMilestoneSubmit)} className="space-y-4">
-                              <FormField
-                                control={milestoneForm.control}
-                                name="title"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Milestone Title</FormLabel>
-                                    <FormControl>
-                                      <Input placeholder="e.g., Halfway there!" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <FormField
-                                control={milestoneForm.control}
-                                name="targetValue"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Target Value</FormLabel>
-                                    <FormControl>
-                                      <Input 
-                                        type="number" 
-                                        placeholder={`A value between 1 and ${selectedGoal.targetValue}`}
-                                        {...field} 
-                                      />
-                                    </FormControl>
-                                    <FormDescription>
-                                      This is the value at which this milestone will be considered achieved.
-                                    </FormDescription>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <FormField
-                                control={milestoneForm.control}
-                                name="description"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Description (Optional)</FormLabel>
-                                    <FormControl>
-                                      <Textarea 
-                                        placeholder="Add details about this milestone..." 
-                                        {...field} 
-                                        value={field.value || ""}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <DialogFooter>
-                                <Button 
-                                  type="submit" 
-                                  disabled={createMilestoneMutation.isPending}
-                                >
-                                  {createMilestoneMutation.isPending ? "Adding..." : "Add Milestone"}
-                                </Button>
-                              </DialogFooter>
-                            </form>
-                          </Form>
-                        </DialogContent>
-                      </Dialog>
+                  <CardTitle className="mt-2">{goal.title}</CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {goal.description || "No description provided"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Progress</span>
+                      <span>
+                        {goal.currentValue} / {goal.targetValue} {getMetricTypeLabel(goal.metricType)}
+                      </span>
                     </div>
-                    
-                    {milestonesLoading ? (
-                      <div className="space-y-2">
-                        {[...Array(3)].map((_, i) => (
-                          <div key={i} className="p-3 border rounded-md animate-pulse">
-                            <div className="h-4 bg-gray-100 mb-2 rounded w-1/2"></div>
-                            <div className="h-3 bg-gray-100 rounded w-3/4"></div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : milestones.length === 0 ? (
-                      <div className="text-center p-6 border border-dashed rounded-md">
-                        <p className="text-muted-foreground">
-                          No milestones created yet. Add milestones to track key achievements toward your goal.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {milestones.map((milestone: Milestone) => (
-                          <div 
-                            key={milestone.id} 
-                            className={`p-3 border rounded-md ${
-                              milestone.isCompleted ? "bg-primary/5 border-primary/20" : ""
-                            }`}
-                          >
-                            <div className="flex justify-between items-start mb-1">
-                              <h4 className="font-medium">{milestone.title}</h4>
-                              {milestone.isCompleted ? (
-                                <Badge variant="default">Completed</Badge>
-                              ) : (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => handleCompleteMilestone(milestone.id)}
-                                  disabled={completeMilestoneMutation.isPending}
-                                >
-                                  Mark Complete
-                                </Button>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-1">
-                              Target: {milestone.targetValue} {selectedGoal.metric}
-                            </p>
-                            {milestone.description && (
-                              <p className="text-sm mt-2">{milestone.description}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                    <Progress
+                      value={calculateProgress(goal.currentValue, goal.targetValue)}
+                      className="h-2"
+                    />
+                  </div>
+                  {goal.exerciseId && (
+                    <div className="mb-2 text-sm">
+                      <span className="font-medium">Exercise: </span>
+                      <span>{getExerciseName(goal.exerciseId)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Started: {formatDate(goal.startDate)}</span>
+                    <span>Target: {formatDate(goal.targetDate)}</span>
+                  </div>
+                </CardContent>
+                <CardFooter className="border-t pt-4 bg-muted/20">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => viewGoalDetails(goal)}
+                  >
+                    View Details
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {selectedGoal && (
+          <Dialog 
+            open={!!selectedGoal} 
+            onOpenChange={(open) => !open && setSelectedGoal(null)}
+          >
+            <DialogContent className="sm:max-w-[700px]">
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <DialogTitle className="text-xl">{selectedGoal.title}</DialogTitle>
+                  <Badge variant={selectedGoal.isPublic ? "default" : "outline"}>
+                    {selectedGoal.isPublic ? "Public" : "Private"}
+                  </Badge>
+                </div>
+                <DialogDescription>
+                  {selectedGoal.description || "No description provided"}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-6">
+                {/* Progress section */}
+                <div>
+                  <h3 className="text-lg font-medium mb-3">Current Progress</h3>
+                  <div className="mb-3">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>
+                        {calculateProgress(selectedGoal.currentValue, selectedGoal.targetValue)}% Complete
+                      </span>
+                      <span>
+                        {selectedGoal.currentValue} / {selectedGoal.targetValue} {getMetricTypeLabel(selectedGoal.metricType)}
+                      </span>
+                    </div>
+                    <Progress
+                      value={calculateProgress(selectedGoal.currentValue, selectedGoal.targetValue)}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <span>Started: {formatDate(selectedGoal.startDate)}</span>
+                    <span>Target: {formatDate(selectedGoal.targetDate)}</span>
+                    <span>Category: {selectedGoal.category}</span>
+                    {selectedGoal.exerciseId && (
+                      <span>Exercise: {getExerciseName(selectedGoal.exerciseId)}</span>
                     )}
                   </div>
                 </div>
-              </DialogContent>
-            </Dialog>
-          )}
-        </TabsContent>
-
-        <TabsContent value="discover">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-4">Community Goals</h2>
-            <p className="text-muted-foreground mb-6">
-              Explore goals shared by other athletes for inspiration. Find people with similar fitness interests.
-            </p>
-            
-            {publicGoalsLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[...Array(3)].map((_, i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardHeader className="h-32 bg-gray-100"></CardHeader>
-                    <CardContent className="h-24 py-4">
-                      <div className="h-4 bg-gray-100 mb-2 rounded"></div>
-                      <div className="h-4 bg-gray-100 w-3/4 rounded"></div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : publicGoals.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <div className="rounded-full bg-primary/10 p-6 mb-4">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-primary"
+                
+                <Separator />
+                
+                {/* Update progress form */}
+                <div>
+                  <h3 className="text-lg font-medium mb-3">Update Progress</h3>
+                  <form 
+                    onSubmit={progressForm.handleSubmit(onProgressSubmit)}
+                    className="flex items-end gap-4"
+                  >
+                    <div className="flex-1">
+                      <label className="text-sm font-medium mb-1.5 block">
+                        Current Value
+                      </label>
+                      <Input
+                        type="number"
+                        {...progressForm.register("currentValue")}
+                        defaultValue={selectedGoal.currentValue}
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      disabled={updateGoalProgressMutation.isPending}
+                      className="mb-0"
                     >
-                      <path d="M17 6.1H3" />
-                      <path d="M21 12.1H3" />
-                      <path d="M15.5 18.1H3" />
-                    </svg>
+                      {updateGoalProgressMutation.isPending ? "Updating..." : "Update Progress"}
+                    </Button>
+                  </form>
+                </div>
+                
+                <Separator />
+                
+                {/* Milestones section */}
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-lg font-medium">Milestones</h3>
+                    <Dialog open={isAddingMilestone} onOpenChange={setIsAddingMilestone}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          Add Milestone
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add Milestone</DialogTitle>
+                          <DialogDescription>
+                            Create a milestone to track key achievements toward your goal.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <Form {...milestoneForm}>
+                          <form onSubmit={milestoneForm.handleSubmit(onMilestoneSubmit)} className="space-y-4">
+                            <FormField
+                              control={milestoneForm.control}
+                              name="title"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Milestone Title</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Halfway there!" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={milestoneForm.control}
+                              name="targetValue"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Target Value</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="number" 
+                                      placeholder={`Should be between ${selectedGoal.currentValue} and ${selectedGoal.targetValue}`}
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    This value represents the point at which the milestone is achieved
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={milestoneForm.control}
+                              name="description"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Description (Optional)</FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      placeholder="Add details about this milestone..."
+                                      {...field}
+                                      value={field.value || ""}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <DialogFooter>
+                              <Button 
+                                type="submit"
+                                disabled={createMilestoneMutation.isPending}
+                              >
+                                {createMilestoneMutation.isPending ? "Creating..." : "Create Milestone"}
+                              </Button>
+                            </DialogFooter>
+                          </form>
+                        </Form>
+                      </DialogContent>
+                    </Dialog>
                   </div>
-                  <h3 className="text-lg font-medium mb-2">No Public Goals Yet</h3>
-                  <p className="text-center text-muted-foreground mb-6">
-                    Be the first to share your fitness goals with the community!
-                  </p>
-                  <Button onClick={() => setIsAddingGoal(true)}>
-                    Create a Public Goal
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {publicGoals.map((goal: Goal) => (
-                  <Card key={goal.id}>
-                    <CardHeader className="pb-4">
-                      <div className="flex justify-between items-start">
-                        <Badge>{goal.category}</Badge>
-                        <div className="text-sm text-muted-foreground">
-                          By {goal.userId === userId ? 'You' : 'User ' + goal.userId}
-                        </div>
-                      </div>
-                      <CardTitle className="mt-2">{goal.title}</CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {goal.description || "No description provided"}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pb-4">
-                      <div className="mb-4">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Progress</span>
-                          <span>
-                            {goal.currentValue} / {goal.targetValue} {goal.metric}
-                          </span>
-                        </div>
-                        <Progress
-                          value={calculateProgress(goal.currentValue, goal.targetValue)}
-                          className="h-2"
-                        />
-                      </div>
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>Started: {formatDate(goal.startDate)}</span>
-                        <span>Target: {formatDate(goal.targetDate)}</span>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="border-t pt-4 bg-muted/20">
+                  
+                  {milestonesLoading ? (
+                    <div className="space-y-3">
+                      {[...Array(2)].map((_, i) => (
+                        <div key={i} className="bg-muted h-16 rounded-md animate-pulse"></div>
+                      ))}
+                    </div>
+                  ) : milestones.length === 0 ? (
+                    <div className="text-center py-8 border rounded-md bg-muted/10">
+                      <p className="text-muted-foreground mb-2">No milestones yet</p>
                       <Button 
                         variant="ghost" 
-                        className="w-full text-primary"
+                        size="sm" 
+                        onClick={() => setIsAddingMilestone(true)}
                       >
-                        Follow Progress
+                        Create your first milestone
                       </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {milestones.sort((a: Milestone, b: Milestone) => a.targetValue - b.targetValue).map((milestone: Milestone) => (
+                        <div 
+                          key={milestone.id}
+                          className={`p-4 rounded-md border flex items-start justify-between ${milestone.isCompleted ? 'bg-primary/5 border-primary/20' : 'bg-card'}`}
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium">{milestone.title}</h4>
+                              {milestone.isCompleted && (
+                                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                                  Completed
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Target: {milestone.targetValue} {getMetricTypeLabel(selectedGoal.metricType)}
+                            </p>
+                            {milestone.description && (
+                              <p className="text-sm mt-1">{milestone.description}</p>
+                            )}
+                            {milestone.completedDate && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Completed on {formatDate(milestone.completedDate)}
+                              </p>
+                            )}
+                          </div>
+                          {!milestone.isCompleted && selectedGoal.currentValue >= milestone.targetValue && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleCompleteMilestone(milestone.id)}
+                              disabled={completeMilestoneMutation.isPending}
+                            >
+                              Mark Complete
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
     </main>
   );
 }
