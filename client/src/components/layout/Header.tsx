@@ -1,17 +1,26 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import { Link } from "wouter";
+import { NotificationDropdown } from "../notifications/NotificationDropdown";
 
 export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   
-  // In a real app, this would check for an authenticated session
-  // For now, we'll just fetch the demo user
-  const { data: user } = useQuery<User>({
-    queryKey: ['/api/auth/demo'],
-    queryFn: () => ({ id: 1, username: 'demo', name: 'John Smith', email: 'demo@example.com', password: '' })
-  });
+  // Demo user data with all required fields
+  const user: User = {
+    id: 1,
+    username: 'demo',
+    name: 'John Smith',
+    email: 'demo@example.com',
+    password: '',
+    bio: null,
+    location: null,
+    fitnessLevel: null,
+    experienceYears: null,
+    goals: null,
+    certifications: null,
+    socialMedia: null
+  };
   
   return (
     <header className="bg-gradient-to-r from-primary to-primary/90 text-white shadow-md">
@@ -37,23 +46,7 @@ export default function Header() {
         </div>
         
         <div className="flex items-center gap-4">
-          <button className="p-2 rounded-full hover:bg-white/10 transition-colors relative">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-            </svg>
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">2</span>
-          </button>
+          <NotificationDropdown />
           
           <div className="relative">
             <button 
@@ -61,7 +54,7 @@ export default function Header() {
               onClick={() => setDropdownOpen(!dropdownOpen)}
             >
               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-medium shadow-sm">
-                {user?.name?.split(' ').map(n => n[0]).join('') || 'JS'}
+                {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'JS'}
               </div>
               <span className="font-medium">{user?.name || 'John Smith'}</span>
               <svg

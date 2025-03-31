@@ -9,6 +9,7 @@ import {
   insertExerciseSchema,
   insertTemplateSchema,
   insertTemplateExerciseSchema,
+  insertNotificationSchema,
   Workout,
   TemplateExercise,
   WorkoutWithDetails
@@ -744,6 +745,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(workoutWithDetails);
     } catch (error) {
       console.error("Create workout from template error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Notification routes
+  app.get("/api/notifications", async (req, res) => {
+    try {
+      const userId = parseInt(req.query.userId as string);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
+      }
+      
+      const notifications = await storage.getNotifications(userId);
+      
+      res.status(200).json(notifications);
+    } catch (error) {
+      console.error("Get notifications error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/notifications/unread-count", async (req, res) => {
+    try {
+      const userId = parseInt(req.query.userId as string);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
+      }
+      
+      const count = await storage.getUnreadNotificationsCount(userId);
+      
+      res.status(200).json({ count });
+    } catch (error) {
+      console.error("Get unread notifications count error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/notifications", async (req, res) => {
+    try {
+      const notificationData = insertNotificationSchema.safeParse(req.body);
+      
+      if (!notificationData.success) {
+        return res.status(400).json({ message: "Invalid notification data", errors: notificationData.error.errors });
+      }
+      
+      const notification = await storage.createNotification(notificationData.data);
+      
+      res.status(201).json(notification);
+    } catch (error) {
+      console.error("Create notification error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.patch("/api/notifications/:id/mark-read", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid notification ID is required" });
+      }
+      
+      const notification = await storage.markNotificationAsRead(id);
+      
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      
+      res.status(200).json(notification);
+    } catch (error) {
+      console.error("Mark notification as read error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.patch("/api/notifications/mark-all-read", async (req, res) => {
+    try {
+      const userId = parseInt(req.body.userId as string);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
+      }
+      
+      const success = await storage.markAllNotificationsAsRead(userId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "No unread notifications found" });
+      }
+      
+      res.status(200).json({ message: "All notifications marked as read" });
+    } catch (error) {
+      console.error("Mark all notifications as read error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

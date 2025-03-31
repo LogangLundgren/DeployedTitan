@@ -6,6 +6,7 @@ import {
   sets, type Set, type InsertSet,
   templates, type Template, type InsertTemplate,
   templateExercises, type TemplateExercise, type InsertTemplateExercise,
+  notifications, type Notification, type InsertNotification,
   type WorkoutWithDetails, type TemplateWithExercises
 } from "@shared/schema";
 import { eq, desc, and } from 'drizzle-orm';
@@ -53,6 +54,13 @@ export interface IStorage {
   deleteTemplateExercise(id: number): Promise<boolean>;
   updateTemplateExercise(id: number, templateExercise: Partial<TemplateExercise>): Promise<TemplateExercise | undefined>;
   
+  // Notification operations
+  getNotifications(userId: number): Promise<Notification[]>;
+  getUnreadNotificationsCount(userId: number): Promise<number>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationAsRead(id: number): Promise<Notification | undefined>;
+  markAllNotificationsAsRead(userId: number): Promise<boolean>;
+  
   // DB-specific method
   initialize?(): Promise<void>;
 }
@@ -65,6 +73,7 @@ export class MemStorage implements IStorage {
   private sets: Map<number, Set>;
   private templates: Map<number, Template>;
   private templateExercises: Map<number, TemplateExercise>;
+  private notifications: Map<number, Notification>;
   
   private userCurrentId: number;
   private exerciseCurrentId: number;
@@ -73,6 +82,7 @@ export class MemStorage implements IStorage {
   private setCurrentId: number;
   private templateCurrentId: number;
   private templateExerciseCurrentId: number;
+  private notificationCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -82,6 +92,7 @@ export class MemStorage implements IStorage {
     this.sets = new Map();
     this.templates = new Map();
     this.templateExercises = new Map();
+    this.notifications = new Map();
     
     this.userCurrentId = 1;
     this.exerciseCurrentId = 1;
@@ -90,6 +101,7 @@ export class MemStorage implements IStorage {
     this.setCurrentId = 1;
     this.templateCurrentId = 1;
     this.templateExerciseCurrentId = 1;
+    this.notificationCurrentId = 1;
     
     // Add some default exercises
     this.seedDefaultExercises();
@@ -411,6 +423,54 @@ export class MemStorage implements IStorage {
   
   async deleteTemplateExercise(id: number): Promise<boolean> {
     return this.templateExercises.delete(id);
+  }
+  
+  // Notification operations
+  async getNotifications(userId: number): Promise<Notification[]> {
+    return Array.from(this.notifications.values())
+      .filter(notification => notification.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getUnreadNotificationsCount(userId: number): Promise<number> {
+    return Array.from(this.notifications.values())
+      .filter(notification => notification.userId === userId && !notification.isRead)
+      .length;
+  }
+  
+  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
+    const id = this.notificationCurrentId++;
+    const notification: Notification = {
+      ...insertNotification,
+      id,
+      isRead: false,
+      createdAt: new Date(),
+      link: insertNotification.link ?? null
+    };
+    this.notifications.set(id, notification);
+    return notification;
+  }
+  
+  async markNotificationAsRead(id: number): Promise<Notification | undefined> {
+    const notification = this.notifications.get(id);
+    if (!notification) return undefined;
+    
+    const updatedNotification = { ...notification, isRead: true };
+    this.notifications.set(id, updatedNotification);
+    return updatedNotification;
+  }
+  
+  async markAllNotificationsAsRead(userId: number): Promise<boolean> {
+    const userNotifications = Array.from(this.notifications.values())
+      .filter(notification => notification.userId === userId && !notification.isRead);
+      
+    if (userNotifications.length === 0) return false;
+    
+    userNotifications.forEach(notification => {
+      this.notifications.set(notification.id, { ...notification, isRead: true });
+    });
+    
+    return true;
   }
   
   // Seed default exercises
@@ -784,6 +844,54 @@ export class DbStorage implements IStorage {
       return result.length > 0;
     } catch (error) {
       console.error('Error deleting template exercise:', error);
+      return false;
+    }
+  }
+  
+  // Notification operations
+  async getNotifications(userId: number): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+  
+  async getUnreadNotificationsCount(userId: number): Promise<number> {
+    const unreadNotifications = await db
+      .select()
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+      
+    return unreadNotifications.length;
+  }
+  
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const result = await db.insert(notifications).values(notification).returning();
+    return result[0];
+  }
+  
+  async markNotificationAsRead(id: number): Promise<Notification | undefined> {
+    const result = await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, id))
+      .returning();
+      
+    return result[0];
+  }
+  
+  async markAllNotificationsAsRead(userId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .update(notifications)
+        .set({ isRead: true })
+        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)))
+        .returning();
+        
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
       return false;
     }
   }

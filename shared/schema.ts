@@ -173,3 +173,24 @@ export interface TemplateWithExercises extends Template {
     exerciseDetails: Exercise;
   })[];
 }
+
+// Notifications model
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull(), // "info", "success", "warning", "error"
+  isRead: boolean("is_read").default(false),
+  link: text("link"), // Optional link to navigate to
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).pick({
+  userId: true,
+  message: true,
+  type: true,
+  link: true,
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
