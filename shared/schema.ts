@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, real, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -240,3 +240,33 @@ export const insertMilestoneSchema = createInsertSchema(milestones);
 
 export type Milestone = typeof milestones.$inferSelect;
 export type InsertMilestone = z.infer<typeof insertMilestoneSchema>;
+
+// Media files schema
+export const mediaFiles = pgTable("media_files", {
+  id: serial("id").primaryKey(),
+  workoutId: integer("workout_id").references(() => workouts.id, { onDelete: "cascade" }),
+  workoutExerciseId: integer("workout_exercise_id").references(() => workoutExercises.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  fileType: varchar("file_type", { length: 10 }).notNull(), // "image" or "video"
+  fileUrl: text("file_url").notNull(),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size"), // size in bytes
+  mimeType: varchar("mime_type", { length: 255 }),
+  caption: text("caption"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMediaFileSchema = createInsertSchema(mediaFiles).pick({
+  workoutId: true,
+  workoutExerciseId: true,
+  userId: true,
+  fileType: true,
+  fileUrl: true,
+  fileName: true,
+  fileSize: true,
+  mimeType: true,
+  caption: true,
+});
+
+export type MediaFile = typeof mediaFiles.$inferSelect;
+export type InsertMediaFile = z.infer<typeof insertMediaFileSchema>;

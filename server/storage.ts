@@ -9,9 +9,10 @@ import {
   notifications, type Notification, type InsertNotification,
   goals, type Goal, type InsertGoal,
   milestones, type Milestone, type InsertMilestone,
+  mediaFiles, type MediaFile, type InsertMediaFile,
   type WorkoutWithDetails, type TemplateWithExercises
 } from "@shared/schema";
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, asc, sql } from 'drizzle-orm';
 import { db } from './db';
 
 export interface IStorage {
@@ -79,6 +80,12 @@ export interface IStorage {
   deleteMilestone(id: number): Promise<boolean>;
   completeMilestone(id: number): Promise<Milestone | undefined>;
   
+  // Media file operations
+  getMediaFiles(workoutId: number): Promise<MediaFile[]>;
+  getMediaFilesByExercise(workoutExerciseId: number): Promise<MediaFile[]>;
+  createMediaFile(mediaFile: InsertMediaFile): Promise<MediaFile>;
+  deleteMediaFile(id: number): Promise<boolean>;
+  
   // DB-specific method
   initialize?(): Promise<void>;
 }
@@ -94,6 +101,7 @@ export class MemStorage implements IStorage {
   private notifications: Map<number, Notification>;
   private goals: Map<number, Goal>;
   private milestones: Map<number, Milestone>;
+  private mediaFiles: Map<number, MediaFile>;
   
   private userCurrentId: number;
   private exerciseCurrentId: number;
@@ -105,6 +113,7 @@ export class MemStorage implements IStorage {
   private notificationCurrentId: number;
   private goalCurrentId: number;
   private milestoneCurrentId: number;
+  private mediaFileCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -117,6 +126,7 @@ export class MemStorage implements IStorage {
     this.notifications = new Map();
     this.goals = new Map();
     this.milestones = new Map();
+    this.mediaFiles = new Map();
     
     this.userCurrentId = 1;
     this.exerciseCurrentId = 1;
@@ -128,6 +138,7 @@ export class MemStorage implements IStorage {
     this.notificationCurrentId = 1;
     this.goalCurrentId = 1;
     this.milestoneCurrentId = 1;
+    this.mediaFileCurrentId = 1;
     
     // Add some default exercises
     this.seedDefaultExercises();
@@ -690,6 +701,48 @@ export class MemStorage implements IStorage {
     return completedMilestone;
   }
   
+  // Media file operations
+  async getMediaFiles(workoutId: number): Promise<MediaFile[]> {
+    return Array.from(this.mediaFiles.values())
+      .filter(file => file.workoutId === workoutId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getMediaFilesByExercise(workoutExerciseId: number): Promise<MediaFile[]> {
+    return Array.from(this.mediaFiles.values())
+      .filter(file => file.workoutExerciseId === workoutExerciseId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async createMediaFile(insertMediaFile: InsertMediaFile): Promise<MediaFile> {
+    const id = this.mediaFileCurrentId++;
+    const mediaFile: MediaFile = {
+      ...insertMediaFile,
+      id,
+      workoutId: insertMediaFile.workoutId ?? null,
+      workoutExerciseId: insertMediaFile.workoutExerciseId ?? null,
+      fileSize: insertMediaFile.fileSize ?? null,
+      mimeType: insertMediaFile.mimeType ?? null,
+      caption: insertMediaFile.caption ?? null,
+      createdAt: new Date()
+    };
+    this.mediaFiles.set(id, mediaFile);
+    
+    // Create a notification for the new media upload
+    await this.createNotification({
+      userId: mediaFile.userId,
+      title: "Media Upload",
+      message: `You've uploaded a new ${mediaFile.fileType} to your workout`,
+      type: "info"
+    });
+    
+    return mediaFile;
+  }
+  
+  async deleteMediaFile(id: number): Promise<boolean> {
+    return this.mediaFiles.delete(id);
+  }
+  
   // Seed default exercises
   private seedDefaultExercises() {
     const defaultExercises: Omit<Exercise, 'id'>[] = [
@@ -736,6 +789,66 @@ export class MemStorage implements IStorage {
 export class DbStorage implements IStorage {
   constructor() {
     // The db is imported from server/db.ts
+  }
+  
+  // Media file operations
+  async getMediaFiles(workoutId: number): Promise<MediaFile[]> {
+    try {
+      return await db
+        .select()
+        .from(mediaFiles)
+        .where(eq(mediaFiles.workoutId, workoutId))
+        .orderBy(desc(mediaFiles.createdAt));
+    } catch (error) {
+      console.error("Error getting media files:", error);
+      return [];
+    }
+  }
+  
+  async getMediaFilesByExercise(workoutExerciseId: number): Promise<MediaFile[]> {
+    try {
+      return await db
+        .select()
+        .from(mediaFiles)
+        .where(eq(mediaFiles.workoutExerciseId, workoutExerciseId))
+        .orderBy(desc(mediaFiles.createdAt));
+    } catch (error) {
+      console.error("Error getting media files by exercise:", error);
+      return [];
+    }
+  }
+  
+  async createMediaFile(mediaFile: InsertMediaFile): Promise<MediaFile> {
+    try {
+      const result = await db.insert(mediaFiles).values(mediaFile).returning();
+      
+      // Create notification
+      await this.createNotification({
+        userId: mediaFile.userId,
+        title: "Media Upload",
+        message: `You've uploaded a new ${mediaFile.fileType} to your workout`,
+        type: "info"
+      });
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error creating media file:", error);
+      throw error;
+    }
+  }
+  
+  async deleteMediaFile(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(mediaFiles)
+        .where(eq(mediaFiles.id, id))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting media file:", error);
+      return false;
+    }
   }
   
   // User operations
@@ -1247,13 +1360,13 @@ export class DbStorage implements IStorage {
       const progressPercentage = Math.floor((currentValue / goal.targetValue) * 100);
       const previousPercentage = Math.floor((previousValue / goal.targetValue) * 100);
       
-      const milestones = [25, 50, 75];
-      for (const milestone of milestones) {
-        if (progressPercentage >= milestone && previousPercentage < milestone) {
+      const milestonePercentages = [25, 50, 75];
+      for (const percentage of milestonePercentages) {
+        if (progressPercentage >= percentage && previousPercentage < percentage) {
           await this.createNotification({
             userId: goal.userId,
-            title: `${milestone}% Progress! 💪`,
-            message: `You've reached ${milestone}% of your goal: ${goal.title}`,
+            title: `${percentage}% Progress! 💪`,
+            message: `You've reached ${percentage}% of your goal: ${goal.title}`,
             type: "progress"
           });
           break;
@@ -1429,6 +1542,7 @@ export class DbStorage implements IStorage {
       // No sample workouts - let users create their own
     }
   }
+  
 }
 
 // Use in-memory storage during development, database storage in production
