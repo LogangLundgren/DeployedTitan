@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -582,6 +583,8 @@ function ActivityFeed() {
 
 // Component for people discovery
 function PeopleDiscover() {
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  
   // Query users 
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ['/api/users/discover'],
@@ -607,11 +610,50 @@ function PeopleDiscover() {
   const handleFollowUser = (userId: number) => {
     followUserMutation.mutate(userId);
   };
+  
+  // Filter users based on search query
+  const filteredUsers = users.filter((user: UserProfile) => 
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    user.username.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl font-semibold">People to Follow</h2>
+        
+        <div className="w-full sm:w-auto relative">
+          <Input 
+            type="search"
+            placeholder="Search for users..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full sm:w-[260px] pr-10"
+          />
+          {searchQuery && (
+            <button
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+              onClick={() => setSearchQuery("")}
+              aria-label="Clear search"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
       
       {usersLoading ? (
@@ -634,7 +676,7 @@ function PeopleDiscover() {
             </Card>
           ))}
         </div>
-      ) : users.length === 0 ? (
+      ) : filteredUsers.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="rounded-full bg-primary/10 p-6 mb-4">
@@ -658,13 +700,15 @@ function PeopleDiscover() {
             </div>
             <h3 className="text-lg font-medium mb-2">No Users Found</h3>
             <p className="text-center text-muted-foreground mb-6">
-              We couldn't find any users to suggest at this time.
+              {searchQuery ? 
+                `No users matching "${searchQuery}" were found. Try a different search term.` : 
+                "We couldn't find any users to suggest at this time."}
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {users.map((user: UserProfile) => (
+          {filteredUsers.map((user: UserProfile) => (
             <Card key={user.id}>
               <CardHeader className="pb-4">
                 <div className="flex items-center space-x-4">

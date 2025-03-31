@@ -340,7 +340,7 @@ export default function Goals() {
             <DialogTrigger asChild>
               <Button>Create New Goal</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Goal</DialogTitle>
                 <DialogDescription>
@@ -644,7 +644,7 @@ export default function Goals() {
             open={!!selectedGoal} 
             onOpenChange={(open) => !open && setSelectedGoal(null)}
           >
-            <DialogContent className="sm:max-w-[700px]">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <div className="flex items-center justify-between">
                   <DialogTitle className="text-xl">{selectedGoal.title}</DialogTitle>
@@ -725,7 +725,7 @@ export default function Goals() {
                           Add Milestone
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle>Add Milestone</DialogTitle>
                           <DialogDescription>
