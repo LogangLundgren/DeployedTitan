@@ -127,28 +127,51 @@ export default function Goals() {
 
   // Mutation for creating a goal
   const createGoalMutation = useMutation({
-    mutationFn: (data: z.infer<typeof goalFormSchema>) => 
-      fetch('/api/goals', {
+    mutationFn: (data: z.infer<typeof goalFormSchema>) => {
+      // Ensure all required fields are present and properly formatted
+      const goalData = {
+        userId,
+        title: data.title,
+        description: data.description || "",
+        targetValue: data.targetValue,
+        currentValue: data.currentValue,
+        metricType: data.metricType,
+        exerciseId: data.exerciseId,
+        category: data.category,
+        startDate: new Date(),
+        targetDate: data.targetDate,
+        isPublic: data.isPublic,
+        isCompleted: false,
+      };
+      
+      return fetch('/api/goals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ...data, 
-          userId, 
-          startDate: new Date(),
-        }),
-      }).then(res => res.json()),
+        body: JSON.stringify(goalData),
+      }).then(res => {
+        if (!res.ok) {
+          return res.json().then(err => {
+            console.error("Goal creation error:", err);
+            throw new Error(err.message || "Failed to create goal");
+          });
+        }
+        return res.json();
+      });
+    },
     onSuccess: () => {
       toast({
         title: "Goal created",
         description: "Your new goal has been created successfully.",
       });
+      goalForm.reset();
       setIsAddingGoal(false);
       queryClient.invalidateQueries({ queryKey: ['/api/goals'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/goals/public'] });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to create goal. Please try again.",
+        description: error.message || "Failed to create goal. Please try again.",
         variant: "destructive",
       });
     },
@@ -197,6 +220,7 @@ export default function Goals() {
         description: "Your goal progress has been updated.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/goals'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/goals/public'] });
       if (selectedGoal) {
         setSelectedGoal(data);
       }
@@ -205,6 +229,70 @@ export default function Goals() {
       toast({
         title: "Error",
         description: "Failed to update progress. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation for deleting a goal
+  const deleteGoalMutation = useMutation({
+    mutationFn: (goalId: number) => 
+      fetch(`/api/goals/${goalId}`, {
+        method: 'DELETE',
+      }).then(res => {
+        if (!res.ok) {
+          return res.json().then(err => {
+            throw new Error(err.message || "Failed to delete goal");
+          });
+        }
+        return res.json();
+      }),
+    onSuccess: () => {
+      toast({
+        title: "Goal deleted",
+        description: "Your goal has been deleted successfully.",
+      });
+      if (selectedGoal) setSelectedGoal(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/goals'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/goals/public'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete goal. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation for updating a goal's details
+  const updateGoalMutation = useMutation({
+    mutationFn: (goal: Partial<Goal> & { id: number }) => 
+      fetch(`/api/goals/${goal.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(goal),
+      }).then(res => {
+        if (!res.ok) {
+          return res.json().then(err => {
+            throw new Error(err.message || "Failed to update goal");
+          });
+        }
+        return res.json();
+      }),
+    onSuccess: (data) => {
+      toast({
+        title: "Goal updated",
+        description: "Your goal has been updated successfully.",
+      });
+      setSelectedGoal(data);
+      queryClient.invalidateQueries({ queryKey: ['/api/goals'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/goals/public'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update goal. Please try again.",
         variant: "destructive",
       });
     },
@@ -625,7 +713,7 @@ export default function Goals() {
                     <span>Target: {formatDate(goal.targetDate)}</span>
                   </div>
                 </CardContent>
-                <CardFooter className="border-t pt-4 bg-muted/20">
+                <CardFooter className="border-t pt-4 bg-muted/20 flex-col space-y-2">
                   <Button 
                     variant="outline" 
                     className="w-full"
@@ -633,6 +721,37 @@ export default function Goals() {
                   >
                     View Details
                   </Button>
+                  
+                  {/* Only show edit/delete for user's own goals */}
+                  {goal.userId === userId && (
+                    <div className="flex w-full space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 text-blue-600 hover:text-blue-800"
+                        onClick={() => {
+                          setSelectedGoal(goal);
+                          // Populate form and open edit dialog - would go here
+                          // For now we'll use the details dialog to edit
+                          viewGoalDetails(goal);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 text-red-600 hover:text-red-800"
+                        onClick={() => {
+                          if (confirm("Are you sure you want to delete this goal?")) {
+                            deleteGoalMutation.mutate(goal.id);
+                          }
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  )}
                 </CardFooter>
               </Card>
             ))}

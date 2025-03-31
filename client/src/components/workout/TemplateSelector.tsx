@@ -12,7 +12,10 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, ArrowRight, Calendar } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Globe, Lock, Loader2, Play, ArrowRight, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { Template, TemplateWithExercises, WorkoutWithDetails } from "@shared/schema";
 
@@ -27,6 +30,9 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
   
   // State to track if we're creating a workout
   const [creatingWorkoutId, setCreatingWorkoutId] = useState<number | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [isPublic, setIsPublic] = useState(false);
+  const [isStartWorkoutDialogOpen, setIsStartWorkoutDialogOpen] = useState(false);
   
   // Fetch all templates for the user
   const { data: templates, isLoading } = useQuery<Template[]>({
@@ -38,10 +44,10 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
   
   // Mutation to create a workout from a template
   const createWorkoutMutation = useMutation({
-    mutationFn: async (templateId: number) => {
+    mutationFn: async ({ templateId, isPublic }: { templateId: number, isPublic: boolean }) => {
       return await apiRequest<WorkoutWithDetails>(`/api/templates/${templateId}/create-workout`, {
         method: 'POST',
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, isPublic }),
         headers: {
           'Content-Type': 'application/json'
         }
@@ -58,6 +64,9 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
       if (onWorkoutCreated) {
         onWorkoutCreated(workout);
       }
+      
+      // Close the dialog
+      setIsStartWorkoutDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
@@ -71,10 +80,19 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
     }
   });
   
+  // Open start workout dialog
+  const openStartWorkoutDialog = (templateId: number) => {
+    setSelectedTemplateId(templateId);
+    setIsPublic(false); // Reset to private by default
+    setIsStartWorkoutDialogOpen(true);
+  };
+  
   // Start a workout from a template
-  const startWorkout = (templateId: number) => {
-    setCreatingWorkoutId(templateId);
-    createWorkoutMutation.mutate(templateId);
+  const startWorkout = () => {
+    if (selectedTemplateId) {
+      setCreatingWorkoutId(selectedTemplateId);
+      createWorkoutMutation.mutate({ templateId: selectedTemplateId, isPublic });
+    }
   };
   
   if (isLoading) {
@@ -129,7 +147,7 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
                 </Button>
               </Link>
               <Button 
-                onClick={() => startWorkout(template.id)}
+                onClick={() => openStartWorkoutDialog(template.id)}
                 disabled={createWorkoutMutation.isPending && creatingWorkoutId === template.id}
                 size="sm"
               >
@@ -149,6 +167,72 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
           </Card>
         ))}
       </div>
+      
+      {/* Start Workout Dialog */}
+      <Dialog open={isStartWorkoutDialogOpen} onOpenChange={setIsStartWorkoutDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Start Workout</DialogTitle>
+            <DialogDescription>
+              Create a new workout based on this template. Choose sharing options before you begin.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            <div className="flex flex-col space-y-1.5">
+              <h3 className="text-sm font-medium leading-none">
+                Workout Privacy
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Choose whether to share this workout with other users
+              </p>
+            </div>
+            
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <div className="flex items-center">
+                  {isPublic ? (
+                    <Globe className="mr-2 h-4 w-4 text-blue-500" />
+                  ) : (
+                    <Lock className="mr-2 h-4 w-4 text-amber-500" />
+                  )}
+                  <span className="font-medium">
+                    {isPublic ? 'Public Workout' : 'Private Workout'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {isPublic 
+                    ? 'This workout will be visible in the social feed and on your profile'
+                    : 'Only you can see this workout'}
+                </p>
+              </div>
+              
+              <Switch
+                checked={isPublic}
+                onCheckedChange={setIsPublic}
+                aria-label="Toggle workout visibility"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsStartWorkoutDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={startWorkout}
+              disabled={createWorkoutMutation.isPending}
+            >
+              {createWorkoutMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : 'Start Workout'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -274,7 +274,8 @@ export class MemStorage implements IStorage {
       date: insertWorkout.date || new Date(),
       category: insertWorkout.category ?? null,
       notes: insertWorkout.notes ?? null,
-      duration: insertWorkout.duration ?? null
+      duration: insertWorkout.duration ?? null,
+      isPublic: insertWorkout.isPublic ?? false
     };
     this.workouts.set(id, workout);
     return workout;

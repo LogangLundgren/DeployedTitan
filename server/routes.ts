@@ -699,7 +699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid template ID is required" });
       }
       
-      const { userId } = req.body;
+      const { userId, isPublic } = req.body;
       
       if (!userId) {
         return res.status(400).json({ message: "User ID is required" });
@@ -718,7 +718,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         date: new Date(),
         userId: userId,
         category: template.category,
-        notes: `Created from template: ${template.name}`
+        notes: `Created from template: ${template.name}`,
+        isPublic: isPublic === true // convert to boolean in case undefined/null
       });
       
       // Add exercises from template to the workout

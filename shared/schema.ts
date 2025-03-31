@@ -57,6 +57,7 @@ export const workouts = pgTable("workouts", {
   duration: integer("duration"),
   userId: integer("user_id").references(() => users.id).notNull(),
   category: text("category"),
+  isPublic: boolean("is_public").default(false),
 });
 
 export const insertWorkoutSchema = createInsertSchema(workouts).pick({
@@ -66,6 +67,7 @@ export const insertWorkoutSchema = createInsertSchema(workouts).pick({
   duration: true,
   userId: true,
   category: true,
+  isPublic: true,
 });
 
 export const workoutExercises = pgTable("workout_exercises", {
