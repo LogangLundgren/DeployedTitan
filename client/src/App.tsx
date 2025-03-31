@@ -8,6 +8,8 @@ import WorkoutLogger from "@/pages/WorkoutLogger";
 import Templates from "@/pages/Templates";
 import TemplateDetail from "@/pages/TemplateDetail";
 import Profile from "@/pages/Profile";
+import Goals from "@/pages/Goals";
+import Social from "@/pages/Social";
 import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
@@ -43,6 +45,8 @@ function Router() {
           <Route path="/templates" component={Templates} />
           <Route path="/templates/:id" component={TemplateDetail} />
           <Route path="/profile" component={Profile} />
+          <Route path="/goals" component={Goals} />
+          <Route path="/social" component={Social} />
           {/* Fallback to 404 */}
           <Route component={NotFound} />
         </Switch>
