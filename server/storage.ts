@@ -7,6 +7,8 @@ import {
   templates, type Template, type InsertTemplate,
   templateExercises, type TemplateExercise, type InsertTemplateExercise,
   notifications, type Notification, type InsertNotification,
+  goals, type Goal, type InsertGoal,
+  milestones, type Milestone, type InsertMilestone,
   type WorkoutWithDetails, type TemplateWithExercises
 } from "@shared/schema";
 import { eq, desc, and } from 'drizzle-orm';
@@ -61,6 +63,22 @@ export interface IStorage {
   markNotificationAsRead(id: number): Promise<Notification | undefined>;
   markAllNotificationsAsRead(userId: number): Promise<boolean>;
   
+  // Goal operations
+  getGoals(userId: number): Promise<Goal[]>;
+  getGoal(id: number): Promise<Goal | undefined>;
+  createGoal(goal: InsertGoal): Promise<Goal>;
+  updateGoal(id: number, goal: Partial<Goal>): Promise<Goal | undefined>;
+  deleteGoal(id: number): Promise<boolean>;
+  updateGoalProgress(id: number, currentValue: number): Promise<Goal | undefined>;
+  getPublicGoals(limit?: number): Promise<Goal[]>;
+  
+  // Milestone operations
+  getMilestones(goalId: number): Promise<Milestone[]>;
+  createMilestone(milestone: InsertMilestone): Promise<Milestone>;
+  updateMilestone(id: number, milestone: Partial<Milestone>): Promise<Milestone | undefined>;
+  deleteMilestone(id: number): Promise<boolean>;
+  completeMilestone(id: number): Promise<Milestone | undefined>;
+  
   // DB-specific method
   initialize?(): Promise<void>;
 }
@@ -74,6 +92,8 @@ export class MemStorage implements IStorage {
   private templates: Map<number, Template>;
   private templateExercises: Map<number, TemplateExercise>;
   private notifications: Map<number, Notification>;
+  private goals: Map<number, Goal>;
+  private milestones: Map<number, Milestone>;
   
   private userCurrentId: number;
   private exerciseCurrentId: number;
@@ -83,6 +103,8 @@ export class MemStorage implements IStorage {
   private templateCurrentId: number;
   private templateExerciseCurrentId: number;
   private notificationCurrentId: number;
+  private goalCurrentId: number;
+  private milestoneCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -93,6 +115,8 @@ export class MemStorage implements IStorage {
     this.templates = new Map();
     this.templateExercises = new Map();
     this.notifications = new Map();
+    this.goals = new Map();
+    this.milestones = new Map();
     
     this.userCurrentId = 1;
     this.exerciseCurrentId = 1;
@@ -102,6 +126,8 @@ export class MemStorage implements IStorage {
     this.templateCurrentId = 1;
     this.templateExerciseCurrentId = 1;
     this.notificationCurrentId = 1;
+    this.goalCurrentId = 1;
+    this.milestoneCurrentId = 1;
     
     // Add some default exercises
     this.seedDefaultExercises();
@@ -445,6 +471,7 @@ export class MemStorage implements IStorage {
       id,
       isRead: false,
       createdAt: new Date(),
+      title: insertNotification.title ?? null,
       link: insertNotification.link ?? null
     };
     this.notifications.set(id, notification);
@@ -471,6 +498,195 @@ export class MemStorage implements IStorage {
     });
     
     return true;
+  }
+  
+  // Goal operations
+  async getGoals(userId: number): Promise<Goal[]> {
+    return Array.from(this.goals.values())
+      .filter(goal => goal.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getGoal(id: number): Promise<Goal | undefined> {
+    return this.goals.get(id);
+  }
+  
+  async createGoal(insertGoal: InsertGoal): Promise<Goal> {
+    const id = this.goalCurrentId++;
+    const now = new Date();
+    const goal: Goal = {
+      ...insertGoal,
+      id,
+      currentValue: insertGoal.currentValue ?? 0,
+      description: insertGoal.description ?? null,
+      category: insertGoal.category ?? null,
+      exerciseId: insertGoal.exerciseId ?? null,
+      startDate: insertGoal.startDate ?? now,
+      targetDate: insertGoal.targetDate ?? null,
+      isPublic: insertGoal.isPublic ?? false,
+      isCompleted: false,
+      completedDate: null,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.goals.set(id, goal);
+    
+    // Create a notification for the new goal
+    await this.createNotification({
+      userId: goal.userId,
+      title: "New Goal Created",
+      message: `You've set a new goal: ${goal.title}`,
+      type: "goal"
+    });
+    
+    return goal;
+  }
+  
+  async updateGoal(id: number, goalUpdate: Partial<Goal>): Promise<Goal | undefined> {
+    const goal = this.goals.get(id);
+    if (!goal) return undefined;
+    
+    const updatedGoal = {
+      ...goal,
+      ...goalUpdate,
+      updatedAt: new Date()
+    };
+    this.goals.set(id, updatedGoal);
+    return updatedGoal;
+  }
+  
+  async deleteGoal(id: number): Promise<boolean> {
+    // Delete all milestones for this goal
+    const milestonesToDelete = Array.from(this.milestones.values())
+      .filter(milestone => milestone.goalId === id);
+    
+    for (const milestone of milestonesToDelete) {
+      this.milestones.delete(milestone.id);
+    }
+    
+    return this.goals.delete(id);
+  }
+  
+  async updateGoalProgress(id: number, currentValue: number): Promise<Goal | undefined> {
+    const goal = this.goals.get(id);
+    if (!goal) return undefined;
+    
+    const previousValue = goal.currentValue;
+    
+    // Check if goal is completed with this update
+    const isCompleted = currentValue >= goal.targetValue && !goal.isCompleted;
+    
+    const updatedGoal = {
+      ...goal,
+      currentValue,
+      isCompleted: isCompleted || goal.isCompleted,
+      updatedAt: new Date()
+    };
+    this.goals.set(id, updatedGoal);
+    
+    // Check if any milestones are reached
+    const goalMilestones = Array.from(this.milestones.values())
+      .filter(milestone => milestone.goalId === id && !milestone.isCompleted && milestone.targetValue <= currentValue);
+    
+    for (const milestone of goalMilestones) {
+      await this.completeMilestone(milestone.id);
+    }
+    
+    // Create a notification if goal is completed
+    if (isCompleted) {
+      await this.createNotification({
+        userId: goal.userId,
+        title: "Goal Completed! 🎉",
+        message: `Congratulations! You've completed your goal: ${goal.title}`,
+        type: "achievement"
+      });
+    }
+    
+    // Create a notification if progress is significant (25%, 50%, 75%)
+    const progressPercentage = Math.floor((currentValue / goal.targetValue) * 100);
+    const previousPercentage = Math.floor((previousValue / goal.targetValue) * 100);
+    
+    const milestones = [25, 50, 75];
+    for (const milestone of milestones) {
+      if (progressPercentage >= milestone && previousPercentage < milestone) {
+        await this.createNotification({
+          userId: goal.userId,
+          title: `${milestone}% Progress! 💪`,
+          message: `You've reached ${milestone}% of your goal: ${goal.title}`,
+          type: "progress"
+        });
+        break;
+      }
+    }
+    
+    return updatedGoal;
+  }
+  
+  async getPublicGoals(limit?: number): Promise<Goal[]> {
+    const publicGoals = Array.from(this.goals.values())
+      .filter(goal => goal.isPublic)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    return limit ? publicGoals.slice(0, limit) : publicGoals;
+  }
+  
+  // Milestone operations
+  async getMilestones(goalId: number): Promise<Milestone[]> {
+    return Array.from(this.milestones.values())
+      .filter(milestone => milestone.goalId === goalId)
+      .sort((a, b) => a.targetValue - b.targetValue);
+  }
+  
+  async createMilestone(insertMilestone: InsertMilestone): Promise<Milestone> {
+    const id = this.milestoneCurrentId++;
+    const milestone: Milestone = {
+      ...insertMilestone,
+      id,
+      description: insertMilestone.description ?? null,
+      isCompleted: false,
+      completedDate: null,
+      createdAt: new Date()
+    };
+    this.milestones.set(id, milestone);
+    return milestone;
+  }
+  
+  async updateMilestone(id: number, milestoneUpdate: Partial<Milestone>): Promise<Milestone | undefined> {
+    const milestone = this.milestones.get(id);
+    if (!milestone) return undefined;
+    
+    const updatedMilestone = { ...milestone, ...milestoneUpdate };
+    this.milestones.set(id, updatedMilestone);
+    return updatedMilestone;
+  }
+  
+  async deleteMilestone(id: number): Promise<boolean> {
+    return this.milestones.delete(id);
+  }
+  
+  async completeMilestone(id: number): Promise<Milestone | undefined> {
+    const milestone = this.milestones.get(id);
+    if (!milestone || milestone.isCompleted) return milestone;
+    
+    const completedMilestone = {
+      ...milestone,
+      isCompleted: true,
+      completedDate: new Date()
+    };
+    this.milestones.set(id, completedMilestone);
+    
+    // Get the goal to create a notification
+    const goal = this.goals.get(milestone.goalId);
+    if (goal) {
+      await this.createNotification({
+        userId: goal.userId,
+        title: "Milestone Achieved! 🏆",
+        message: `You've reached a milestone in your goal "${goal.title}": ${milestone.title}`,
+        type: "milestone"
+      });
+    }
+    
+    return completedMilestone;
   }
   
   // Seed default exercises
@@ -893,6 +1109,278 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
       return false;
+    }
+  }
+  
+  // Goal operations
+  async getGoals(userId: number): Promise<Goal[]> {
+    try {
+      return await db
+        .select()
+        .from(goals)
+        .where(eq(goals.userId, userId))
+        .orderBy(desc(goals.createdAt));
+    } catch (error) {
+      console.error('Error getting goals:', error);
+      return [];
+    }
+  }
+  
+  async getGoal(id: number): Promise<Goal | undefined> {
+    try {
+      const result = await db.select().from(goals).where(eq(goals.id, id));
+      return result[0];
+    } catch (error) {
+      console.error('Error getting goal:', error);
+      return undefined;
+    }
+  }
+  
+  async createGoal(goal: InsertGoal): Promise<Goal> {
+    try {
+      const result = await db.insert(goals).values(goal).returning();
+      const newGoal = result[0];
+      
+      // Create a notification for the new goal
+      await this.createNotification({
+        userId: newGoal.userId,
+        title: "New Goal Created",
+        message: `You've set a new goal: ${newGoal.title}`,
+        type: "goal"
+      });
+      
+      return newGoal;
+    } catch (error) {
+      console.error('Error creating goal:', error);
+      throw error;
+    }
+  }
+  
+  async updateGoal(id: number, goalUpdate: Partial<Goal>): Promise<Goal | undefined> {
+    try {
+      const result = await db
+        .update(goals)
+        .set({ ...goalUpdate, updatedAt: new Date() })
+        .where(eq(goals.id, id))
+        .returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error('Error updating goal:', error);
+      return undefined;
+    }
+  }
+  
+  async deleteGoal(id: number): Promise<boolean> {
+    try {
+      // Delete all milestones for this goal (cascade should handle this, but just to be safe)
+      await db.delete(milestones).where(eq(milestones.goalId, id));
+      
+      // Delete the goal
+      const result = await db
+        .delete(goals)
+        .where(eq(goals.id, id))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+      return false;
+    }
+  }
+  
+  async updateGoalProgress(id: number, currentValue: number): Promise<Goal | undefined> {
+    try {
+      // Get current goal to check progress
+      const goalResult = await db.select().from(goals).where(eq(goals.id, id));
+      if (goalResult.length === 0) return undefined;
+      
+      const goal = goalResult[0];
+      const previousValue = goal.currentValue;
+      
+      // Check if goal is completed with this update
+      const isCompleted = currentValue >= goal.targetValue && !goal.isCompleted;
+      
+      // Update goal
+      const updatedGoalResult = await db
+        .update(goals)
+        .set({
+          currentValue,
+          isCompleted: isCompleted || goal.isCompleted,
+          updatedAt: new Date()
+        })
+        .where(eq(goals.id, id))
+        .returning();
+      
+      if (updatedGoalResult.length === 0) return undefined;
+      const updatedGoal = updatedGoalResult[0];
+      
+      // Check if any milestones are reached
+      const milestonesResult = await db
+        .select()
+        .from(milestones)
+        .where(
+          and(
+            eq(milestones.goalId, id),
+            eq(milestones.isCompleted, false)
+          )
+        );
+      
+      for (const milestone of milestonesResult) {
+        if (currentValue >= milestone.targetValue) {
+          await this.completeMilestone(milestone.id);
+        }
+      }
+      
+      // Create a notification if goal is completed
+      if (isCompleted) {
+        await this.createNotification({
+          userId: goal.userId,
+          title: "Goal Completed! 🎉",
+          message: `Congratulations! You've completed your goal: ${goal.title}`,
+          type: "achievement"
+        });
+      }
+      
+      // Create a notification if progress is significant (25%, 50%, 75%)
+      const progressPercentage = Math.floor((currentValue / goal.targetValue) * 100);
+      const previousPercentage = Math.floor((previousValue / goal.targetValue) * 100);
+      
+      const milestones = [25, 50, 75];
+      for (const milestone of milestones) {
+        if (progressPercentage >= milestone && previousPercentage < milestone) {
+          await this.createNotification({
+            userId: goal.userId,
+            title: `${milestone}% Progress! 💪`,
+            message: `You've reached ${milestone}% of your goal: ${goal.title}`,
+            type: "progress"
+          });
+          break;
+        }
+      }
+      
+      return updatedGoal;
+    } catch (error) {
+      console.error('Error updating goal progress:', error);
+      return undefined;
+    }
+  }
+  
+  async getPublicGoals(limit?: number): Promise<Goal[]> {
+    try {
+      const query = db
+        .select()
+        .from(goals)
+        .where(eq(goals.isPublic, true))
+        .orderBy(desc(goals.createdAt));
+      
+      if (limit) {
+        query.limit(limit);
+      }
+      
+      return await query;
+    } catch (error) {
+      console.error('Error getting public goals:', error);
+      return [];
+    }
+  }
+  
+  // Milestone operations
+  async getMilestones(goalId: number): Promise<Milestone[]> {
+    try {
+      return await db
+        .select()
+        .from(milestones)
+        .where(eq(milestones.goalId, goalId))
+        .orderBy(milestones.targetValue);
+    } catch (error) {
+      console.error('Error getting milestones:', error);
+      return [];
+    }
+  }
+  
+  async createMilestone(milestone: InsertMilestone): Promise<Milestone> {
+    try {
+      const result = await db.insert(milestones).values(milestone).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating milestone:', error);
+      throw error;
+    }
+  }
+  
+  async updateMilestone(id: number, milestoneUpdate: Partial<Milestone>): Promise<Milestone | undefined> {
+    try {
+      const result = await db
+        .update(milestones)
+        .set(milestoneUpdate)
+        .where(eq(milestones.id, id))
+        .returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error('Error updating milestone:', error);
+      return undefined;
+    }
+  }
+  
+  async deleteMilestone(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(milestones)
+        .where(eq(milestones.id, id))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error deleting milestone:', error);
+      return false;
+    }
+  }
+  
+  async completeMilestone(id: number): Promise<Milestone | undefined> {
+    try {
+      const milestoneResult = await db
+        .select()
+        .from(milestones)
+        .where(eq(milestones.id, id));
+      
+      if (milestoneResult.length === 0 || milestoneResult[0].isCompleted) {
+        return milestoneResult[0];
+      }
+      
+      const updatedResult = await db
+        .update(milestones)
+        .set({ 
+          isCompleted: true, 
+          completedDate: new Date() 
+        })
+        .where(eq(milestones.id, id))
+        .returning();
+      
+      if (updatedResult.length === 0) return undefined;
+      
+      // Get the goal to create a notification
+      const milestone = updatedResult[0];
+      const goalResult = await db
+        .select()
+        .from(goals)
+        .where(eq(goals.id, milestone.goalId));
+      
+      if (goalResult.length > 0) {
+        const goal = goalResult[0];
+        await this.createNotification({
+          userId: goal.userId,
+          title: "Milestone Achieved! 🏆",
+          message: `You've reached a milestone in your goal "${goal.title}": ${milestone.title}`,
+          type: "milestone"
+        });
+      }
+      
+      return milestone;
+    } catch (error) {
+      console.error('Error completing milestone:', error);
+      return undefined;
     }
   }
   

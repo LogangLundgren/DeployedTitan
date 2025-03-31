@@ -10,9 +10,13 @@ import {
   insertTemplateSchema,
   insertTemplateExerciseSchema,
   insertNotificationSchema,
+  insertGoalSchema,
+  insertMilestoneSchema,
   Workout,
   TemplateExercise,
-  WorkoutWithDetails
+  WorkoutWithDetails,
+  Goal,
+  Milestone
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -839,6 +843,277 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({ message: "All notifications marked as read" });
     } catch (error) {
       console.error("Mark all notifications as read error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Goal routes
+  app.get("/api/goals", async (req, res) => {
+    try {
+      const userId = parseInt(req.query.userId as string);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
+      }
+      
+      const goals = await storage.getGoals(userId);
+      
+      res.status(200).json(goals);
+    } catch (error) {
+      console.error("Get goals error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/goals/public", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || undefined;
+      
+      const publicGoals = await storage.getPublicGoals(limit);
+      
+      res.status(200).json(publicGoals);
+    } catch (error) {
+      console.error("Get public goals error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/goals/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid goal ID is required" });
+      }
+      
+      const goal = await storage.getGoal(id);
+      
+      if (!goal) {
+        return res.status(404).json({ message: "Goal not found" });
+      }
+      
+      res.status(200).json(goal);
+    } catch (error) {
+      console.error("Get goal error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/goals", async (req, res) => {
+    try {
+      const goalData = insertGoalSchema.safeParse(req.body);
+      
+      if (!goalData.success) {
+        return res.status(400).json({ message: "Invalid goal data", errors: goalData.error.errors });
+      }
+      
+      const goal = await storage.createGoal(goalData.data);
+      
+      res.status(201).json(goal);
+    } catch (error) {
+      console.error("Create goal error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/goals/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid goal ID is required" });
+      }
+      
+      const updateSchema = z.object({
+        name: z.string().optional(),
+        description: z.string().nullable().optional(),
+        targetValue: z.number().optional(),
+        currentValue: z.number().optional(),
+        unit: z.string().optional(),
+        deadline: z.coerce.date().nullable().optional(),
+        category: z.string().optional(),
+        isPublic: z.boolean().optional(),
+        isCompleted: z.boolean().optional()
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      const updatedGoal = await storage.updateGoal(id, updateData.data);
+      
+      if (!updatedGoal) {
+        return res.status(404).json({ message: "Goal not found" });
+      }
+      
+      res.status(200).json(updatedGoal);
+    } catch (error) {
+      console.error("Update goal error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/goals/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid goal ID is required" });
+      }
+      
+      const deleted = await storage.deleteGoal(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Goal not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete goal error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/goals/:id/progress", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid goal ID is required" });
+      }
+      
+      const updateSchema = z.object({
+        currentValue: z.number()
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      const updatedGoal = await storage.updateGoalProgress(id, updateData.data.currentValue);
+      
+      if (!updatedGoal) {
+        return res.status(404).json({ message: "Goal not found" });
+      }
+      
+      res.status(200).json(updatedGoal);
+    } catch (error) {
+      console.error("Update goal progress error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Milestone routes
+  app.get("/api/milestones", async (req, res) => {
+    try {
+      const goalId = parseInt(req.query.goalId as string);
+      
+      if (isNaN(goalId)) {
+        return res.status(400).json({ message: "Valid goal ID is required" });
+      }
+      
+      const milestones = await storage.getMilestones(goalId);
+      
+      res.status(200).json(milestones);
+    } catch (error) {
+      console.error("Get milestones error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/milestones", async (req, res) => {
+    try {
+      const milestoneData = insertMilestoneSchema.safeParse(req.body);
+      
+      if (!milestoneData.success) {
+        return res.status(400).json({ message: "Invalid milestone data", errors: milestoneData.error.errors });
+      }
+      
+      const milestone = await storage.createMilestone(milestoneData.data);
+      
+      res.status(201).json(milestone);
+    } catch (error) {
+      console.error("Create milestone error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/milestones/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid milestone ID is required" });
+      }
+      
+      const updateSchema = z.object({
+        description: z.string().optional(),
+        targetValue: z.number().optional(),
+        rewards: z.string().nullable().optional(),
+        isCompleted: z.boolean().optional()
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      const updatedMilestone = await storage.updateMilestone(id, updateData.data);
+      
+      if (!updatedMilestone) {
+        return res.status(404).json({ message: "Milestone not found" });
+      }
+      
+      res.status(200).json(updatedMilestone);
+    } catch (error) {
+      console.error("Update milestone error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/milestones/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid milestone ID is required" });
+      }
+      
+      const deleted = await storage.deleteMilestone(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Milestone not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete milestone error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/milestones/:id/complete", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid milestone ID is required" });
+      }
+      
+      const completedMilestone = await storage.completeMilestone(id);
+      
+      if (!completedMilestone) {
+        return res.status(404).json({ message: "Milestone not found" });
+      }
+      
+      res.status(200).json(completedMilestone);
+    } catch (error) {
+      console.error("Complete milestone error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

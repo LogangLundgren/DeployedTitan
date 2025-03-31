@@ -178,8 +178,9 @@ export interface TemplateWithExercises extends Template {
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
+  title: text("title"),
   message: text("message").notNull(),
-  type: text("type").notNull(), // "info", "success", "warning", "error"
+  type: text("type").notNull(), // "info", "success", "warning", "error", "goal", "achievement", "progress", "milestone"
   isRead: boolean("is_read").default(false),
   link: text("link"), // Optional link to navigate to
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -187,6 +188,7 @@ export const notifications = pgTable("notifications", {
 
 export const insertNotificationSchema = createInsertSchema(notifications).pick({
   userId: true,
+  title: true,
   message: true,
   type: true,
   link: true,
@@ -194,3 +196,45 @@ export const insertNotificationSchema = createInsertSchema(notifications).pick({
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+// Goals schema
+export const goals = pgTable("goals", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  targetValue: real("target_value").notNull(),
+  currentValue: real("current_value").default(0).notNull(),
+  metricType: text("metric_type").notNull(), // weight, reps, volume, workouts, etc.
+  exerciseId: integer("exercise_id").references(() => exercises.id),
+  category: text("category"), // Strength, Endurance, Habit, etc.
+  startDate: timestamp("start_date").defaultNow().notNull(),
+  targetDate: timestamp("target_date"),
+  completedDate: timestamp("completed_date"),
+  isCompleted: boolean("is_completed").default(false).notNull(),
+  isPublic: boolean("is_public").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertGoalSchema = createInsertSchema(goals);
+
+export type Goal = typeof goals.$inferSelect;
+export type InsertGoal = z.infer<typeof insertGoalSchema>;
+
+// Milestones schema
+export const milestones = pgTable("milestones", {
+  id: serial("id").primaryKey(),
+  goalId: integer("goal_id").notNull().references(() => goals.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  targetValue: real("target_value").notNull(),
+  isCompleted: boolean("is_completed").default(false).notNull(),
+  completedDate: timestamp("completed_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMilestoneSchema = createInsertSchema(milestones);
+
+export type Milestone = typeof milestones.$inferSelect;
+export type InsertMilestone = z.infer<typeof insertMilestoneSchema>;
