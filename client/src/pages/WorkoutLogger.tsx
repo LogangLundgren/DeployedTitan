@@ -3,7 +3,7 @@ import { WorkoutWithDetails } from "@shared/schema";
 import WorkoutForm from "@/components/workout/WorkoutForm";
 import WorkoutHistory from "@/components/workout/WorkoutHistory";
 import TemplateSelector from "@/components/workout/TemplateSelector";
-import WorkoutAnalytics from "@/components/workout/WorkoutAnalytics";
+import EnhancedAnalytics from "@/components/workout/EnhancedAnalytics";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -184,7 +184,7 @@ export default function WorkoutLogger() {
             </TabsContent>
             
             <TabsContent value="analytics" className="p-0 m-0">
-              <WorkoutAnalytics userId={userId} />
+              <EnhancedAnalytics userId={userId} />
             </TabsContent>
           </CardContent>
         </Tabs>
