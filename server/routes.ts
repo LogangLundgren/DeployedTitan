@@ -902,7 +902,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/goals", async (req, res) => {
     try {
-      const goalData = insertGoalSchema.safeParse(req.body);
+      // Modify the schema on the fly to parse date strings
+      const goalSchema = z.object({
+        userId: z.number(),
+        title: z.string(),
+        description: z.string().optional(),
+        targetValue: z.number(),
+        currentValue: z.number(),
+        metricType: z.string(),
+        exerciseId: z.number().nullable().optional(),
+        category: z.string(),
+        startDate: z.string().transform(str => new Date(str)),
+        targetDate: z.string().transform(str => new Date(str)),
+        isPublic: z.boolean(),
+        isCompleted: z.boolean()
+      });
+      
+      const goalData = goalSchema.safeParse(req.body);
       
       if (!goalData.success) {
         return res.status(400).json({ message: "Invalid goal data", errors: goalData.error.errors });
