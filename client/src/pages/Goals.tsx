@@ -414,8 +414,8 @@ export default function Goals() {
                       <FormItem>
                         <FormLabel>Exercise (Optional)</FormLabel>
                         <Select 
-                          onValueChange={(value) => field.onChange(value ? parseInt(value) : null)} 
-                          value={field.value?.toString() || ""}
+                          onValueChange={(value) => field.onChange(value && value !== "none" ? parseInt(value) : null)} 
+                          value={field.value?.toString() || "none"}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -423,7 +423,7 @@ export default function Goals() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">No specific exercise</SelectItem>
+                            <SelectItem value="none">No specific exercise</SelectItem>
                             {exercisesLoading ? (
                               <SelectItem value="" disabled>Loading exercises...</SelectItem>
                             ) : exercises.map((exercise: any) => (
@@ -448,7 +448,7 @@ export default function Goals() {
                         <FormLabel>Metric Type</FormLabel>
                         <Select 
                           onValueChange={field.onChange} 
-                          defaultValue={field.value}
+                          value={field.value || ""}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -475,7 +475,7 @@ export default function Goals() {
                         <FormLabel>Category</FormLabel>
                         <Select 
                           onValueChange={field.onChange} 
-                          defaultValue={field.value}
+                          value={field.value || ""}
                         >
                           <FormControl>
                             <SelectTrigger>
