@@ -117,17 +117,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: z.string().optional(),
         username: z.string().optional(),
         email: z.string().email().optional(),
-        bio: z.string().optional(),
-        location: z.string().optional(),
-        fitnessLevel: z.string().optional(),
-        experienceYears: z.coerce.number().optional(),
-        goals: z.string().optional(),
-        certifications: z.string().optional(),
+        bio: z.string().nullable().optional(),
+        location: z.string().nullable().optional(),
+        fitnessLevel: z.string().nullable().optional(),
+        experienceYears: z.coerce.number().nullable().optional(),
+        goals: z.string().nullable().optional(),
+        certifications: z.string().nullable().optional(),
         socialMedia: z.object({
-          instagram: z.string().optional(),
-          twitter: z.string().optional(),
-          facebook: z.string().optional(),
-        }).optional(),
+          instagram: z.string().optional().default(''),
+          twitter: z.string().optional().default(''),
+          facebook: z.string().optional().default(''),
+        }).optional().nullable(),
       });
       
       const updateData = updateSchema.safeParse(req.body);
