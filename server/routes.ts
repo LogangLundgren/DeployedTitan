@@ -97,6 +97,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch("/api/users/:id", async (req, res) => {
     try {
+      console.log("Received PATCH request to /api/users/:id");
+      console.log("Request body:", req.body);
+      console.log("Content-Type:", req.headers['content-type']);
+      
       const userId = parseInt(req.params.id);
       
       if (isNaN(userId)) {
@@ -116,7 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bio: z.string().optional(),
         location: z.string().optional(),
         fitnessLevel: z.string().optional(),
-        experienceYears: z.number().optional(),
+        experienceYears: z.coerce.number().optional(),
         goals: z.string().optional(),
         certifications: z.string().optional(),
         socialMedia: z.object({
@@ -157,6 +161,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json(userWithoutPassword);
     } catch (error) {
       console.error("Update user error:", error);
+      console.error("Update request body:", req.body);
+      // Safe way to report errors without referencing potentially undefined variables
+      if (error instanceof z.ZodError) {
+        console.error("Update validation errors:", error.errors);
+      }
       res.status(500).json({ message: "Internal server error" });
     }
   });
