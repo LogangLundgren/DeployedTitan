@@ -168,6 +168,11 @@ export interface WorkoutWithDetails extends Workout {
   totalSets: number;
   totalExercises: number;
   volume: number;
+  comments?: Comment[];
+  likes?: Like[];
+  likesCount?: number;
+  commentsCount?: number;
+  isLikedByCurrentUser?: boolean;
 }
 
 export interface TemplateWithExercises extends Template {
@@ -270,3 +275,38 @@ export const insertMediaFileSchema = createInsertSchema(mediaFiles).pick({
 
 export type MediaFile = typeof mediaFiles.$inferSelect;
 export type InsertMediaFile = z.infer<typeof insertMediaFileSchema>;
+
+// Comments schema
+export const comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  workoutId: integer("workout_id").references(() => workouts.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCommentSchema = createInsertSchema(comments).pick({
+  workoutId: true,
+  userId: true,
+  content: true,
+});
+
+export type Comment = typeof comments.$inferSelect;
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+
+// Likes schema
+export const likes = pgTable("likes", {
+  id: serial("id").primaryKey(),
+  workoutId: integer("workout_id").references(() => workouts.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertLikeSchema = createInsertSchema(likes).pick({
+  workoutId: true,
+  userId: true,
+});
+
+export type Like = typeof likes.$inferSelect;
+export type InsertLike = z.infer<typeof insertLikeSchema>;

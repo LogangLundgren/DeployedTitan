@@ -10,6 +10,8 @@ import {
   goals, type Goal, type InsertGoal,
   milestones, type Milestone, type InsertMilestone,
   mediaFiles, type MediaFile, type InsertMediaFile,
+  comments, type Comment, type InsertComment,
+  likes, type Like, type InsertLike,
   type WorkoutWithDetails, type TemplateWithExercises
 } from "@shared/schema";
 import { eq, desc, and, asc, sql } from 'drizzle-orm';
@@ -86,6 +88,20 @@ export interface IStorage {
   createMediaFile(mediaFile: InsertMediaFile): Promise<MediaFile>;
   deleteMediaFile(id: number): Promise<boolean>;
   
+  // Comment operations
+  getComments(workoutId: number): Promise<Comment[]>;
+  createComment(comment: InsertComment): Promise<Comment>;
+  updateComment(id: number, content: string): Promise<Comment | undefined>;
+  deleteComment(id: number): Promise<boolean>;
+  
+  // Like operations
+  getLikes(workoutId: number): Promise<Like[]>;
+  getLikeCount(workoutId: number): Promise<number>;
+  isLikedByUser(workoutId: number, userId: number): Promise<boolean>;
+  toggleLike(workoutId: number, userId: number): Promise<boolean>;
+  createLike(like: InsertLike): Promise<Like>;
+  deleteLike(workoutId: number, userId: number): Promise<boolean>;
+  
   // DB-specific method
   initialize?(): Promise<void>;
 }
@@ -102,6 +118,8 @@ export class MemStorage implements IStorage {
   private goals: Map<number, Goal>;
   private milestones: Map<number, Milestone>;
   private mediaFiles: Map<number, MediaFile>;
+  private comments: Map<number, Comment>;
+  private likes: Map<number, Like>;
   
   private userCurrentId: number;
   private exerciseCurrentId: number;
@@ -114,6 +132,8 @@ export class MemStorage implements IStorage {
   private goalCurrentId: number;
   private milestoneCurrentId: number;
   private mediaFileCurrentId: number;
+  private commentCurrentId: number;
+  private likeCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -127,6 +147,8 @@ export class MemStorage implements IStorage {
     this.goals = new Map();
     this.milestones = new Map();
     this.mediaFiles = new Map();
+    this.comments = new Map();
+    this.likes = new Map();
     
     this.userCurrentId = 1;
     this.exerciseCurrentId = 1;
@@ -139,6 +161,8 @@ export class MemStorage implements IStorage {
     this.goalCurrentId = 1;
     this.milestoneCurrentId = 1;
     this.mediaFileCurrentId = 1;
+    this.commentCurrentId = 1;
+    this.likeCurrentId = 1;
     
     // Add some default exercises
     this.seedDefaultExercises();
@@ -255,12 +279,26 @@ export class MemStorage implements IStorage {
       });
     });
     
+    // Get comments for this workout
+    const comments = Array.from(this.comments.values())
+      .filter(comment => comment.workoutId === id)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    
+    // Get likes for this workout
+    const likes = Array.from(this.likes.values())
+      .filter(like => like.workoutId === id);
+      
     return {
       ...workout,
       exercises,
       totalSets,
       totalExercises: exercises.length,
-      volume
+      volume,
+      comments,
+      likes,
+      likesCount: likes.length,
+      commentsCount: comments.length,
+      isLikedByCurrentUser: likes.some(like => like.userId === workout.userId)
     };
   }
   
@@ -743,6 +781,119 @@ export class MemStorage implements IStorage {
     return this.mediaFiles.delete(id);
   }
   
+  // Comment operations
+  async getComments(workoutId: number): Promise<Comment[]> {
+    return Array.from(this.comments.values())
+      .filter(comment => comment.workoutId === workoutId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+  
+  async createComment(insertComment: InsertComment): Promise<Comment> {
+    const id = this.commentCurrentId++;
+    const now = new Date();
+    const comment: Comment = {
+      ...insertComment,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.comments.set(id, comment);
+    
+    // Create a notification for the workout owner
+    const workout = this.workouts.get(insertComment.workoutId);
+    if (workout && workout.userId !== insertComment.userId) {
+      await this.createNotification({
+        userId: workout.userId,
+        title: "New Comment",
+        message: `Someone commented on your workout: ${workout.name}`,
+        type: "social",
+        link: `/workouts/${workout.id}`
+      });
+    }
+    
+    return comment;
+  }
+  
+  async updateComment(id: number, content: string): Promise<Comment | undefined> {
+    const comment = this.comments.get(id);
+    if (!comment) return undefined;
+    
+    const updatedComment = { 
+      ...comment, 
+      content,
+      updatedAt: new Date()
+    };
+    this.comments.set(id, updatedComment);
+    return updatedComment;
+  }
+  
+  async deleteComment(id: number): Promise<boolean> {
+    return this.comments.delete(id);
+  }
+  
+  // Like operations
+  async getLikes(workoutId: number): Promise<Like[]> {
+    return Array.from(this.likes.values())
+      .filter(like => like.workoutId === workoutId);
+  }
+  
+  async getLikeCount(workoutId: number): Promise<number> {
+    return Array.from(this.likes.values())
+      .filter(like => like.workoutId === workoutId)
+      .length;
+  }
+  
+  async isLikedByUser(workoutId: number, userId: number): Promise<boolean> {
+    return Array.from(this.likes.values())
+      .some(like => like.workoutId === workoutId && like.userId === userId);
+  }
+  
+  async toggleLike(workoutId: number, userId: number): Promise<boolean> {
+    const isLiked = await this.isLikedByUser(workoutId, userId);
+    
+    if (isLiked) {
+      return this.deleteLike(workoutId, userId);
+    } else {
+      await this.createLike({ workoutId, userId });
+      return true;
+    }
+  }
+  
+  async createLike(insertLike: InsertLike): Promise<Like> {
+    const id = this.likeCurrentId++;
+    const like: Like = {
+      ...insertLike,
+      id,
+      createdAt: new Date()
+    };
+    this.likes.set(id, like);
+    
+    // Create a notification for the workout owner
+    const workout = this.workouts.get(insertLike.workoutId);
+    if (workout && workout.userId !== insertLike.userId) {
+      await this.createNotification({
+        userId: workout.userId,
+        title: "New Like",
+        message: `Someone liked your workout: ${workout.name}`,
+        type: "social",
+        link: `/workouts/${workout.id}`
+      });
+    }
+    
+    return like;
+  }
+  
+  async deleteLike(workoutId: number, userId: number): Promise<boolean> {
+    const like = Array.from(this.likes.values())
+      .find(like => like.workoutId === workoutId && like.userId === userId);
+    
+    if (like) {
+      return this.likes.delete(like.id);
+    }
+    
+    return false;
+  }
+  
   // Seed default exercises
   private seedDefaultExercises() {
     const defaultExercises: Omit<Exercise, 'id'>[] = [
@@ -959,12 +1110,34 @@ export class DbStorage implements IStorage {
       });
     });
     
+    // Get comments for this workout
+    const commentsResult = await db
+      .select()
+      .from(comments)
+      .where(eq(comments.workoutId, id))
+      .orderBy(asc(comments.createdAt));
+    
+    // Get likes for this workout
+    const likesResult = await db
+      .select()
+      .from(likes)
+      .where(eq(likes.workoutId, id));
+    
+    // Check if the current user has liked this workout
+    const isLikedByCurrentUser = workout.userId ? 
+      await this.isLikedByUser(id, workout.userId) : false;
+    
     return {
       ...workout,
       exercises: exercisesWithDetails,
       totalSets,
       totalExercises: exercisesWithDetails.length,
-      volume
+      volume,
+      comments: commentsResult,
+      likes: likesResult,
+      likesCount: likesResult.length,
+      commentsCount: commentsResult.length,
+      isLikedByCurrentUser
     };
   }
   
@@ -1543,6 +1716,204 @@ export class DbStorage implements IStorage {
     }
   }
   
+  // Comment operations
+  async getComments(workoutId: number): Promise<Comment[]> {
+    try {
+      return await db
+        .select()
+        .from(comments)
+        .where(eq(comments.workoutId, workoutId))
+        .orderBy(asc(comments.createdAt));
+    } catch (error) {
+      console.error("Error getting comments:", error);
+      return [];
+    }
+  }
+  
+  async createComment(comment: InsertComment): Promise<Comment> {
+    try {
+      // Ensure workoutId is not undefined
+      if (!comment.workoutId) {
+        throw new Error("workoutId is required for comment creation");
+      }
+      
+      const result = await db.insert(comments).values(comment).returning();
+      const newComment = result[0];
+      
+      // Create a notification for the workout owner
+      const workoutResult = await db
+        .select()
+        .from(workouts)
+        .where(eq(workouts.id, comment.workoutId));
+      
+      if (workoutResult.length > 0) {
+        const workout = workoutResult[0];
+        if (workout.userId !== comment.userId) {
+          await this.createNotification({
+            userId: workout.userId,
+            title: "New Comment",
+            message: `Someone commented on your workout: ${workout.name}`,
+            type: "social",
+            link: `/workouts/${workout.id}`
+          });
+        }
+      }
+      
+      return newComment;
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      throw error;
+    }
+  }
+  
+  async updateComment(id: number, content: string): Promise<Comment | undefined> {
+    try {
+      const result = await db
+        .update(comments)
+        .set({ 
+          content,
+          updatedAt: new Date()
+        })
+        .where(eq(comments.id, id))
+        .returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error updating comment:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteComment(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(comments)
+        .where(eq(comments.id, id))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      return false;
+    }
+  }
+  
+  // Like operations
+  async getLikes(workoutId: number): Promise<Like[]> {
+    try {
+      return await db
+        .select()
+        .from(likes)
+        .where(eq(likes.workoutId, workoutId));
+    } catch (error) {
+      console.error("Error getting likes:", error);
+      return [];
+    }
+  }
+  
+  async getLikeCount(workoutId: number): Promise<number> {
+    try {
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(likes)
+        .where(eq(likes.workoutId, workoutId));
+      
+      return Number(result[0]?.count || 0);
+    } catch (error) {
+      console.error("Error getting like count:", error);
+      return 0;
+    }
+  }
+  
+  async isLikedByUser(workoutId: number, userId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .select()
+        .from(likes)
+        .where(
+          and(
+            eq(likes.workoutId, workoutId),
+            eq(likes.userId, userId)
+          )
+        );
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error checking if liked by user:", error);
+      return false;
+    }
+  }
+  
+  async toggleLike(workoutId: number, userId: number): Promise<boolean> {
+    try {
+      const isLiked = await this.isLikedByUser(workoutId, userId);
+      
+      if (isLiked) {
+        return this.deleteLike(workoutId, userId);
+      } else {
+        await this.createLike({ workoutId, userId });
+        return true;
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+      return false;
+    }
+  }
+  
+  async createLike(like: InsertLike): Promise<Like> {
+    try {
+      // Ensure workoutId is not undefined
+      if (!like.workoutId) {
+        throw new Error("workoutId is required for like creation");
+      }
+      
+      const result = await db.insert(likes).values(like).returning();
+      const newLike = result[0];
+      
+      // Create a notification for the workout owner
+      const workoutResult = await db
+        .select()
+        .from(workouts)
+        .where(eq(workouts.id, like.workoutId));
+      
+      if (workoutResult.length > 0) {
+        const workout = workoutResult[0];
+        if (workout.userId !== like.userId) {
+          await this.createNotification({
+            userId: workout.userId,
+            title: "New Like",
+            message: `Someone liked your workout: ${workout.name}`,
+            type: "social",
+            link: `/workouts/${workout.id}`
+          });
+        }
+      }
+      
+      return newLike;
+    } catch (error) {
+      console.error("Error creating like:", error);
+      throw error;
+    }
+  }
+  
+  async deleteLike(workoutId: number, userId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(likes)
+        .where(
+          and(
+            eq(likes.workoutId, workoutId),
+            eq(likes.userId, userId)
+          )
+        )
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting like:", error);
+      return false;
+    }
+  }
 }
 
 // Use in-memory storage during development, database storage in production
