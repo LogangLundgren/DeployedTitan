@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
 import { 
@@ -122,6 +122,24 @@ function ActivityFeed() {
   // Comment query - store comments in state for immediate updates
   const [commentsState, setCommentsState] = useState<WorkoutComment[]>([]);
   
+  // Initialize default comments for the selected workout
+  useEffect(() => {
+    if (selectedWorkout) {
+      // In a real implementation, this would fetch from a real endpoint
+      // Here we'll mock the comments data
+      const mockComments: WorkoutComment[] = [
+        {
+          id: 1,
+          userId: 2,
+          username: "JessicaFitPro",
+          text: "Great workout! What was the most challenging exercise?",
+          createdAt: new Date(Date.now() - 1000 * 60 * 30) // 30 minutes ago
+        }
+      ];
+      setCommentsState(mockComments);
+    }
+  }, [selectedWorkout]);
+  
   const { data: workoutComments = [], refetch: refetchComments } = useQuery({
     queryKey: ['/api/comments', selectedWorkout?.id],
     queryFn: async () => {
@@ -130,18 +148,7 @@ function ActivityFeed() {
       try {
         // In a real implementation, this would fetch from a real endpoint
         // Here we'll mock the comments data
-        const mockComments: WorkoutComment[] = [
-          {
-            id: 1,
-            userId: 2,
-            username: "JessicaFitPro",
-            text: "Great workout! What was the most challenging exercise?",
-            createdAt: new Date(Date.now() - 1000 * 60 * 30) // 30 minutes ago
-          }
-        ];
-        // Update state when we get data
-        setCommentsState(mockComments);
-        return mockComments;
+        return commentsState;
       } catch (error) {
         console.error("Error fetching comments:", error);
         return [];
@@ -152,6 +159,20 @@ function ActivityFeed() {
 
   // Keep track of likes in local state for immediate UI updates
   const [likedWorkouts, setLikedWorkouts] = useState<number[]>([]);
+  // Keep track of like counts for each workout
+  const [likeCounts, setLikeCounts] = useState<Record<number, number>>({});
+  
+  // Initialize like counts from the community workouts data
+  useEffect(() => {
+    if (communityWorkouts.length > 0) {
+      const counts: Record<number, number> = {};
+      communityWorkouts.forEach(workout => {
+        // Initialize each workout with 0 or a random number between 5-15 likes for demo
+        counts[workout.id] = Math.floor(Math.random() * 10) + 5;
+      });
+      setLikeCounts(counts);
+    }
+  }, [communityWorkouts]);
   
   // Like workout mutation
   const likeWorkoutMutation = useMutation({
@@ -169,6 +190,11 @@ function ActivityFeed() {
       
       // Add the workout to liked workouts for immediate UI update
       setLikedWorkouts(prev => [...prev, result.workoutId]);
+      // Increment the like count for this workout
+      setLikeCounts(prev => ({
+        ...prev,
+        [result.workoutId]: (prev[result.workoutId] || 0) + 1
+      }));
       
       // Refresh the activity feed
       refetch();
@@ -347,7 +373,7 @@ function ActivityFeed() {
                         <path d="M7 10v12" />
                         <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
                       </svg>
-                      {likedWorkouts.includes(workout.id) ? "Liked" : "Like"}
+                      {likedWorkouts.includes(workout.id) ? "Liked" : "Like"} ({likeCounts[workout.id] || 0})
                     </Button>
                     <Button 
                       variant="ghost" 
