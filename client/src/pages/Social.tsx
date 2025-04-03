@@ -34,6 +34,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import type { User, Workout, WorkoutWithDetails, Goal } from "@shared/schema";
 
@@ -161,6 +171,8 @@ function ActivityFeed() {
   const [likedWorkouts, setLikedWorkouts] = useState<number[]>([]);
   // Keep track of like counts for each workout
   const [likeCounts, setLikeCounts] = useState<Record<number, number>>({});
+  // Track the currently selected comment for possible deletion
+  const [selectedComment, setSelectedComment] = useState<WorkoutComment | null>(null);
   
   // Initialize like counts from the community workouts data
   useEffect(() => {
@@ -202,6 +214,30 @@ function ActivityFeed() {
     },
   });
   
+  // Unlike workout mutation
+  const unlikeWorkoutMutation = useMutation({
+    mutationFn: async (workoutId: number) => {
+      // In a real implementation, this would call a real endpoint
+      await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
+      
+      return { success: true, liked: false, workoutId };
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Unliked workout",
+        description: "Your like has been removed.",
+      });
+      
+      // Remove the workout from liked workouts for immediate UI update
+      setLikedWorkouts(prev => prev.filter(id => id !== result.workoutId));
+      // Decrement the like count for this workout
+      setLikeCounts(prev => ({
+        ...prev,
+        [result.workoutId]: Math.max((prev[result.workoutId] || 0) - 1, 0)
+      }));
+    },
+  });
+  
   // Add comment mutation
   const addCommentMutation = useMutation({
     mutationFn: async (data: { workoutId: number, userId: number, content: string }) => {
@@ -233,9 +269,34 @@ function ActivityFeed() {
       // refetchComments();
     },
   });
+  
+  // Delete comment mutation
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (commentId: number) => {
+      // In a real implementation, this would call a real endpoint
+      await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
+      
+      return { success: true, commentId };
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Comment deleted",
+        description: "Your comment has been removed.",
+      });
+      
+      // Remove the comment from state immediately
+      setCommentsState(prev => prev.filter(comment => comment.id !== result.commentId));
+      setSelectedComment(null);
+    },
+  });
 
   const handleLikeWorkout = (workoutId: number) => {
-    likeWorkoutMutation.mutate(workoutId);
+    // If already liked, unlike it. Otherwise, like it.
+    if (likedWorkouts.includes(workoutId)) {
+      unlikeWorkoutMutation.mutate(workoutId);
+    } else {
+      likeWorkoutMutation.mutate(workoutId);
+    }
   };
 
   // We're using inline function for comment submission in the button's onClick
@@ -358,7 +419,7 @@ function ActivityFeed() {
                       size="sm"
                       className={`${likedWorkouts.includes(workout.id) ? "text-primary font-medium" : "text-muted-foreground"}`}
                       onClick={() => handleLikeWorkout(workout.id)}
-                      disabled={likedWorkouts.includes(workout.id) || likeWorkoutMutation.isPending}
+                      disabled={likeWorkoutMutation.isPending || unlikeWorkoutMutation.isPending}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -623,6 +684,29 @@ function ActivityFeed() {
         </div>
       </div>
 
+      {/* Comment delete confirmation dialog */}
+      {selectedComment && (
+        <AlertDialog open={!!selectedComment} onOpenChange={(open) => !open && setSelectedComment(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Comment</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this comment? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => deleteCommentMutation.mutate(selectedComment.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+      
       {selectedWorkout && (
         <Dialog 
           open={!!selectedWorkout} 
@@ -696,13 +780,21 @@ function ActivityFeed() {
                             {comment.userId === userId ? "ME" : getInitials(comment.username)}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="bg-muted p-3 rounded-md text-sm flex-1">
+                        <div className="bg-muted p-3 rounded-md text-sm flex-1 relative group">
                           <div className="font-medium mb-1">
                             {comment.userId === userId ? "You" : comment.username}
                           </div>
                           <p>{comment.text}</p>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {formatDate(comment.createdAt)}
+                          <div className="text-xs text-muted-foreground mt-1 flex justify-between items-center">
+                            <span>{formatDate(comment.createdAt)}</span>
+                            {comment.userId === userId && (
+                              <button 
+                                className="text-xs text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => setSelectedComment(comment)}
+                              >
+                                Delete
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
