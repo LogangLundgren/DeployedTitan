@@ -12,11 +12,15 @@ import {
   insertNotificationSchema,
   insertGoalSchema,
   insertMilestoneSchema,
+  insertCommentSchema,
+  insertLikeSchema,
   Workout,
   TemplateExercise,
   WorkoutWithDetails,
   Goal,
-  Milestone
+  Milestone,
+  Comment,
+  Like
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -1131,6 +1135,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json(completedMilestone);
     } catch (error) {
       console.error("Complete milestone error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Comment routes
+  app.get("/api/comments/:workoutId", async (req, res) => {
+    try {
+      const workoutId = parseInt(req.params.workoutId);
+      
+      if (isNaN(workoutId)) {
+        return res.status(400).json({ message: "Valid workout ID is required" });
+      }
+      
+      const comments = await storage.getComments(workoutId);
+      
+      res.status(200).json(comments);
+    } catch (error) {
+      console.error("Get comments error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/comments", async (req, res) => {
+    try {
+      const commentData = insertCommentSchema.safeParse(req.body);
+      
+      if (!commentData.success) {
+        return res.status(400).json({ message: "Invalid comment data", errors: commentData.error.errors });
+      }
+      
+      const comment = await storage.createComment(commentData.data);
+      
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Create comment error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.put("/api/comments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid comment ID is required" });
+      }
+      
+      const { content } = req.body;
+      
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ message: "Content is required and must be a string" });
+      }
+      
+      const updatedComment = await storage.updateComment(id, content);
+      
+      if (!updatedComment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      res.status(200).json(updatedComment);
+    } catch (error) {
+      console.error("Update comment error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.delete("/api/comments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid comment ID is required" });
+      }
+      
+      const deleted = await storage.deleteComment(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete comment error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Like routes
+  app.get("/api/likes/:workoutId", async (req, res) => {
+    try {
+      const workoutId = parseInt(req.params.workoutId);
+      
+      if (isNaN(workoutId)) {
+        return res.status(400).json({ message: "Valid workout ID is required" });
+      }
+      
+      const likes = await storage.getLikes(workoutId);
+      
+      res.status(200).json(likes);
+    } catch (error) {
+      console.error("Get likes error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/likes/:workoutId/count", async (req, res) => {
+    try {
+      const workoutId = parseInt(req.params.workoutId);
+      
+      if (isNaN(workoutId)) {
+        return res.status(400).json({ message: "Valid workout ID is required" });
+      }
+      
+      const count = await storage.getLikeCount(workoutId);
+      
+      res.status(200).json({ count });
+    } catch (error) {
+      console.error("Get like count error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/likes/:workoutId/users/:userId", async (req, res) => {
+    try {
+      const workoutId = parseInt(req.params.workoutId);
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(workoutId) || isNaN(userId)) {
+        return res.status(400).json({ message: "Valid workout ID and user ID are required" });
+      }
+      
+      const isLiked = await storage.isLikedByUser(workoutId, userId);
+      
+      res.status(200).json({ isLiked });
+    } catch (error) {
+      console.error("Is workout liked error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/likes/toggle", async (req, res) => {
+    try {
+      const { workoutId, userId } = req.body;
+      
+      if (!workoutId || !userId || isNaN(workoutId) || isNaN(userId)) {
+        return res.status(400).json({ message: "Valid workout ID and user ID are required" });
+      }
+      
+      const result = await storage.toggleLike(workoutId, userId);
+      
+      res.status(200).json({ success: result });
+    } catch (error) {
+      console.error("Toggle like error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

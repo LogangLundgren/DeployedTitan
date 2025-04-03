@@ -37,6 +37,21 @@ import {
 import { format } from "date-fns";
 import type { User, Workout, WorkoutWithDetails, Goal } from "@shared/schema";
 
+// Extended workout type with stats for the social feed
+interface WorkoutWithExtraStats extends Workout {
+  totalExercises?: number;
+  volume?: number;
+}
+
+// Comment type
+interface WorkoutComment {
+  id: number;
+  userId: number;
+  username: string;
+  text: string;
+  createdAt: Date;
+}
+
 // Demo data (in a real app, this would come from the API)
 const demoUsers = [
   { id: 2, username: "JessicaFitPro", name: "Jessica Chen", profilePicture: "" },
@@ -57,14 +72,7 @@ interface UserProfile {
   isFollowing?: boolean;
 }
 
-// Comments interface
-interface WorkoutComment {
-  id: number;
-  userId: number;
-  username: string;
-  text: string;
-  createdAt: Date;
-}
+// No need to redefine WorkoutComment here
 
 function getInitials(name: string) {
   return name
@@ -86,14 +94,23 @@ function formatTime(date: Date | string) {
 function ActivityFeed() {
   const userId = 1; // Hardcoded user ID for demo
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutWithDetails | null>(null);
+  const [newComment, setNewComment] = useState<string>("");
   
   // Query recent workouts from the community
-  const { data: communityWorkouts = [], isLoading: workoutsLoading } = useQuery({
+  const { data: communityWorkouts = [], isLoading: workoutsLoading, refetch } = useQuery({
     queryKey: ['/api/workouts/community'],
-    queryFn: () => 
+    queryFn: async () => {
       // In a real implementation, this would fetch from a real endpoint
       // Here we'll use the user's workouts as demo data
-      fetch(`/api/workouts?userId=1`).then(res => res.json()),
+      const response = await fetch(`/api/workouts?userId=1`).then(res => res.json());
+      
+      // Add extra stats to workout data
+      return response.map((workout: Workout) => ({
+        ...workout,
+        totalExercises: Math.floor(Math.random() * 8) + 1, // Mock data for demo
+        volume: Math.floor(Math.random() * 5000) + 500 // Mock data for demo
+      })) as WorkoutWithExtraStats[];
+    }
   });
 
   // Query public goals
@@ -102,22 +119,84 @@ function ActivityFeed() {
     queryFn: () => fetch('/api/goals/public').then(res => res.json()),
   });
 
+  // Comment query
+  const { data: workoutComments = [], refetch: refetchComments } = useQuery({
+    queryKey: ['/api/comments', selectedWorkout?.id],
+    queryFn: async () => {
+      if (!selectedWorkout) return [];
+      
+      try {
+        // In a real implementation, this would fetch from a real endpoint
+        // Here we'll mock the comments data
+        const mockComments: WorkoutComment[] = [
+          {
+            id: 1,
+            userId: 2,
+            username: "JessicaFitPro",
+            text: "Great workout! What was the most challenging exercise?",
+            createdAt: new Date(Date.now() - 1000 * 60 * 30) // 30 minutes ago
+          }
+        ];
+        return mockComments;
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+        return [];
+      }
+    },
+    enabled: !!selectedWorkout,
+  });
+
   // Like workout mutation
   const likeWorkoutMutation = useMutation({
-    mutationFn: (workoutId: number) => 
-      // In a real app, this would be a real endpoint
-      Promise.resolve({ success: true }),
+    mutationFn: async (workoutId: number) => {
+      // In a real implementation, this would call a real endpoint
+      await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
+      
+      return { success: true, liked: true };
+    },
     onSuccess: () => {
       toast({
         title: "Workout liked",
         description: "Your appreciation has been shared with the user.",
       });
+      // Refresh the activity feed
+      refetch();
+    },
+  });
+  
+  // Add comment mutation
+  const addCommentMutation = useMutation({
+    mutationFn: async (data: { workoutId: number, userId: number, content: string }) => {
+      // In a real implementation, this would call a real endpoint
+      // Here we'll mock the response
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+      
+      // Return a mock comment
+      return {
+        id: Math.floor(Math.random() * 1000) + 10,
+        userId: data.userId,
+        username: "You",
+        text: data.content,
+        createdAt: new Date(),
+      };
+    },
+    onSuccess: (newComment) => {
+      toast({
+        title: "Comment added",
+        description: "Your comment has been added successfully.",
+      });
+      setNewComment('');
+      
+      // Update comments in memory
+      refetchComments();
     },
   });
 
   const handleLikeWorkout = (workoutId: number) => {
     likeWorkoutMutation.mutate(workoutId);
   };
+
+  // We're using inline function for comment submission in the button's onClick
 
   const calculateProgress = (current: number, target: number) => {
     return Math.min(Math.round((current / target) * 100), 100);
@@ -178,7 +257,7 @@ function ActivityFeed() {
             </Card>
           ) : (
             <div className="space-y-6">
-              {communityWorkouts.map((workout: Workout) => (
+              {communityWorkouts.map((workout: WorkoutWithExtraStats) => (
                 <Card key={workout.id}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
@@ -558,18 +637,61 @@ function ActivityFeed() {
               <div>
                 <h4 className="font-medium mb-3">Comments</h4>
                 <div className="space-y-3 max-h-[200px] overflow-y-auto mb-4">
-                  {/* This would be populated with real comments in a full implementation */}
-                  <div className="flex items-start space-x-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>{getInitials(demoUsers[0].name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="bg-muted p-3 rounded-md text-sm flex-1">
-                      <div className="font-medium mb-1">{demoUsers[0].name}</div>
-                      <p>Great workout! What was the most challenging exercise?</p>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Just now
+                  {workoutComments.length === 0 ? (
+                    <p className="text-muted-foreground text-sm text-center py-4">
+                      No comments yet. Be the first to comment!
+                    </p>
+                  ) : (
+                    workoutComments.map((comment: WorkoutComment) => (
+                      <div key={comment.id} className="flex items-start space-x-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback>
+                            {comment.userId === userId ? "ME" : getInitials(comment.username)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="bg-muted p-3 rounded-md text-sm flex-1">
+                          <div className="font-medium mb-1">
+                            {comment.userId === userId ? "You" : comment.username}
+                          </div>
+                          <p>{comment.text}</p>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {formatDate(comment.createdAt)}
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))
+                  )}
+                </div>
+                
+                {/* Comment input field */}
+                <div className="flex items-start space-x-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>ME</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 flex">
+                    <Input
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Add a comment..."
+                      className="flex-1"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="ml-2"
+                      onClick={() => {
+                        if (newComment.trim()) {
+                          addCommentMutation.mutate({
+                            workoutId: selectedWorkout.id,
+                            userId,
+                            content: newComment
+                          });
+                        }
+                      }}
+                      disabled={!newComment.trim() || addCommentMutation.isPending}
+                    >
+                      Post
+                    </Button>
                   </div>
                 </div>
               </div>
