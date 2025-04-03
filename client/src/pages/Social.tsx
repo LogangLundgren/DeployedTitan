@@ -196,8 +196,9 @@ function ActivityFeed() {
         [result.workoutId]: (prev[result.workoutId] || 0) + 1
       }));
       
-      // Refresh the activity feed
-      refetch();
+      // Don't refresh the feed to avoid regenerating random data
+      // In a real implementation with API backend, we would refetch
+      // refetch();
     },
   });
   
@@ -227,8 +228,9 @@ function ActivityFeed() {
       // Immediately update the comments state to show the new comment
       setCommentsState(prev => [...prev, newComment]);
       
-      // Also refresh from the server
-      refetchComments();
+      // Don't refresh for mock data to avoid regenerating random comments
+      // In a real implementation with API backend, we would refetch
+      // refetchComments();
     },
   });
 
