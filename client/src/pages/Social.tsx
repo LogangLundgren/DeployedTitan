@@ -119,7 +119,9 @@ function ActivityFeed() {
     queryFn: () => fetch('/api/goals/public').then(res => res.json()),
   });
 
-  // Comment query
+  // Comment query - store comments in state for immediate updates
+  const [commentsState, setCommentsState] = useState<WorkoutComment[]>([]);
+  
   const { data: workoutComments = [], refetch: refetchComments } = useQuery({
     queryKey: ['/api/comments', selectedWorkout?.id],
     queryFn: async () => {
@@ -137,6 +139,8 @@ function ActivityFeed() {
             createdAt: new Date(Date.now() - 1000 * 60 * 30) // 30 minutes ago
           }
         ];
+        // Update state when we get data
+        setCommentsState(mockComments);
         return mockComments;
       } catch (error) {
         console.error("Error fetching comments:", error);
@@ -146,19 +150,26 @@ function ActivityFeed() {
     enabled: !!selectedWorkout,
   });
 
+  // Keep track of likes in local state for immediate UI updates
+  const [likedWorkouts, setLikedWorkouts] = useState<number[]>([]);
+  
   // Like workout mutation
   const likeWorkoutMutation = useMutation({
     mutationFn: async (workoutId: number) => {
       // In a real implementation, this would call a real endpoint
       await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
       
-      return { success: true, liked: true };
+      return { success: true, liked: true, workoutId };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast({
         title: "Workout liked",
         description: "Your appreciation has been shared with the user.",
       });
+      
+      // Add the workout to liked workouts for immediate UI update
+      setLikedWorkouts(prev => [...prev, result.workoutId]);
+      
       // Refresh the activity feed
       refetch();
     },
@@ -187,7 +198,10 @@ function ActivityFeed() {
       });
       setNewComment('');
       
-      // Update comments in memory
+      // Immediately update the comments state to show the new comment
+      setCommentsState(prev => [...prev, newComment]);
+      
+      // Also refresh from the server
       refetchComments();
     },
   });
@@ -314,15 +328,16 @@ function ActivityFeed() {
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      className="text-muted-foreground"
+                      className={`${likedWorkouts.includes(workout.id) ? "text-primary font-medium" : "text-muted-foreground"}`}
                       onClick={() => handleLikeWorkout(workout.id)}
+                      disabled={likedWorkouts.includes(workout.id) || likeWorkoutMutation.isPending}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="18"
                         height="18"
                         viewBox="0 0 24 24"
-                        fill="none"
+                        fill={likedWorkouts.includes(workout.id) ? "currentColor" : "none"}
                         stroke="currentColor"
                         strokeWidth="2"
                         strokeLinecap="round"
@@ -332,13 +347,17 @@ function ActivityFeed() {
                         <path d="M7 10v12" />
                         <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
                       </svg>
-                      Like
+                      {likedWorkouts.includes(workout.id) ? "Liked" : "Like"}
                     </Button>
                     <Button 
                       variant="ghost" 
                       size="sm"
                       className="text-muted-foreground"
-                      onClick={() => setSelectedWorkout(workout as WorkoutWithDetails)}
+                      onClick={() => {
+                        setSelectedWorkout(workout as WorkoutWithDetails);
+                        // Also load comments based on selected workout
+                        refetchComments();
+                      }}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -637,12 +656,12 @@ function ActivityFeed() {
               <div>
                 <h4 className="font-medium mb-3">Comments</h4>
                 <div className="space-y-3 max-h-[200px] overflow-y-auto mb-4">
-                  {workoutComments.length === 0 ? (
+                  {commentsState.length === 0 ? (
                     <p className="text-muted-foreground text-sm text-center py-4">
                       No comments yet. Be the first to comment!
                     </p>
                   ) : (
-                    workoutComments.map((comment: WorkoutComment) => (
+                    commentsState.map((comment: WorkoutComment) => (
                       <div key={comment.id} className="flex items-start space-x-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback>
