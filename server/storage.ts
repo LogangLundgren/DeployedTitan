@@ -14,6 +14,7 @@ import {
   likes, type Like, type InsertLike,
   coachProfiles, type CoachProfile, type InsertCoachProfile,
   workoutPlans, type WorkoutPlan, type InsertWorkoutPlan,
+  workoutPlanDays, type WorkoutPlanDay, type InsertWorkoutPlanDay,
   planTemplates, type PlanTemplate, type InsertPlanTemplate,
   coachingServices, type CoachingService, type InsertCoachingService,
   purchases, type Purchase, type InsertPurchase,
@@ -118,16 +119,24 @@ export interface IStorage {
   searchCoaches(query: string, category?: string, limit?: number): Promise<CoachProfile[]>;
   
   // Workout Plan operations
-  getWorkoutPlans(coachId: number): Promise<WorkoutPlan[]>;
   getWorkoutPlan(id: number): Promise<WorkoutPlan | undefined>;
-  createWorkoutPlan(workoutPlan: InsertWorkoutPlan): Promise<WorkoutPlan>;
-  updateWorkoutPlan(id: number, workoutPlan: Partial<WorkoutPlan>): Promise<WorkoutPlan | undefined>;
+  getWorkoutPlans(coachId: number): Promise<WorkoutPlan[]>;
+  createWorkoutPlan(plan: InsertWorkoutPlan): Promise<WorkoutPlan>;
+  updateWorkoutPlan(id: number, plan: Partial<WorkoutPlan>): Promise<WorkoutPlan | undefined>;
   deleteWorkoutPlan(id: number): Promise<boolean>;
   getFeaturedWorkoutPlans(limit?: number): Promise<WorkoutPlan[]>;
   searchWorkoutPlans(query: string, category?: string, limit?: number): Promise<WorkoutPlan[]>;
   getPurchasedWorkoutPlans(userId: number): Promise<WorkoutPlan[]>;
   
+  // Workout Plan Day operations
+  getWorkoutPlanDays(planId: number): Promise<WorkoutPlanDay[]>;
+  getWorkoutPlanDay(id: number): Promise<WorkoutPlanDay | undefined>;
+  createWorkoutPlanDay(workoutPlanDay: InsertWorkoutPlanDay): Promise<WorkoutPlanDay>;
+  updateWorkoutPlanDay(id: number, workoutPlanDay: Partial<WorkoutPlanDay>): Promise<WorkoutPlanDay | undefined>;
+  deleteWorkoutPlanDay(id: number): Promise<boolean>;
+  
   // Plan Template operations
+  
   getPlanTemplates(planId: number): Promise<PlanTemplate[]>;
   createPlanTemplate(planTemplate: InsertPlanTemplate): Promise<PlanTemplate>;
   updatePlanTemplate(id: number, planTemplate: Partial<PlanTemplate>): Promise<PlanTemplate | undefined>;
@@ -173,6 +182,7 @@ export class MemStorage implements IStorage {
   private likes: Map<number, Like>;
   private coachProfiles: Map<number, CoachProfile>;
   private workoutPlans: Map<number, WorkoutPlan>;
+  private workoutPlanDays: Map<number, WorkoutPlanDay>;
   private planTemplates: Map<number, PlanTemplate>;
   private coachingServices: Map<number, CoachingService>;
   private purchases: Map<number, Purchase>;
@@ -193,6 +203,7 @@ export class MemStorage implements IStorage {
   private likeCurrentId: number;
   private coachProfileCurrentId: number;
   private workoutPlanCurrentId: number;
+  private workoutPlanDayCurrentId: number;
   private planTemplateCurrentId: number;
   private coachingServiceCurrentId: number;
   private purchaseCurrentId: number;
@@ -214,6 +225,7 @@ export class MemStorage implements IStorage {
     this.likes = new Map();
     this.coachProfiles = new Map();
     this.workoutPlans = new Map();
+    this.workoutPlanDays = new Map();
     this.planTemplates = new Map();
     this.coachingServices = new Map();
     this.purchases = new Map();
@@ -234,6 +246,7 @@ export class MemStorage implements IStorage {
     this.likeCurrentId = 1;
     this.coachProfileCurrentId = 1;
     this.workoutPlanCurrentId = 1;
+    this.workoutPlanDayCurrentId = 1;
     this.planTemplateCurrentId = 1;
     this.coachingServiceCurrentId = 1;
     this.purchaseCurrentId = 1;
@@ -1167,6 +1180,14 @@ export class MemStorage implements IStorage {
       this.planTemplates.delete(pt.id);
     }
     
+    // Delete all workout plan days for this plan
+    const workoutPlanDaysToDelete = Array.from(this.workoutPlanDays.values())
+      .filter(day => day.planId === id);
+    
+    for (const day of workoutPlanDaysToDelete) {
+      this.workoutPlanDays.delete(day.id);
+    }
+    
     return this.workoutPlans.delete(id);
   }
   
@@ -1246,6 +1267,47 @@ export class MemStorage implements IStorage {
     return Array.from(this.workoutPlans.values())
       .filter(plan => planIds.includes(plan.id))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  // Workout Plan Day operations
+  async getWorkoutPlanDays(planId: number): Promise<WorkoutPlanDay[]> {
+    return Array.from(this.workoutPlanDays.values())
+      .filter(day => day.planId === planId)
+      .sort((a, b) => a.dayNumber - b.dayNumber);
+  }
+  
+  async getWorkoutPlanDay(id: number): Promise<WorkoutPlanDay | undefined> {
+    return this.workoutPlanDays.get(id);
+  }
+  
+  async createWorkoutPlanDay(insertWorkoutPlanDay: InsertWorkoutPlanDay): Promise<WorkoutPlanDay> {
+    const id = this.workoutPlanDayCurrentId++;
+    const workoutPlanDay: WorkoutPlanDay = {
+      ...insertWorkoutPlanDay,
+      id,
+      createdAt: new Date(),
+      title: insertWorkoutPlanDay.title,
+      description: insertWorkoutPlanDay.description ?? null,
+      templateId: insertWorkoutPlanDay.templateId ?? null
+    };
+    this.workoutPlanDays.set(id, workoutPlanDay);
+    return workoutPlanDay;
+  }
+  
+  async updateWorkoutPlanDay(id: number, workoutPlanDayUpdate: Partial<WorkoutPlanDay>): Promise<WorkoutPlanDay | undefined> {
+    const workoutPlanDay = this.workoutPlanDays.get(id);
+    if (!workoutPlanDay) return undefined;
+    
+    const updatedWorkoutPlanDay = {
+      ...workoutPlanDay,
+      ...workoutPlanDayUpdate
+    };
+    this.workoutPlanDays.set(id, updatedWorkoutPlanDay);
+    return updatedWorkoutPlanDay;
+  }
+  
+  async deleteWorkoutPlanDay(id: number): Promise<boolean> {
+    return this.workoutPlanDays.delete(id);
   }
   
   // Plan Template operations

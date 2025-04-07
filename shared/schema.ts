@@ -381,6 +381,28 @@ export const insertWorkoutPlanSchema = createInsertSchema(workoutPlans).pick({
 export type WorkoutPlan = typeof workoutPlans.$inferSelect;
 export type InsertWorkoutPlan = z.infer<typeof insertWorkoutPlanSchema>;
 
+// Workout plan days schema (days in a workout plan)
+export const workoutPlanDays = pgTable("workout_plan_days", {
+  id: serial("id").primaryKey(),
+  planId: integer("plan_id").references(() => workoutPlans.id, { onDelete: "cascade" }).notNull(),
+  dayNumber: integer("day_number").notNull(),
+  templateId: integer("template_id").references(() => templates.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWorkoutPlanDaySchema = createInsertSchema(workoutPlanDays).pick({
+  planId: true,
+  dayNumber: true,
+  templateId: true,
+  title: true,
+  description: true,
+});
+
+export type WorkoutPlanDay = typeof workoutPlanDays.$inferSelect;
+export type InsertWorkoutPlanDay = z.infer<typeof insertWorkoutPlanDaySchema>;
+
 // Plan templates schema (templates included in a workout plan)
 export const planTemplates = pgTable("plan_templates", {
   id: serial("id").primaryKey(),

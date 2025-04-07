@@ -14,6 +14,8 @@ import Marketplace from "@/pages/Marketplace";
 import WorkoutPlanDetail from "@/pages/WorkoutPlanDetail";
 import CoachProfile from "@/pages/CoachProfile";
 import MyPlans from "@/pages/MyPlans";
+import BecomeCoach from "@/pages/BecomeCoach";
+import CreatePlan from "@/pages/CreatePlan";
 import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
@@ -55,6 +57,8 @@ function Router() {
           <Route path="/workout-plans/:id" component={WorkoutPlanDetail} />
           <Route path="/coaches/:id" component={CoachProfile} />
           <Route path="/my-plans" component={MyPlans} />
+          <Route path="/become-coach" component={BecomeCoach} />
+          <Route path="/create-plan" component={CreatePlan} />
           {/* Fallback to 404 */}
           <Route component={NotFound} />
         </Switch>

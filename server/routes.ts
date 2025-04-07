@@ -1791,6 +1791,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Workout Plan Day routes
+  app.get("/api/workout-plan-days", async (req, res) => {
+    try {
+      const planId = parseInt(req.query.planId as string);
+      
+      if (isNaN(planId)) {
+        return res.status(400).json({ message: "Valid workout plan ID is required" });
+      }
+      
+      const workoutPlanDays = await storage.getWorkoutPlanDays(planId);
+      res.status(200).json(workoutPlanDays);
+    } catch (error) {
+      console.error("Get workout plan days error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/workout-plan-days/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid workout plan day ID is required" });
+      }
+      
+      const workoutPlanDay = await storage.getWorkoutPlanDay(id);
+      
+      if (!workoutPlanDay) {
+        return res.status(404).json({ message: "Workout plan day not found" });
+      }
+      
+      res.status(200).json(workoutPlanDay);
+    } catch (error) {
+      console.error("Get workout plan day error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/workout-plan-days", async (req, res) => {
+    try {
+      const workoutPlanDayData = insertWorkoutPlanDaySchema.safeParse(req.body);
+      
+      if (!workoutPlanDayData.success) {
+        return res.status(400).json({ message: "Invalid workout plan day data", errors: workoutPlanDayData.error.errors });
+      }
+      
+      // Check if plan exists
+      const plan = await storage.getWorkoutPlan(workoutPlanDayData.data.planId);
+      if (!plan) {
+        return res.status(404).json({ message: "Workout plan not found" });
+      }
+      
+      // Create the workout plan day
+      const workoutPlanDay = await storage.createWorkoutPlanDay(workoutPlanDayData.data);
+      res.status(201).json(workoutPlanDay);
+    } catch (error) {
+      console.error("Create workout plan day error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.put("/api/workout-plan-days/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid workout plan day ID is required" });
+      }
+      
+      // Check if workout plan day exists
+      const existingWorkoutPlanDay = await storage.getWorkoutPlanDay(id);
+      if (!existingWorkoutPlanDay) {
+        return res.status(404).json({ message: "Workout plan day not found" });
+      }
+      
+      // Update the workout plan day
+      const updatedWorkoutPlanDay = await storage.updateWorkoutPlanDay(id, req.body);
+      res.status(200).json(updatedWorkoutPlanDay);
+    } catch (error) {
+      console.error("Update workout plan day error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.delete("/api/workout-plan-days/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid workout plan day ID is required" });
+      }
+      
+      const deleted = await storage.deleteWorkoutPlanDay(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Workout plan day not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete workout plan day error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Coaching Service routes
   app.get("/api/coaching-services", async (req, res) => {
     try {
