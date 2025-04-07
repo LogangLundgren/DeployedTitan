@@ -10,6 +10,10 @@ import TemplateDetail from "@/pages/TemplateDetail";
 import Profile from "@/pages/Profile";
 import Goals from "@/pages/Goals";
 import Social from "@/pages/Social";
+import Marketplace from "@/pages/Marketplace";
+import WorkoutPlanDetail from "@/pages/WorkoutPlanDetail";
+import CoachProfile from "@/pages/CoachProfile";
+import MyPlans from "@/pages/MyPlans";
 import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
@@ -47,6 +51,10 @@ function Router() {
           <Route path="/profile" component={Profile} />
           <Route path="/goals" component={Goals} />
           <Route path="/social" component={Social} />
+          <Route path="/marketplace" component={Marketplace} />
+          <Route path="/workout-plans/:id" component={WorkoutPlanDetail} />
+          <Route path="/coaches/:id" component={CoachProfile} />
+          <Route path="/my-plans" component={MyPlans} />
           {/* Fallback to 404 */}
           <Route component={NotFound} />
         </Switch>

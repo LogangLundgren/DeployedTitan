@@ -310,3 +310,170 @@ export const insertLikeSchema = createInsertSchema(likes).pick({
 
 export type Like = typeof likes.$inferSelect;
 export type InsertLike = z.infer<typeof insertLikeSchema>;
+
+// Coach profile schema (extends user but with coaching specific fields)
+export const coachProfiles = pgTable("coach_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull().unique(),
+  title: text("title").notNull(), // e.g. "Strength Coach", "Fitness Expert"
+  experience: text("experience").notNull(),
+  specialties: text("specialties").notNull(), // JSON array of specialties
+  biography: text("biography").notNull(),
+  hourlyRate: real("hourly_rate"),
+  rating: real("rating"),
+  ratingsCount: integer("ratings_count").default(0),
+  isVerified: boolean("is_verified").default(false),
+  isAvailableForHire: boolean("is_available_for_hire").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCoachProfileSchema = createInsertSchema(coachProfiles).pick({
+  userId: true,
+  title: true,
+  experience: true,
+  specialties: true,
+  biography: true,
+  hourlyRate: true,
+  isAvailableForHire: true,
+});
+
+export type CoachProfile = typeof coachProfiles.$inferSelect;
+export type InsertCoachProfile = z.infer<typeof insertCoachProfileSchema>;
+
+// Workout plans schema (packages of templates sold by coaches)
+export const workoutPlans = pgTable("workout_plans", {
+  id: serial("id").primaryKey(),
+  coachId: integer("coach_id").references(() => coachProfiles.id, { onDelete: "cascade" }).notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  price: real("price").notNull(),
+  durationWeeks: integer("duration_weeks").notNull(),
+  difficultyLevel: text("difficulty_level").notNull(), // beginner, intermediate, advanced
+  category: text("category").notNull(), // strength, endurance, fat loss, etc.
+  featuredImageUrl: text("featured_image_url"),
+  goals: text("goals").notNull(), // JSON array of goals this plan addresses
+  equipment: text("equipment"), // JSON array of required equipment
+  isFeatured: boolean("is_featured").default(false),
+  isSoldOut: boolean("is_sold_out").default(false),
+  rating: real("rating"),
+  ratingsCount: integer("ratings_count").default(0),
+  sales: integer("sales").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertWorkoutPlanSchema = createInsertSchema(workoutPlans).pick({
+  coachId: true,
+  title: true,
+  description: true,
+  price: true,
+  durationWeeks: true,
+  difficultyLevel: true,
+  category: true,
+  featuredImageUrl: true,
+  goals: true,
+  equipment: true,
+  isFeatured: true,
+  isSoldOut: true,
+});
+
+export type WorkoutPlan = typeof workoutPlans.$inferSelect;
+export type InsertWorkoutPlan = z.infer<typeof insertWorkoutPlanSchema>;
+
+// Plan templates schema (templates included in a workout plan)
+export const planTemplates = pgTable("plan_templates", {
+  id: serial("id").primaryKey(),
+  planId: integer("plan_id").references(() => workoutPlans.id, { onDelete: "cascade" }).notNull(),
+  templateId: integer("template_id").references(() => templates.id, { onDelete: "cascade" }).notNull(),
+  weekNumber: integer("week_number").notNull(),
+  dayNumber: integer("day_number").notNull(),
+  order: integer("order").notNull(),
+  notes: text("notes"),
+});
+
+export const insertPlanTemplateSchema = createInsertSchema(planTemplates).pick({
+  planId: true,
+  templateId: true,
+  weekNumber: true,
+  dayNumber: true,
+  order: true,
+  notes: true,
+});
+
+export type PlanTemplate = typeof planTemplates.$inferSelect;
+export type InsertPlanTemplate = z.infer<typeof insertPlanTemplateSchema>;
+
+// Coaching services schema
+export const coachingServices = pgTable("coaching_services", {
+  id: serial("id").primaryKey(),
+  coachId: integer("coach_id").references(() => coachProfiles.id, { onDelete: "cascade" }).notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  price: real("price").notNull(),
+  durationType: text("duration_type").notNull(), // one-time, weekly, monthly, etc.
+  serviceType: text("service_type").notNull(), // 1-on-1, group, consultation, etc.
+  isAvailable: boolean("is_available").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCoachingServiceSchema = createInsertSchema(coachingServices).pick({
+  coachId: true,
+  title: true,
+  description: true,
+  price: true,
+  durationType: true,
+  serviceType: true,
+  isAvailable: true,
+});
+
+export type CoachingService = typeof coachingServices.$inferSelect;
+export type InsertCoachingService = z.infer<typeof insertCoachingServiceSchema>;
+
+// User purchases schema
+export const purchases = pgTable("purchases", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  planId: integer("plan_id").references(() => workoutPlans.id),
+  serviceId: integer("service_id").references(() => coachingServices.id),
+  transactionId: text("transaction_id").notNull(),
+  amount: real("amount").notNull(),
+  status: text("status").notNull(), // completed, refunded, etc.
+  purchaseDate: timestamp("purchase_date").defaultNow().notNull(),
+});
+
+export const insertPurchaseSchema = createInsertSchema(purchases).pick({
+  userId: true,
+  planId: true,
+  serviceId: true,
+  transactionId: true,
+  amount: true,
+  status: true,
+});
+
+export type Purchase = typeof purchases.$inferSelect;
+export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
+
+// Reviews schema for plans and coaches
+export const reviews = pgTable("reviews", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  coachId: integer("coach_id").references(() => coachProfiles.id),
+  planId: integer("plan_id").references(() => workoutPlans.id),
+  rating: integer("rating").notNull(),
+  review: text("review"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertReviewSchema = createInsertSchema(reviews).pick({
+  userId: true,
+  coachId: true,
+  planId: true,
+  rating: true,
+  review: true,
+});
+
+export type Review = typeof reviews.$inferSelect;
+export type InsertReview = z.infer<typeof insertReviewSchema>;

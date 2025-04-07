@@ -12,6 +12,12 @@ import {
   mediaFiles, type MediaFile, type InsertMediaFile,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
+  coachProfiles, type CoachProfile, type InsertCoachProfile,
+  workoutPlans, type WorkoutPlan, type InsertWorkoutPlan,
+  planTemplates, type PlanTemplate, type InsertPlanTemplate,
+  coachingServices, type CoachingService, type InsertCoachingService,
+  purchases, type Purchase, type InsertPurchase,
+  reviews, type Review, type InsertReview,
   type WorkoutWithDetails, type TemplateWithExercises
 } from "@shared/schema";
 import { eq, desc, and, asc, sql } from 'drizzle-orm';
@@ -102,6 +108,51 @@ export interface IStorage {
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(workoutId: number, userId: number): Promise<boolean>;
   
+  // Coach Profile operations
+  getCoachProfile(userId: number): Promise<CoachProfile | undefined>;
+  getCoachProfileById(id: number): Promise<CoachProfile | undefined>;
+  createCoachProfile(coachProfile: InsertCoachProfile): Promise<CoachProfile>;
+  updateCoachProfile(id: number, coachProfile: Partial<CoachProfile>): Promise<CoachProfile | undefined>;
+  listCoaches(limit?: number, offset?: number): Promise<CoachProfile[]>;
+  getFeaturedCoaches(limit?: number): Promise<CoachProfile[]>;
+  searchCoaches(query: string, category?: string, limit?: number): Promise<CoachProfile[]>;
+  
+  // Workout Plan operations
+  getWorkoutPlans(coachId: number): Promise<WorkoutPlan[]>;
+  getWorkoutPlan(id: number): Promise<WorkoutPlan | undefined>;
+  createWorkoutPlan(workoutPlan: InsertWorkoutPlan): Promise<WorkoutPlan>;
+  updateWorkoutPlan(id: number, workoutPlan: Partial<WorkoutPlan>): Promise<WorkoutPlan | undefined>;
+  deleteWorkoutPlan(id: number): Promise<boolean>;
+  getFeaturedWorkoutPlans(limit?: number): Promise<WorkoutPlan[]>;
+  searchWorkoutPlans(query: string, category?: string, limit?: number): Promise<WorkoutPlan[]>;
+  getPurchasedWorkoutPlans(userId: number): Promise<WorkoutPlan[]>;
+  
+  // Plan Template operations
+  getPlanTemplates(planId: number): Promise<PlanTemplate[]>;
+  createPlanTemplate(planTemplate: InsertPlanTemplate): Promise<PlanTemplate>;
+  updatePlanTemplate(id: number, planTemplate: Partial<PlanTemplate>): Promise<PlanTemplate | undefined>;
+  deletePlanTemplate(id: number): Promise<boolean>;
+  
+  // Coaching Service operations
+  getCoachingServices(coachId: number): Promise<CoachingService[]>;
+  getCoachingService(id: number): Promise<CoachingService | undefined>;
+  createCoachingService(coachingService: InsertCoachingService): Promise<CoachingService>;
+  updateCoachingService(id: number, coachingService: Partial<CoachingService>): Promise<CoachingService | undefined>;
+  deleteCoachingService(id: number): Promise<boolean>;
+  
+  // Purchase operations
+  getPurchases(userId: number): Promise<Purchase[]>;
+  createPurchase(purchase: InsertPurchase): Promise<Purchase>;
+  getPurchase(id: number): Promise<Purchase | undefined>;
+  updatePurchaseStatus(id: number, status: string): Promise<Purchase | undefined>;
+  
+  // Review operations
+  getReviews(coachId?: number, planId?: number): Promise<Review[]>;
+  createReview(review: InsertReview): Promise<Review>;
+  updateReview(id: number, reviewContent: string, rating: number): Promise<Review | undefined>;
+  deleteReview(id: number): Promise<boolean>;
+  getAverageRating(coachId?: number, planId?: number): Promise<number>;
+  
   // DB-specific method
   initialize?(): Promise<void>;
 }
@@ -120,6 +171,12 @@ export class MemStorage implements IStorage {
   private mediaFiles: Map<number, MediaFile>;
   private comments: Map<number, Comment>;
   private likes: Map<number, Like>;
+  private coachProfiles: Map<number, CoachProfile>;
+  private workoutPlans: Map<number, WorkoutPlan>;
+  private planTemplates: Map<number, PlanTemplate>;
+  private coachingServices: Map<number, CoachingService>;
+  private purchases: Map<number, Purchase>;
+  private reviews: Map<number, Review>;
   
   private userCurrentId: number;
   private exerciseCurrentId: number;
@@ -134,6 +191,12 @@ export class MemStorage implements IStorage {
   private mediaFileCurrentId: number;
   private commentCurrentId: number;
   private likeCurrentId: number;
+  private coachProfileCurrentId: number;
+  private workoutPlanCurrentId: number;
+  private planTemplateCurrentId: number;
+  private coachingServiceCurrentId: number;
+  private purchaseCurrentId: number;
+  private reviewCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -149,6 +212,12 @@ export class MemStorage implements IStorage {
     this.mediaFiles = new Map();
     this.comments = new Map();
     this.likes = new Map();
+    this.coachProfiles = new Map();
+    this.workoutPlans = new Map();
+    this.planTemplates = new Map();
+    this.coachingServices = new Map();
+    this.purchases = new Map();
+    this.reviews = new Map();
     
     this.userCurrentId = 1;
     this.exerciseCurrentId = 1;
@@ -163,6 +232,12 @@ export class MemStorage implements IStorage {
     this.mediaFileCurrentId = 1;
     this.commentCurrentId = 1;
     this.likeCurrentId = 1;
+    this.coachProfileCurrentId = 1;
+    this.workoutPlanCurrentId = 1;
+    this.planTemplateCurrentId = 1;
+    this.coachingServiceCurrentId = 1;
+    this.purchaseCurrentId = 1;
+    this.reviewCurrentId = 1;
     
     // Add some default exercises
     this.seedDefaultExercises();
@@ -892,6 +967,610 @@ export class MemStorage implements IStorage {
     }
     
     return false;
+  }
+  
+  // Coach Profile operations
+  async getCoachProfile(userId: number): Promise<CoachProfile | undefined> {
+    return Array.from(this.coachProfiles.values())
+      .find((profile) => profile.userId === userId);
+  }
+  
+  async getCoachProfileById(id: number): Promise<CoachProfile | undefined> {
+    return this.coachProfiles.get(id);
+  }
+  
+  async createCoachProfile(insertCoachProfile: InsertCoachProfile): Promise<CoachProfile> {
+    const id = this.coachProfileCurrentId++;
+    const now = new Date();
+    const coachProfile: CoachProfile = {
+      ...insertCoachProfile,
+      id,
+      rating: null,
+      ratingsCount: 0,
+      isVerified: false,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.coachProfiles.set(id, coachProfile);
+    
+    // Create a notification for the user about becoming a coach
+    await this.createNotification({
+      userId: coachProfile.userId,
+      title: "Coach Profile Created",
+      message: "You're now a coach! You can create workout plans and offer coaching services.",
+      type: "info"
+    });
+    
+    return coachProfile;
+  }
+  
+  async updateCoachProfile(id: number, profileUpdate: Partial<CoachProfile>): Promise<CoachProfile | undefined> {
+    const profile = this.coachProfiles.get(id);
+    if (!profile) return undefined;
+    
+    const updatedProfile = {
+      ...profile,
+      ...profileUpdate,
+      updatedAt: new Date()
+    };
+    this.coachProfiles.set(id, updatedProfile);
+    return updatedProfile;
+  }
+  
+  async listCoaches(limit?: number, offset = 0): Promise<CoachProfile[]> {
+    let coaches = Array.from(this.coachProfiles.values())
+      .filter(coach => coach.isAvailableForHire)
+      .sort((a, b) => {
+        // Sort by verified first, then by rating
+        if (a.isVerified && !b.isVerified) return -1;
+        if (!a.isVerified && b.isVerified) return 1;
+        
+        const aRating = a.rating || 0;
+        const bRating = b.rating || 0;
+        return bRating - aRating;
+      });
+    
+    if (offset) {
+      coaches = coaches.slice(offset);
+    }
+    
+    if (limit) {
+      coaches = coaches.slice(0, limit);
+    }
+    
+    return coaches;
+  }
+  
+  async getFeaturedCoaches(limit?: number): Promise<CoachProfile[]> {
+    let coaches = Array.from(this.coachProfiles.values())
+      .filter(coach => coach.isAvailableForHire && coach.isVerified)
+      .sort((a, b) => {
+        const aRating = a.rating || 0;
+        const bRating = b.rating || 0;
+        if (bRating !== aRating) {
+          return bRating - aRating;
+        }
+        return b.ratingsCount - a.ratingsCount;
+      });
+    
+    if (limit) {
+      coaches = coaches.slice(0, limit);
+    }
+    
+    return coaches;
+  }
+  
+  async searchCoaches(query: string, category?: string, limit?: number): Promise<CoachProfile[]> {
+    const queryLower = query.toLowerCase();
+    
+    // Get users for name search
+    const userMap = new Map<number, User>();
+    this.users.forEach(user => userMap.set(user.id, user));
+    
+    let coaches = Array.from(this.coachProfiles.values())
+      .filter(coach => {
+        if (!coach.isAvailableForHire) return false;
+        
+        const user = userMap.get(coach.userId);
+        if (!user) return false;
+        
+        // Match by name, title, specialties, or biography
+        const titleMatch = coach.title.toLowerCase().includes(queryLower);
+        const nameMatch = user.name ? user.name.toLowerCase().includes(queryLower) : false;
+        const specialtiesMatch = coach.specialties.toLowerCase().includes(queryLower);
+        const bioMatch = coach.biography.toLowerCase().includes(queryLower);
+        
+        return titleMatch || nameMatch || specialtiesMatch || bioMatch;
+      })
+      .sort((a, b) => {
+        if (a.isVerified && !b.isVerified) return -1;
+        if (!a.isVerified && b.isVerified) return 1;
+        
+        const aRating = a.rating || 0;
+        const bRating = b.rating || 0;
+        return bRating - aRating;
+      });
+    
+    if (limit) {
+      coaches = coaches.slice(0, limit);
+    }
+    
+    return coaches;
+  }
+  
+  // Workout Plan operations
+  async getWorkoutPlans(coachId: number): Promise<WorkoutPlan[]> {
+    return Array.from(this.workoutPlans.values())
+      .filter(plan => plan.coachId === coachId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getWorkoutPlan(id: number): Promise<WorkoutPlan | undefined> {
+    return this.workoutPlans.get(id);
+  }
+  
+  async createWorkoutPlan(insertWorkoutPlan: InsertWorkoutPlan): Promise<WorkoutPlan> {
+    const id = this.workoutPlanCurrentId++;
+    const now = new Date();
+    const workoutPlan: WorkoutPlan = {
+      ...insertWorkoutPlan,
+      id,
+      featuredImageUrl: insertWorkoutPlan.featuredImageUrl || null,
+      equipment: insertWorkoutPlan.equipment || null,
+      isFeatured: insertWorkoutPlan.isFeatured || false,
+      isSoldOut: false,
+      rating: null,
+      ratingsCount: 0,
+      sales: 0,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.workoutPlans.set(id, workoutPlan);
+    
+    // Find the coach profile for coach name
+    const coachProfile = this.coachProfiles.get(workoutPlan.coachId);
+    if (coachProfile) {
+      // Get user for the coach
+      const user = this.users.get(coachProfile.userId);
+      
+      // Create a notification for the coach
+      await this.createNotification({
+        userId: coachProfile.userId,
+        title: "Workout Plan Created",
+        message: `You created a new workout plan: ${workoutPlan.title}`,
+        type: "info"
+      });
+    }
+    
+    return workoutPlan;
+  }
+  
+  async updateWorkoutPlan(id: number, planUpdate: Partial<WorkoutPlan>): Promise<WorkoutPlan | undefined> {
+    const plan = this.workoutPlans.get(id);
+    if (!plan) return undefined;
+    
+    const updatedPlan = {
+      ...plan,
+      ...planUpdate,
+      updatedAt: new Date()
+    };
+    this.workoutPlans.set(id, updatedPlan);
+    return updatedPlan;
+  }
+  
+  async deleteWorkoutPlan(id: number): Promise<boolean> {
+    // Delete all plan templates for this plan
+    const planTemplatesToDelete = Array.from(this.planTemplates.values())
+      .filter(pt => pt.planId === id);
+    
+    for (const pt of planTemplatesToDelete) {
+      this.planTemplates.delete(pt.id);
+    }
+    
+    return this.workoutPlans.delete(id);
+  }
+  
+  async getFeaturedWorkoutPlans(limit?: number): Promise<WorkoutPlan[]> {
+    let plans = Array.from(this.workoutPlans.values())
+      .filter(plan => plan.isFeatured && !plan.isSoldOut)
+      .sort((a, b) => {
+        const aRating = a.rating || 0;
+        const bRating = b.rating || 0;
+        if (bRating !== aRating) {
+          return bRating - aRating;
+        }
+        return b.sales - a.sales;
+      });
+    
+    if (limit) {
+      plans = plans.slice(0, limit);
+    }
+    
+    return plans;
+  }
+  
+  async searchWorkoutPlans(query: string, category?: string, limit?: number): Promise<WorkoutPlan[]> {
+    const queryLower = query.toLowerCase();
+    
+    let filteredPlans = Array.from(this.workoutPlans.values())
+      .filter(plan => {
+        if (plan.isSoldOut) return false;
+        
+        // Filter by category if provided
+        if (category && plan.category !== category) return false;
+        
+        // Match by title, description, category, goals
+        const titleMatch = plan.title.toLowerCase().includes(queryLower);
+        const descMatch = plan.description.toLowerCase().includes(queryLower);
+        const categoryMatch = plan.category.toLowerCase().includes(queryLower);
+        const goalsMatch = plan.goals.toLowerCase().includes(queryLower);
+        
+        return titleMatch || descMatch || categoryMatch || goalsMatch;
+      })
+      .sort((a, b) => {
+        // Sort featured first
+        if (a.isFeatured && !b.isFeatured) return -1;
+        if (!a.isFeatured && b.isFeatured) return 1;
+        
+        // Then by rating
+        const aRating = a.rating || 0;
+        const bRating = b.rating || 0;
+        if (bRating !== aRating) {
+          return bRating - aRating;
+        }
+        
+        // Then by sales
+        return b.sales - a.sales;
+      });
+    
+    if (limit) {
+      filteredPlans = filteredPlans.slice(0, limit);
+    }
+    
+    return filteredPlans;
+  }
+  
+  async getPurchasedWorkoutPlans(userId: number): Promise<WorkoutPlan[]> {
+    // Find all purchases for this user
+    const userPurchases = Array.from(this.purchases.values())
+      .filter(purchase => 
+        purchase.userId === userId && 
+        purchase.status === 'completed' && 
+        purchase.planId !== null
+      );
+    
+    // Get plan IDs from purchases
+    const planIds = userPurchases.map(purchase => purchase.planId!);
+    
+    // Return all plans that have been purchased
+    return Array.from(this.workoutPlans.values())
+      .filter(plan => planIds.includes(plan.id))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  // Plan Template operations
+  async getPlanTemplates(planId: number): Promise<PlanTemplate[]> {
+    return Array.from(this.planTemplates.values())
+      .filter(pt => pt.planId === planId)
+      .sort((a, b) => {
+        // Sort by week number, then day number, then order
+        if (a.weekNumber !== b.weekNumber) {
+          return a.weekNumber - b.weekNumber;
+        }
+        if (a.dayNumber !== b.dayNumber) {
+          return a.dayNumber - b.dayNumber;
+        }
+        return a.order - b.order;
+      });
+  }
+  
+  async createPlanTemplate(insertPlanTemplate: InsertPlanTemplate): Promise<PlanTemplate> {
+    const id = this.planTemplateCurrentId++;
+    const planTemplate: PlanTemplate = {
+      ...insertPlanTemplate,
+      id,
+      notes: insertPlanTemplate.notes || null
+    };
+    this.planTemplates.set(id, planTemplate);
+    return planTemplate;
+  }
+  
+  async updatePlanTemplate(id: number, planTemplateUpdate: Partial<PlanTemplate>): Promise<PlanTemplate | undefined> {
+    const planTemplate = this.planTemplates.get(id);
+    if (!planTemplate) return undefined;
+    
+    const updatedPlanTemplate = { ...planTemplate, ...planTemplateUpdate };
+    this.planTemplates.set(id, updatedPlanTemplate);
+    return updatedPlanTemplate;
+  }
+  
+  async deletePlanTemplate(id: number): Promise<boolean> {
+    return this.planTemplates.delete(id);
+  }
+  
+  // Coaching Service operations
+  async getCoachingServices(coachId: number): Promise<CoachingService[]> {
+    return Array.from(this.coachingServices.values())
+      .filter(service => service.coachId === coachId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getCoachingService(id: number): Promise<CoachingService | undefined> {
+    return this.coachingServices.get(id);
+  }
+  
+  async createCoachingService(insertCoachingService: InsertCoachingService): Promise<CoachingService> {
+    const id = this.coachingServiceCurrentId++;
+    const now = new Date();
+    const coachingService: CoachingService = {
+      ...insertCoachingService,
+      id,
+      isAvailable: insertCoachingService.isAvailable ?? true,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.coachingServices.set(id, coachingService);
+    return coachingService;
+  }
+  
+  async updateCoachingService(id: number, serviceUpdate: Partial<CoachingService>): Promise<CoachingService | undefined> {
+    const service = this.coachingServices.get(id);
+    if (!service) return undefined;
+    
+    const updatedService = {
+      ...service,
+      ...serviceUpdate,
+      updatedAt: new Date()
+    };
+    this.coachingServices.set(id, updatedService);
+    return updatedService;
+  }
+  
+  async deleteCoachingService(id: number): Promise<boolean> {
+    return this.coachingServices.delete(id);
+  }
+  
+  // Purchase operations
+  async getPurchases(userId: number): Promise<Purchase[]> {
+    return Array.from(this.purchases.values())
+      .filter(purchase => purchase.userId === userId)
+      .sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
+  }
+  
+  async createPurchase(insertPurchase: InsertPurchase): Promise<Purchase> {
+    const id = this.purchaseCurrentId++;
+    const purchase: Purchase = {
+      ...insertPurchase,
+      id,
+      purchaseDate: new Date()
+    };
+    this.purchases.set(id, purchase);
+    
+    // If it's a plan purchase, update the plan's sales counter
+    if (purchase.planId) {
+      const plan = this.workoutPlans.get(purchase.planId);
+      if (plan) {
+        const updatedPlan = {
+          ...plan,
+          sales: plan.sales + 1
+        };
+        this.workoutPlans.set(plan.id, updatedPlan);
+      }
+    }
+    
+    // Create a notification for the purchase
+    await this.createNotification({
+      userId: purchase.userId,
+      title: "Purchase Completed",
+      message: `Your purchase has been completed. Thank you for your order!`,
+      type: "success",
+      link: "/profile"
+    });
+    
+    return purchase;
+  }
+  
+  async getPurchase(id: number): Promise<Purchase | undefined> {
+    return this.purchases.get(id);
+  }
+  
+  async updatePurchaseStatus(id: number, status: string): Promise<Purchase | undefined> {
+    const purchase = this.purchases.get(id);
+    if (!purchase) return undefined;
+    
+    const updatedPurchase = { ...purchase, status };
+    this.purchases.set(id, updatedPurchase);
+    
+    // Notify user of status change
+    await this.createNotification({
+      userId: purchase.userId,
+      title: "Purchase Status Updated",
+      message: `Your purchase status has been updated to: ${status}`,
+      type: "info",
+      link: "/profile"
+    });
+    
+    return updatedPurchase;
+  }
+  
+  // Review operations
+  async getReviews(coachId?: number, planId?: number): Promise<Review[]> {
+    let reviews = Array.from(this.reviews.values());
+    
+    if (coachId) {
+      reviews = reviews.filter(review => review.coachId === coachId);
+    }
+    
+    if (planId) {
+      reviews = reviews.filter(review => review.planId === planId);
+    }
+    
+    return reviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async createReview(insertReview: InsertReview): Promise<Review> {
+    const id = this.reviewCurrentId++;
+    const now = new Date();
+    const review: Review = {
+      ...insertReview,
+      id,
+      review: insertReview.review || null,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.reviews.set(id, review);
+    
+    // Update the rating on the coach or plan
+    if (review.coachId) {
+      await this.updateCoachRating(review.coachId);
+      
+      // Notify the coach about the review
+      const coachProfile = this.coachProfiles.get(review.coachId);
+      if (coachProfile) {
+        await this.createNotification({
+          userId: coachProfile.userId,
+          title: "New Review Received",
+          message: `You've received a new review with a rating of ${review.rating} stars!`,
+          type: "info"
+        });
+      }
+    }
+    
+    if (review.planId) {
+      await this.updatePlanRating(review.planId);
+      
+      // Notify the plan owner about the review
+      const plan = this.workoutPlans.get(review.planId);
+      if (plan) {
+        const coachProfile = this.coachProfiles.get(plan.coachId);
+        if (coachProfile) {
+          await this.createNotification({
+            userId: coachProfile.userId,
+            title: "New Plan Review",
+            message: `Your plan "${plan.title}" has received a new review with ${review.rating} stars!`,
+            type: "info"
+          });
+        }
+      }
+    }
+    
+    return review;
+  }
+  
+  async updateReview(id: number, reviewContent: string, rating: number): Promise<Review | undefined> {
+    const review = this.reviews.get(id);
+    if (!review) return undefined;
+    
+    const updatedReview = {
+      ...review,
+      review: reviewContent,
+      rating,
+      updatedAt: new Date()
+    };
+    this.reviews.set(id, updatedReview);
+    
+    // Update ratings
+    if (review.coachId) {
+      await this.updateCoachRating(review.coachId);
+    }
+    
+    if (review.planId) {
+      await this.updatePlanRating(review.planId);
+    }
+    
+    return updatedReview;
+  }
+  
+  async deleteReview(id: number): Promise<boolean> {
+    const review = this.reviews.get(id);
+    if (!review) return false;
+    
+    const deleted = this.reviews.delete(id);
+    
+    // Update ratings after deletion
+    if (deleted) {
+      if (review.coachId) {
+        await this.updateCoachRating(review.coachId);
+      }
+      
+      if (review.planId) {
+        await this.updatePlanRating(review.planId);
+      }
+    }
+    
+    return deleted;
+  }
+  
+  async getAverageRating(coachId?: number, planId?: number): Promise<number> {
+    if (!coachId && !planId) return 0;
+    
+    let reviews = Array.from(this.reviews.values());
+    
+    if (coachId) {
+      reviews = reviews.filter(review => review.coachId === coachId);
+    }
+    
+    if (planId) {
+      reviews = reviews.filter(review => review.planId === planId);
+    }
+    
+    if (reviews.length === 0) return 0;
+    
+    const sum = reviews.reduce((total, review) => total + review.rating, 0);
+    return sum / reviews.length;
+  }
+  
+  // Helper methods for rating updates
+  private async updateCoachRating(coachId: number): Promise<void> {
+    const coachProfile = this.coachProfiles.get(coachId);
+    if (!coachProfile) return;
+    
+    const reviews = Array.from(this.reviews.values())
+      .filter(review => review.coachId === coachId);
+    
+    if (reviews.length === 0) {
+      this.coachProfiles.set(coachId, {
+        ...coachProfile,
+        rating: null,
+        ratingsCount: 0
+      });
+      return;
+    }
+    
+    const sum = reviews.reduce((total, review) => total + review.rating, 0);
+    const average = sum / reviews.length;
+    
+    this.coachProfiles.set(coachId, {
+      ...coachProfile,
+      rating: average,
+      ratingsCount: reviews.length
+    });
+  }
+  
+  private async updatePlanRating(planId: number): Promise<void> {
+    const plan = this.workoutPlans.get(planId);
+    if (!plan) return;
+    
+    const reviews = Array.from(this.reviews.values())
+      .filter(review => review.planId === planId);
+    
+    if (reviews.length === 0) {
+      this.workoutPlans.set(planId, {
+        ...plan,
+        rating: null,
+        ratingsCount: 0
+      });
+      return;
+    }
+    
+    const sum = reviews.reduce((total, review) => total + review.rating, 0);
+    const average = sum / reviews.length;
+    
+    this.workoutPlans.set(planId, {
+      ...plan,
+      rating: average,
+      ratingsCount: reviews.length
+    });
   }
   
   // Seed default exercises

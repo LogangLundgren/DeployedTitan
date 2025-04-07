@@ -14,13 +14,25 @@ import {
   insertMilestoneSchema,
   insertCommentSchema,
   insertLikeSchema,
+  insertCoachProfileSchema,
+  insertCoachingServiceSchema,
+  insertWorkoutPlanSchema,
+  insertPlanTemplateSchema,
+  insertReviewSchema,
+  insertPurchaseSchema,
   Workout,
   TemplateExercise,
   WorkoutWithDetails,
   Goal,
   Milestone,
   Comment,
-  Like
+  Like,
+  CoachProfile,
+  WorkoutPlan,
+  CoachingService,
+  PlanTemplate,
+  Purchase,
+  Review
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -1291,6 +1303,868 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // Coach Profile routes
+  app.get("/api/coaches", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+      const featured = req.query.featured === 'true';
+      const query = req.query.query as string;
+      const category = req.query.category as string;
+      
+      let coaches;
+      
+      if (featured) {
+        coaches = await storage.getFeaturedCoaches(limit);
+      } else if (query) {
+        coaches = await storage.searchCoaches(query, category, limit);
+      } else {
+        coaches = await storage.listCoaches(limit, offset);
+      }
+      
+      // Get user data for each coach
+      const coachesWithUserInfo = await Promise.all(
+        coaches.map(async (coach) => {
+          const user = await storage.getUser(coach.userId);
+          if (!user) return coach;
+          
+          // Remove password from user data
+          const { password: _, ...userWithoutPassword } = user;
+          
+          return {
+            ...coach,
+            user: {
+              ...userWithoutPassword,
+              socialMedia: userWithoutPassword.socialMedia ? JSON.parse(userWithoutPassword.socialMedia) : null
+            }
+          };
+        })
+      );
+      
+      res.status(200).json(coachesWithUserInfo);
+    } catch (error) {
+      console.error("Get coaches error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/coaches/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid coach ID is required" });
+      }
+      
+      const coach = await storage.getCoachProfileById(id);
+      
+      if (!coach) {
+        return res.status(404).json({ message: "Coach profile not found" });
+      }
+      
+      // Get user data
+      const user = await storage.getUser(coach.userId);
+      if (!user) {
+        return res.status(404).json({ message: "Coach user data not found" });
+      }
+      
+      // Remove password from user data
+      const { password: _, ...userWithoutPassword } = user;
+      
+      const coachWithUser = {
+        ...coach,
+        user: {
+          ...userWithoutPassword,
+          socialMedia: userWithoutPassword.socialMedia ? JSON.parse(userWithoutPassword.socialMedia) : null
+        }
+      };
+      
+      res.status(200).json(coachWithUser);
+    } catch (error) {
+      console.error("Get coach profile error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/users/:userId/coach-profile", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
+      }
+      
+      const coachProfile = await storage.getCoachProfile(userId);
+      
+      if (!coachProfile) {
+        return res.status(404).json({ message: "Coach profile not found for this user" });
+      }
+      
+      res.status(200).json(coachProfile);
+    } catch (error) {
+      console.error("Get user coach profile error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/coach-profiles", async (req, res) => {
+    try {
+      const coachProfileData = insertCoachProfileSchema.safeParse(req.body);
+      
+      if (!coachProfileData.success) {
+        return res.status(400).json({ message: "Invalid coach profile data", errors: coachProfileData.error.errors });
+      }
+      
+      // Check if user exists
+      const user = await storage.getUser(coachProfileData.data.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Check if user already has a coach profile
+      const existingProfile = await storage.getCoachProfile(coachProfileData.data.userId);
+      if (existingProfile) {
+        return res.status(409).json({ message: "User already has a coach profile" });
+      }
+      
+      const coachProfile = await storage.createCoachProfile(coachProfileData.data);
+      
+      res.status(201).json(coachProfile);
+    } catch (error) {
+      console.error("Create coach profile error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.put("/api/coach-profiles/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid coach profile ID is required" });
+      }
+      
+      const updateSchema = z.object({
+        title: z.string().optional(),
+        experience: z.string().optional(),
+        specialties: z.string().optional(),
+        biography: z.string().optional(),
+        hourlyRate: z.number().nullable().optional(),
+        isAvailableForHire: z.boolean().optional(),
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      const updatedCoachProfile = await storage.updateCoachProfile(id, updateData.data);
+      
+      if (!updatedCoachProfile) {
+        return res.status(404).json({ message: "Coach profile not found" });
+      }
+      
+      res.status(200).json(updatedCoachProfile);
+    } catch (error) {
+      console.error("Update coach profile error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Workout Plans routes
+  app.get("/api/workout-plans", async (req, res) => {
+    try {
+      const coachId = req.query.coachId ? parseInt(req.query.coachId as string) : undefined;
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const featured = req.query.featured === 'true';
+      const query = req.query.query as string;
+      const category = req.query.category as string;
+      
+      let plans;
+      
+      if (coachId) {
+        plans = await storage.getWorkoutPlans(coachId);
+      } else if (userId) {
+        plans = await storage.getPurchasedWorkoutPlans(userId);
+      } else if (featured) {
+        plans = await storage.getFeaturedWorkoutPlans(limit);
+      } else if (query) {
+        plans = await storage.searchWorkoutPlans(query, category, limit);
+      } else {
+        return res.status(400).json({ message: "At least one of coachId, userId, featured, or query is required" });
+      }
+      
+      res.status(200).json(plans);
+    } catch (error) {
+      console.error("Get workout plans error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/workout-plans/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid workout plan ID is required" });
+      }
+      
+      const plan = await storage.getWorkoutPlan(id);
+      
+      if (!plan) {
+        return res.status(404).json({ message: "Workout plan not found" });
+      }
+      
+      // Get coach profile
+      const coach = await storage.getCoachProfileById(plan.coachId);
+      if (!coach) {
+        return res.status(404).json({ message: "Coach profile not found" });
+      }
+      
+      // Get user data for coach
+      const user = await storage.getUser(coach.userId);
+      if (!user) {
+        return res.status(404).json({ message: "Coach user data not found" });
+      }
+      
+      // Remove password from user data
+      const { password: _, ...userWithoutPassword } = user;
+      
+      // Get plan templates
+      const planTemplates = await storage.getPlanTemplates(id);
+      
+      // Get full template details for each plan template
+      const templatesWithDetails = await Promise.all(
+        planTemplates.map(async (pt) => {
+          const template = await storage.getTemplateWithExercises(pt.templateId);
+          return {
+            ...pt,
+            template
+          };
+        })
+      );
+      
+      // Filter out any templates that couldn't be found
+      const validTemplates = templatesWithDetails.filter(pt => pt.template !== undefined);
+      
+      const planWithDetails = {
+        ...plan,
+        coach: {
+          ...coach,
+          user: {
+            ...userWithoutPassword,
+            socialMedia: userWithoutPassword.socialMedia ? JSON.parse(userWithoutPassword.socialMedia) : null
+          }
+        },
+        templates: validTemplates,
+        // Parse JSON strings if they exist
+        goals: plan.goals ? JSON.parse(plan.goals) : [],
+        equipment: plan.equipment ? JSON.parse(plan.equipment) : []
+      };
+      
+      res.status(200).json(planWithDetails);
+    } catch (error) {
+      console.error("Get workout plan error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/workout-plans", async (req, res) => {
+    try {
+      // Prepare data for validation - parse JSON strings if provided
+      const rawData = {
+        ...req.body,
+        goals: typeof req.body.goals === 'string' ? req.body.goals : JSON.stringify(req.body.goals || []),
+        equipment: typeof req.body.equipment === 'string' ? req.body.equipment : JSON.stringify(req.body.equipment || [])
+      };
+      
+      const workoutPlanData = insertWorkoutPlanSchema.safeParse(rawData);
+      
+      if (!workoutPlanData.success) {
+        return res.status(400).json({ message: "Invalid workout plan data", errors: workoutPlanData.error.errors });
+      }
+      
+      // Check if coach exists
+      const coach = await storage.getCoachProfileById(workoutPlanData.data.coachId);
+      if (!coach) {
+        return res.status(404).json({ message: "Coach profile not found" });
+      }
+      
+      const workoutPlan = await storage.createWorkoutPlan(workoutPlanData.data);
+      
+      res.status(201).json(workoutPlan);
+    } catch (error) {
+      console.error("Create workout plan error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.put("/api/workout-plans/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid workout plan ID is required" });
+      }
+      
+      const updateSchema = z.object({
+        title: z.string().optional(),
+        description: z.string().optional(),
+        price: z.number().optional(),
+        durationWeeks: z.number().optional(),
+        difficultyLevel: z.string().optional(),
+        category: z.string().optional(),
+        featuredImageUrl: z.string().nullable().optional(),
+        goals: z.union([z.string(), z.array(z.string())]).optional(),
+        equipment: z.union([z.string(), z.array(z.string())]).optional(),
+        isFeatured: z.boolean().optional(),
+        isSoldOut: z.boolean().optional(),
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      // Process goals and equipment
+      const processedData = {
+        ...updateData.data,
+        goals: Array.isArray(updateData.data.goals) 
+          ? JSON.stringify(updateData.data.goals) 
+          : updateData.data.goals,
+        equipment: Array.isArray(updateData.data.equipment) 
+          ? JSON.stringify(updateData.data.equipment) 
+          : updateData.data.equipment
+      };
+      
+      const updatedWorkoutPlan = await storage.updateWorkoutPlan(id, processedData);
+      
+      if (!updatedWorkoutPlan) {
+        return res.status(404).json({ message: "Workout plan not found" });
+      }
+      
+      res.status(200).json(updatedWorkoutPlan);
+    } catch (error) {
+      console.error("Update workout plan error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.delete("/api/workout-plans/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid workout plan ID is required" });
+      }
+      
+      const deleted = await storage.deleteWorkoutPlan(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Workout plan not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete workout plan error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Plan Template routes
+  app.get("/api/workout-plans/:planId/templates", async (req, res) => {
+    try {
+      const planId = parseInt(req.params.planId);
+      
+      if (isNaN(planId)) {
+        return res.status(400).json({ message: "Valid workout plan ID is required" });
+      }
+      
+      const planTemplates = await storage.getPlanTemplates(planId);
+      
+      // Get full template details for each plan template
+      const templatesWithDetails = await Promise.all(
+        planTemplates.map(async (pt) => {
+          const template = await storage.getTemplateWithExercises(pt.templateId);
+          return {
+            ...pt,
+            template
+          };
+        })
+      );
+      
+      // Filter out any templates that couldn't be found
+      const validTemplates = templatesWithDetails.filter(pt => pt.template !== undefined);
+      
+      res.status(200).json(validTemplates);
+    } catch (error) {
+      console.error("Get plan templates error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/plan-templates", async (req, res) => {
+    try {
+      const planTemplateData = insertPlanTemplateSchema.safeParse(req.body);
+      
+      if (!planTemplateData.success) {
+        return res.status(400).json({ message: "Invalid plan template data", errors: planTemplateData.error.errors });
+      }
+      
+      // Check if plan exists
+      const plan = await storage.getWorkoutPlan(planTemplateData.data.planId);
+      if (!plan) {
+        return res.status(404).json({ message: "Workout plan not found" });
+      }
+      
+      // Check if template exists
+      const template = await storage.getTemplateWithExercises(planTemplateData.data.templateId);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      const planTemplate = await storage.createPlanTemplate(planTemplateData.data);
+      
+      res.status(201).json(planTemplate);
+    } catch (error) {
+      console.error("Create plan template error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.put("/api/plan-templates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid plan template ID is required" });
+      }
+      
+      const updateSchema = z.object({
+        weekNumber: z.number().optional(),
+        dayNumber: z.number().optional(),
+        order: z.number().optional(),
+        notes: z.string().nullable().optional(),
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      const updatedPlanTemplate = await storage.updatePlanTemplate(id, updateData.data);
+      
+      if (!updatedPlanTemplate) {
+        return res.status(404).json({ message: "Plan template not found" });
+      }
+      
+      res.status(200).json(updatedPlanTemplate);
+    } catch (error) {
+      console.error("Update plan template error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.delete("/api/plan-templates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid plan template ID is required" });
+      }
+      
+      const deleted = await storage.deletePlanTemplate(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Plan template not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete plan template error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Coaching Service routes
+  app.get("/api/coaching-services", async (req, res) => {
+    try {
+      const coachId = parseInt(req.query.coachId as string);
+      
+      if (isNaN(coachId)) {
+        return res.status(400).json({ message: "Valid coach ID is required" });
+      }
+      
+      const services = await storage.getCoachingServices(coachId);
+      
+      res.status(200).json(services);
+    } catch (error) {
+      console.error("Get coaching services error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/coaching-services/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid coaching service ID is required" });
+      }
+      
+      const service = await storage.getCoachingService(id);
+      
+      if (!service) {
+        return res.status(404).json({ message: "Coaching service not found" });
+      }
+      
+      res.status(200).json(service);
+    } catch (error) {
+      console.error("Get coaching service error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/coaching-services", async (req, res) => {
+    try {
+      const serviceData = insertCoachingServiceSchema.safeParse(req.body);
+      
+      if (!serviceData.success) {
+        return res.status(400).json({ message: "Invalid coaching service data", errors: serviceData.error.errors });
+      }
+      
+      // Check if coach exists
+      const coach = await storage.getCoachProfileById(serviceData.data.coachId);
+      if (!coach) {
+        return res.status(404).json({ message: "Coach profile not found" });
+      }
+      
+      const service = await storage.createCoachingService(serviceData.data);
+      
+      res.status(201).json(service);
+    } catch (error) {
+      console.error("Create coaching service error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.put("/api/coaching-services/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid coaching service ID is required" });
+      }
+      
+      const updateSchema = z.object({
+        title: z.string().optional(),
+        description: z.string().optional(),
+        price: z.number().optional(),
+        durationType: z.string().optional(),
+        serviceType: z.string().optional(),
+        isAvailable: z.boolean().optional(),
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      const updatedService = await storage.updateCoachingService(id, updateData.data);
+      
+      if (!updatedService) {
+        return res.status(404).json({ message: "Coaching service not found" });
+      }
+      
+      res.status(200).json(updatedService);
+    } catch (error) {
+      console.error("Update coaching service error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.delete("/api/coaching-services/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid coaching service ID is required" });
+      }
+      
+      const deleted = await storage.deleteCoachingService(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Coaching service not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete coaching service error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Purchase routes
+  app.get("/api/purchases", async (req, res) => {
+    try {
+      const userId = parseInt(req.query.userId as string);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
+      }
+      
+      const purchases = await storage.getPurchases(userId);
+      
+      // Enhanced purchases with details
+      const enhancedPurchases = await Promise.all(
+        purchases.map(async (purchase) => {
+          let planDetails = null;
+          let serviceDetails = null;
+          
+          if (purchase.planId) {
+            planDetails = await storage.getWorkoutPlan(purchase.planId);
+          }
+          
+          if (purchase.serviceId) {
+            serviceDetails = await storage.getCoachingService(purchase.serviceId);
+          }
+          
+          return {
+            ...purchase,
+            planDetails,
+            serviceDetails
+          };
+        })
+      );
+      
+      res.status(200).json(enhancedPurchases);
+    } catch (error) {
+      console.error("Get purchases error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/purchases", async (req, res) => {
+    try {
+      const purchaseData = insertPurchaseSchema.safeParse(req.body);
+      
+      if (!purchaseData.success) {
+        return res.status(400).json({ message: "Invalid purchase data", errors: purchaseData.error.errors });
+      }
+      
+      // Check if user exists
+      const user = await storage.getUser(purchaseData.data.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Check if either planId or serviceId is provided, but not both
+      if (!purchaseData.data.planId && !purchaseData.data.serviceId) {
+        return res.status(400).json({ message: "Either planId or serviceId must be provided" });
+      }
+      
+      if (purchaseData.data.planId && purchaseData.data.serviceId) {
+        return res.status(400).json({ message: "Cannot purchase both a plan and a service in a single transaction" });
+      }
+      
+      // Check if plan or service exists
+      if (purchaseData.data.planId) {
+        const plan = await storage.getWorkoutPlan(purchaseData.data.planId);
+        if (!plan) {
+          return res.status(404).json({ message: "Workout plan not found" });
+        }
+      }
+      
+      if (purchaseData.data.serviceId) {
+        const service = await storage.getCoachingService(purchaseData.data.serviceId);
+        if (!service) {
+          return res.status(404).json({ message: "Coaching service not found" });
+        }
+      }
+      
+      const purchase = await storage.createPurchase(purchaseData.data);
+      
+      res.status(201).json(purchase);
+    } catch (error) {
+      console.error("Create purchase error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.put("/api/purchases/:id/status", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid purchase ID is required" });
+      }
+      
+      const { status } = req.body;
+      
+      if (!status || typeof status !== 'string') {
+        return res.status(400).json({ message: "Valid status string is required" });
+      }
+      
+      const updatedPurchase = await storage.updatePurchaseStatus(id, status);
+      
+      if (!updatedPurchase) {
+        return res.status(404).json({ message: "Purchase not found" });
+      }
+      
+      res.status(200).json(updatedPurchase);
+    } catch (error) {
+      console.error("Update purchase status error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Review routes
+  app.get("/api/reviews", async (req, res) => {
+    try {
+      const coachId = req.query.coachId ? parseInt(req.query.coachId as string) : undefined;
+      const planId = req.query.planId ? parseInt(req.query.planId as string) : undefined;
+      
+      if (!coachId && !planId) {
+        return res.status(400).json({ message: "Either coachId or planId must be provided" });
+      }
+      
+      const reviews = await storage.getReviews(coachId, planId);
+      
+      // Get user data for each review
+      const reviewsWithUserInfo = await Promise.all(
+        reviews.map(async (review) => {
+          const user = await storage.getUser(review.userId);
+          if (!user) return review;
+          
+          // Remove password from user data
+          const { password: _, ...userWithoutPassword } = user;
+          
+          return {
+            ...review,
+            user: userWithoutPassword
+          };
+        })
+      );
+      
+      res.status(200).json(reviewsWithUserInfo);
+    } catch (error) {
+      console.error("Get reviews error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/reviews", async (req, res) => {
+    try {
+      const reviewData = insertReviewSchema.safeParse(req.body);
+      
+      if (!reviewData.success) {
+        return res.status(400).json({ message: "Invalid review data", errors: reviewData.error.errors });
+      }
+      
+      // Check if user exists
+      const user = await storage.getUser(reviewData.data.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Check if either coachId or planId is provided, but not both
+      if (!reviewData.data.coachId && !reviewData.data.planId) {
+        return res.status(400).json({ message: "Either coachId or planId must be provided" });
+      }
+      
+      if (reviewData.data.coachId && reviewData.data.planId) {
+        return res.status(400).json({ message: "Cannot review both a coach and a plan in a single review" });
+      }
+      
+      // Check if coach or plan exists
+      if (reviewData.data.coachId) {
+        const coach = await storage.getCoachProfileById(reviewData.data.coachId);
+        if (!coach) {
+          return res.status(404).json({ message: "Coach profile not found" });
+        }
+      }
+      
+      if (reviewData.data.planId) {
+        const plan = await storage.getWorkoutPlan(reviewData.data.planId);
+        if (!plan) {
+          return res.status(404).json({ message: "Workout plan not found" });
+        }
+      }
+      
+      const review = await storage.createReview(reviewData.data);
+      
+      res.status(201).json(review);
+    } catch (error) {
+      console.error("Create review error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.put("/api/reviews/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid review ID is required" });
+      }
+      
+      const updateSchema = z.object({
+        rating: z.number().min(1).max(5),
+        review: z.string().optional()
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      const updatedReview = await storage.updateReview(
+        id, 
+        updateData.data.review || "", 
+        updateData.data.rating
+      );
+      
+      if (!updatedReview) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+      
+      res.status(200).json(updatedReview);
+    } catch (error) {
+      console.error("Update review error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.delete("/api/reviews/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid review ID is required" });
+      }
+      
+      const deleted = await storage.deleteReview(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete review error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Payment processing routes
+  // These will be added when implementing Stripe integration
 
   const httpServer = createServer(app);
 
