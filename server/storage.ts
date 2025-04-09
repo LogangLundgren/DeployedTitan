@@ -21,7 +21,7 @@ import {
   reviews, type Review, type InsertReview,
   type WorkoutWithDetails, type TemplateWithExercises
 } from "@shared/schema";
-import { eq, desc, and, asc, sql } from 'drizzle-orm';
+import { eq, desc, and, asc, sql, or, isNull, isNotNull, inArray, like } from 'drizzle-orm';
 import { db } from './db';
 
 export interface IStorage {
@@ -1683,6 +1683,424 @@ export class DbStorage implements IStorage {
     // The db is imported from server/db.ts
   }
   
+  // Workout Plan operations
+  async getWorkoutPlans(coachId?: number): Promise<WorkoutPlan[]> {
+    try {
+      let query = db.select().from(workoutPlans);
+      
+      if (coachId) {
+        query = query.where(eq(workoutPlans.coachId, coachId));
+      } else {
+        // When not filtered by coach, return only published plans
+        const publishedPlans = await query
+          .orderBy(desc(workoutPlans.createdAt));
+        
+        return publishedPlans.filter(plan => plan.isPublished === true);
+      }
+      
+      return await query.orderBy(desc(workoutPlans.createdAt));
+    } catch (error) {
+      console.error("Error getting workout plans:", error);
+      return [];
+    }
+  }
+  
+  async getWorkoutPlan(id: number): Promise<WorkoutPlan | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(workoutPlans)
+        .where(eq(workoutPlans.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error getting workout plan:", error);
+      return undefined;
+    }
+  }
+  
+  async createWorkoutPlan(plan: InsertWorkoutPlan): Promise<WorkoutPlan> {
+    try {
+      const result = await db.insert(workoutPlans).values(plan).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating workout plan:", error);
+      throw error;
+    }
+  }
+  
+  async updateWorkoutPlan(id: number, planUpdate: Partial<WorkoutPlan>): Promise<WorkoutPlan | undefined> {
+    try {
+      const result = await db
+        .update(workoutPlans)
+        .set(planUpdate)
+        .where(eq(workoutPlans.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating workout plan:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteWorkoutPlan(id: number): Promise<boolean> {
+    try {
+      // Delete related entities first
+      await db.delete(workoutPlanDays).where(eq(workoutPlanDays.planId, id));
+      await db.delete(planTemplates).where(eq(planTemplates.planId, id));
+      
+      // Delete the plan
+      const result = await db
+        .delete(workoutPlans)
+        .where(eq(workoutPlans.id, id))
+        .returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting workout plan:", error);
+      return false;
+    }
+  }
+  
+  // Workout Plan Day operations
+  async getWorkoutPlanDays(planId: number): Promise<WorkoutPlanDay[]> {
+    try {
+      return await db
+        .select()
+        .from(workoutPlanDays)
+        .where(eq(workoutPlanDays.planId, planId))
+        .orderBy(workoutPlanDays.dayNumber);
+    } catch (error) {
+      console.error("Error getting workout plan days:", error);
+      return [];
+    }
+  }
+  
+  async getWorkoutPlanDay(id: number): Promise<WorkoutPlanDay | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(workoutPlanDays)
+        .where(eq(workoutPlanDays.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error getting workout plan day:", error);
+      return undefined;
+    }
+  }
+  
+  async createWorkoutPlanDay(day: InsertWorkoutPlanDay): Promise<WorkoutPlanDay> {
+    try {
+      const result = await db.insert(workoutPlanDays).values(day).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating workout plan day:", error);
+      throw error;
+    }
+  }
+  
+  async updateWorkoutPlanDay(id: number, dayUpdate: Partial<WorkoutPlanDay>): Promise<WorkoutPlanDay | undefined> {
+    try {
+      const result = await db
+        .update(workoutPlanDays)
+        .set(dayUpdate)
+        .where(eq(workoutPlanDays.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating workout plan day:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteWorkoutPlanDay(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(workoutPlanDays)
+        .where(eq(workoutPlanDays.id, id))
+        .returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting workout plan day:", error);
+      return false;
+    }
+  }
+  
+  // Coach Profile operations
+  async getCoachProfileById(id: number): Promise<CoachProfile | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(coachProfiles)
+        .where(eq(coachProfiles.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error getting coach profile by id:", error);
+      return undefined;
+    }
+  }
+  
+  async getCoachProfile(userId: number): Promise<CoachProfile | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(coachProfiles)
+        .where(eq(coachProfiles.userId, userId));
+      return result[0];
+    } catch (error) {
+      console.error("Error getting coach profile:", error);
+      return undefined;
+    }
+  }
+  
+  async createCoachProfile(profile: InsertCoachProfile): Promise<CoachProfile> {
+    try {
+      const result = await db.insert(coachProfiles).values(profile).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating coach profile:", error);
+      throw error;
+    }
+  }
+  
+  async updateCoachProfile(id: number, profileUpdate: Partial<CoachProfile>): Promise<CoachProfile | undefined> {
+    try {
+      const result = await db
+        .update(coachProfiles)
+        .set(profileUpdate)
+        .where(eq(coachProfiles.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating coach profile:", error);
+      return undefined;
+    }
+  }
+  
+  // Coaching Service operations
+  async getCoachingServices(coachId: number): Promise<CoachingService[]> {
+    try {
+      return await db
+        .select()
+        .from(coachingServices)
+        .where(eq(coachingServices.coachId, coachId))
+        .orderBy(desc(coachingServices.createdAt));
+    } catch (error) {
+      console.error("Error getting coaching services:", error);
+      return [];
+    }
+  }
+  
+  async getCoachingService(id: number): Promise<CoachingService | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(coachingServices)
+        .where(eq(coachingServices.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error getting coaching service:", error);
+      return undefined;
+    }
+  }
+  
+  async createCoachingService(service: InsertCoachingService): Promise<CoachingService> {
+    try {
+      const result = await db.insert(coachingServices).values(service).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating coaching service:", error);
+      throw error;
+    }
+  }
+  
+  async updateCoachingService(id: number, serviceUpdate: Partial<CoachingService>): Promise<CoachingService | undefined> {
+    try {
+      const result = await db
+        .update(coachingServices)
+        .set(serviceUpdate)
+        .where(eq(coachingServices.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating coaching service:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteCoachingService(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(coachingServices)
+        .where(eq(coachingServices.id, id))
+        .returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting coaching service:", error);
+      return false;
+    }
+  }
+  
+  // Plan Template operations
+  async getPlanTemplates(planId: number): Promise<PlanTemplate[]> {
+    try {
+      return await db
+        .select()
+        .from(planTemplates)
+        .where(eq(planTemplates.planId, planId));
+    } catch (error) {
+      console.error("Error getting plan templates:", error);
+      return [];
+    }
+  }
+  
+  async createPlanTemplate(template: InsertPlanTemplate): Promise<PlanTemplate> {
+    try {
+      const result = await db.insert(planTemplates).values(template).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating plan template:", error);
+      throw error;
+    }
+  }
+  
+  async updatePlanTemplate(id: number, templateUpdate: Partial<PlanTemplate>): Promise<PlanTemplate | undefined> {
+    try {
+      const result = await db
+        .update(planTemplates)
+        .set(templateUpdate)
+        .where(eq(planTemplates.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating plan template:", error);
+      return undefined;
+    }
+  }
+  
+  async deletePlanTemplate(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(planTemplates)
+        .where(eq(planTemplates.id, id))
+        .returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting plan template:", error);
+      return false;
+    }
+  }
+  
+  // Purchase operations
+  async getPurchases(userId: number): Promise<Purchase[]> {
+    try {
+      return await db
+        .select()
+        .from(purchases)
+        .where(eq(purchases.userId, userId))
+        .orderBy(desc(purchases.purchaseDate));
+    } catch (error) {
+      console.error("Error getting purchases:", error);
+      return [];
+    }
+  }
+  
+  async createPurchase(insertPurchase: InsertPurchase): Promise<Purchase> {
+    try {
+      const result = await db.insert(purchases).values(insertPurchase).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating purchase:", error);
+      throw error;
+    }
+  }
+  
+  async getPurchase(id: number): Promise<Purchase | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(purchases)
+        .where(eq(purchases.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error getting purchase:", error);
+      return undefined;
+    }
+  }
+  
+  async updatePurchaseStatus(id: number, status: string): Promise<Purchase | undefined> {
+    try {
+      const result = await db
+        .update(purchases)
+        .set({ status })
+        .where(eq(purchases.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating purchase status:", error);
+      return undefined;
+    }
+  }
+  
+  // Review operations
+  async getReviews(coachId?: number, planId?: number): Promise<Review[]> {
+    try {
+      let queryBuilder = db.select().from(reviews);
+      
+      if (coachId) {
+        queryBuilder = queryBuilder.where(eq(reviews.coachId, coachId));
+      }
+      
+      if (planId) {
+        queryBuilder = queryBuilder.where(eq(reviews.planId, planId));
+      }
+      
+      return await queryBuilder.orderBy(desc(reviews.createdAt));
+    } catch (error) {
+      console.error("Error getting reviews:", error);
+      return [];
+    }
+  }
+  
+  async createReview(review: InsertReview): Promise<Review> {
+    try {
+      const result = await db.insert(reviews).values(review).returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error creating review:", error);
+      throw error;
+    }
+  }
+  
+  async updateReview(id: number, reviewContent: string, rating: number): Promise<Review | undefined> {
+    try {
+      const result = await db
+        .update(reviews)
+        .set({ 
+          review: reviewContent,
+          rating,
+          updatedAt: new Date()
+        })
+        .where(eq(reviews.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error("Error updating review:", error);
+      return undefined;
+    }
+  }
+  
+  async deleteReview(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(reviews)
+        .where(eq(reviews.id, id))
+        .returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting review:", error);
+      return false;
+    }
+  }
+  
   // Media file operations
   async getMediaFiles(workoutId: number): Promise<MediaFile[]> {
     try {
@@ -2653,6 +3071,207 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting like:", error);
       return false;
+    }
+  }
+
+  // Coach methods
+  async getFeaturedCoaches(limit?: number): Promise<CoachProfile[]> {
+    try {
+      const query = db
+        .select()
+        .from(coachProfiles)
+        .where(
+          and(
+            eq(coachProfiles.isAvailableForHire, true),
+            eq(coachProfiles.isVerified, true)
+          )
+        )
+        .orderBy(desc(coachProfiles.rating))
+        .limit(limit || 10);
+      
+      return await query;
+    } catch (error) {
+      console.error("Error getting featured coaches:", error);
+      return [];
+    }
+  }
+  
+  async searchCoaches(query: string, category?: string, limit?: number): Promise<CoachProfile[]> {
+    try {
+      // Fetch all coaches - in a real app, you would use full-text search
+      let coaches = await db.select().from(coachProfiles);
+      
+      // Perform search filtering in application (since we don't have full FTS)
+      coaches = coaches.filter(coach => {
+        const titleMatch = coach.title.toLowerCase().includes(query.toLowerCase());
+        const specialtiesMatch = coach.specialties.toLowerCase().includes(query.toLowerCase());
+        const biographyMatch = coach.biography.toLowerCase().includes(query.toLowerCase());
+        
+        return titleMatch || specialtiesMatch || biographyMatch;
+      });
+      
+      // Apply category filter if provided (matching against specialties)
+      if (category) {
+        coaches = coaches.filter(coach => 
+          coach.specialties.toLowerCase().includes(category.toLowerCase())
+        );
+      }
+      
+      // Apply limit if provided
+      if (limit && limit > 0) {
+        coaches = coaches.slice(0, limit);
+      }
+      
+      return coaches;
+    } catch (error) {
+      console.error("Error searching coaches:", error);
+      return [];
+    }
+  }
+  
+  async listCoaches(limit?: number, offset = 0): Promise<CoachProfile[]> {
+    try {
+      const query = db
+        .select()
+        .from(coachProfiles)
+        .orderBy(desc(coachProfiles.createdAt))
+        .offset(offset)
+        .limit(limit || 10);
+      
+      return await query;
+    } catch (error) {
+      console.error("Error listing coaches:", error);
+      return [];
+    }
+  }
+  
+  // Workout Plan methods
+  async getFeaturedWorkoutPlans(limit?: number): Promise<WorkoutPlan[]> {
+    try {
+      const query = db
+        .select()
+        .from(workoutPlans)
+        .where(
+          and(
+            eq(workoutPlans.isFeatured, true),
+            eq(workoutPlans.isPublished, true)
+          )
+        )
+        .orderBy(desc(workoutPlans.rating))
+        .limit(limit || 10);
+      
+      return await query;
+    } catch (error) {
+      console.error("Error getting featured workout plans:", error);
+      return [];
+    }
+  }
+  
+  async searchWorkoutPlans(query: string, category?: string, limit?: number): Promise<WorkoutPlan[]> {
+    try {
+      // In a real app, use full-text search
+      let plans = await db
+        .select()
+        .from(workoutPlans)
+        .where(eq(workoutPlans.isPublished, true));
+      
+      // Filter by search query
+      plans = plans.filter(plan => {
+        const titleMatch = plan.title.toLowerCase().includes(query.toLowerCase());
+        const descriptionMatch = plan.description.toLowerCase().includes(query.toLowerCase());
+        const goalsMatch = plan.goals.toLowerCase().includes(query.toLowerCase());
+        
+        return titleMatch || descriptionMatch || goalsMatch;
+      });
+      
+      // Apply category filter if provided
+      if (category) {
+        plans = plans.filter(plan => 
+          plan.category.toLowerCase() === category.toLowerCase()
+        );
+      }
+      
+      // Apply limit if provided
+      if (limit && limit > 0) {
+        plans = plans.slice(0, limit);
+      }
+      
+      return plans;
+    } catch (error) {
+      console.error("Error searching workout plans:", error);
+      return [];
+    }
+  }
+  
+  async getPurchasedWorkoutPlans(userId: number): Promise<WorkoutPlan[]> {
+    try {
+      // Get all purchases by the user that have a plan
+      const userPurchases = await db
+        .select()
+        .from(purchases)
+        .where(
+          and(
+            eq(purchases.userId, userId),
+            eq(purchases.status, "completed"),
+            isNotNull(purchases.planId)
+          )
+        );
+      
+      // Extract plan IDs from purchases
+      const planIds = userPurchases
+        .map(purchase => purchase.planId)
+        .filter((planId): planId is number => planId !== null);
+      
+      if (planIds.length === 0) {
+        return [];
+      }
+      
+      // Get all the purchased plans
+      const purchasedPlans = await db
+        .select()
+        .from(workoutPlans)
+        .where(inArray(workoutPlans.id, planIds));
+      
+      return purchasedPlans;
+    } catch (error) {
+      console.error("Error getting purchased workout plans:", error);
+      return [];
+    }
+  }
+  
+  // Review methods
+  async getAverageRating(coachId?: number, planId?: number): Promise<number> {
+    try {
+      if (!coachId && !planId) {
+        throw new Error("Either coachId or planId must be provided");
+      }
+      
+      // Raw SQL for average computation to avoid TypeScript issues
+      let whereClause = "";
+      let params: any[] = [];
+      
+      if (coachId) {
+        whereClause = "WHERE coach_id = $1";
+        params.push(coachId);
+      } else if (planId) {
+        whereClause = "WHERE plan_id = $1";
+        params.push(planId);
+      }
+      
+      const result = await db.execute(
+        sql`SELECT AVG(rating) as avg_rating FROM reviews ${sql.raw(whereClause)}`,
+        params
+      );
+      
+      if (result && result.rows && result.rows.length > 0) {
+        const avgRating = result.rows[0].avg_rating;
+        return avgRating ? Number(avgRating) : 0;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error(`Error calculating average rating: ${error}`);
+      return 0;
     }
   }
 }

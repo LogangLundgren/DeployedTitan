@@ -356,6 +356,7 @@ export const workoutPlans = pgTable("workout_plans", {
   equipment: text("equipment"), // JSON array of required equipment
   isFeatured: boolean("is_featured").default(false),
   isSoldOut: boolean("is_sold_out").default(false),
+  isPublished: boolean("is_published").default(false),
   rating: real("rating"),
   ratingsCount: integer("ratings_count").default(0),
   sales: integer("sales").default(0),
@@ -376,6 +377,7 @@ export const insertWorkoutPlanSchema = createInsertSchema(workoutPlans).pick({
   equipment: true,
   isFeatured: true,
   isSoldOut: true,
+  isPublished: true,
 });
 
 export type WorkoutPlan = typeof workoutPlans.$inferSelect;

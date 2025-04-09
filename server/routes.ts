@@ -1,6 +1,15 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import Stripe from "stripe";
+
+// Initialize Stripe with the secret key
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required environment variable: STRIPE_SECRET_KEY');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+});
 import { 
   insertUserSchema, 
   insertWorkoutSchema, 
@@ -20,6 +29,7 @@ import {
   insertPlanTemplateSchema,
   insertReviewSchema,
   insertPurchaseSchema,
+  insertWorkoutPlanDaySchema,
   Workout,
   TemplateExercise,
   WorkoutWithDetails,
@@ -2270,7 +2280,396 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Payment processing routes
   // These will be added when implementing Stripe integration
+  
+  // Workout Plans endpoints
+  app.get("/api/workout-plans", async (req, res) => {
+    try {
+      const coachId = req.query.coachId ? parseInt(req.query.coachId as string) : undefined;
+      const plans = await storage.getWorkoutPlans(coachId);
+      res.status(200).json(plans);
+    } catch (error) {
+      console.error("Get workout plans error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/workout-plans/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid workout plan ID is required" });
+      }
+      
+      const plan = await storage.getWorkoutPlan(id);
+      
+      if (!plan) {
+        return res.status(404).json({ message: "Workout plan not found" });
+      }
+      
+      const planDays = await storage.getWorkoutPlanDays(id);
+      
+      res.status(200).json({
+        ...plan,
+        days: planDays
+      });
+    } catch (error) {
+      console.error("Get workout plan details error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/workout-plans", async (req, res) => {
+    try {
+      const planData = insertWorkoutPlanSchema.safeParse(req.body);
+      
+      if (!planData.success) {
+        return res.status(400).json({ message: "Invalid workout plan data", errors: planData.error.errors });
+      }
+      
+      const plan = await storage.createWorkoutPlan(planData.data);
+      
+      res.status(201).json(plan);
+    } catch (error) {
+      console.error("Create workout plan error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Purchases endpoints
+  app.get("/api/purchases", async (req, res) => {
+    try {
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      const purchases = await storage.getPurchases(userId);
+      
+      // For each purchase, fetch plan or service details
+      const purchasesWithDetails = await Promise.all(
+        purchases.map(async (purchase) => {
+          let planDetails = null;
+          let serviceDetails = null;
+          
+          if (purchase.planId) {
+            planDetails = await storage.getWorkoutPlan(purchase.planId);
+          }
+          
+          if (purchase.serviceId) {
+            serviceDetails = await storage.getCoachingService(purchase.serviceId);
+          }
+          
+          return {
+            ...purchase,
+            planDetails,
+            serviceDetails
+          };
+        })
+      );
+      
+      res.status(200).json(purchasesWithDetails);
+    } catch (error) {
+      console.error("Get purchases error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/purchases", async (req, res) => {
+    try {
+      const purchaseData = insertPurchaseSchema.safeParse(req.body);
+      
+      if (!purchaseData.success) {
+        return res.status(400).json({ message: "Invalid purchase data", errors: purchaseData.error.errors });
+      }
+      
+      const purchase = await storage.createPurchase(purchaseData.data);
+      
+      // Update the plan or service sales counts
+      if (purchase.planId) {
+        const plan = await storage.getWorkoutPlan(purchase.planId);
+        if (plan) {
+          await storage.updateWorkoutPlan(purchase.planId, {
+            sales: (plan.sales || 0) + 1
+          });
+        }
+      }
+      
+      res.status(201).json(purchase);
+    } catch (error) {
+      console.error("Create purchase error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Development routes for testing/demo purposes
+  // Custom Exercise route - allowing users to create their own exercises
+  app.post("/api/exercises/custom", async (req, res) => {
+    try {
+      const exerciseData = insertExerciseSchema.safeParse(req.body);
+      
+      if (!exerciseData.success) {
+        return res.status(400).json({ message: "Invalid exercise data", errors: exerciseData.error.errors });
+      }
+      
+      // Add isCustom flag to the exercise
+      const customExercise = {
+        ...exerciseData.data,
+        isCustom: true,
+      };
+      
+      const exercise = await storage.createExercise(customExercise);
+      
+      // Create notification for the user
+      if (exercise.userId) {
+        await storage.createNotification({
+          userId: exercise.userId,
+          title: "New Custom Exercise",
+          message: `You've created a new custom exercise: ${exercise.name}`,
+          type: "info"
+        });
+      }
+      
+      res.status(201).json(exercise);
+    } catch (error) {
+      console.error("Create custom exercise error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/seed/workout-plans", async (req, res) => {
+    try {
+      // This endpoint is for development only
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ message: "Not available in production" });
+      }
+      
+      const { coachId } = req.body;
+      
+      if (!coachId) {
+        return res.status(400).json({ message: "Coach ID is required" });
+      }
+      
+      const sampleWorkoutPlans = [
+        {
+          title: "12-Week Strength Builder",
+          description: "A comprehensive strength program designed for intermediate lifters looking to increase their main lifts.",
+          coachId,
+          price: 49.99,
+          durationWeeks: 12,
+          difficultyLevel: "intermediate",
+          category: "strength",
+          goals: JSON.stringify(["increase strength", "build muscle", "improve technique"]),
+          equipment: JSON.stringify(["barbell", "dumbbells", "squat rack"]),
+          isPublished: true
+        },
+        {
+          title: "Fat Loss Accelerator",
+          description: "High-intensity program focused on rapid fat loss and conditioning in just 6 weeks.",
+          coachId,
+          price: 34.99,
+          durationWeeks: 6,
+          difficultyLevel: "beginner",
+          category: "fat loss",
+          goals: JSON.stringify(["lose weight", "improve conditioning", "increase endurance"]),
+          equipment: JSON.stringify(["bodyweight", "dumbbells", "kettlebells"]),
+          isPublished: true
+        },
+        {
+          title: "Bodybuilding Foundations",
+          description: "Classic bodybuilding program to build muscle across all major muscle groups.",
+          coachId,
+          price: 59.99,
+          durationWeeks: 8,
+          difficultyLevel: "intermediate",
+          category: "hypertrophy",
+          goals: JSON.stringify(["build muscle", "improve aesthetics", "increase strength"]),
+          equipment: JSON.stringify(["barbell", "dumbbells", "cables", "machines"]),
+          isPublished: true
+        }
+      ];
+      
+      const createdPlans = [];
+      
+      // Create the workout plans
+      for (const planData of sampleWorkoutPlans) {
+        const plan = await storage.createWorkoutPlan(planData);
+        createdPlans.push(plan);
+        
+        // Create sample days for each plan
+        for (let day = 1; day <= 5; day++) {
+          await storage.createWorkoutPlanDay({
+            planId: plan.id,
+            dayNumber: day,
+            templateId: null, // Would be set to an actual template in real usage
+            title: `Day ${day}`,
+            description: `Workout for day ${day} of the program`
+          });
+        }
+      }
+      
+      res.status(201).json({
+        message: "Sample workout plans created successfully",
+        plans: createdPlans
+      });
+    } catch (error) {
+      console.error("Create sample workout plans error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/seed/purchases", async (req, res) => {
+    try {
+      // This endpoint is for development only
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ message: "Not available in production" });
+      }
+      
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      // Get all workout plans for demo data
+      const allPlans = await storage.getWorkoutPlans(undefined);
+      
+      if (allPlans.length === 0) {
+        return res.status(404).json({ message: "No workout plans found to create sample purchases" });
+      }
+      
+      // Create sample purchases for development
+      const samplePurchases = [];
+      
+      for (const plan of allPlans.slice(0, 3)) { // Limit to first 3 plans
+        const purchase = await storage.createPurchase({
+          userId: userId,
+          planId: plan.id,
+          serviceId: null,
+          transactionId: `demo-txn-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          amount: plan.price,
+          status: "completed"
+        });
+        
+        samplePurchases.push(purchase);
+        
+        // Update plan sales count
+        await storage.updateWorkoutPlan(plan.id, {
+          sales: (plan.sales || 0) + 1
+        });
+      }
+      
+      res.status(201).json({
+        message: "Sample purchases created successfully",
+        purchases: samplePurchases
+      });
+    } catch (error) {
+      console.error("Create sample purchases error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
+  // Payment processing routes with Stripe
+  app.post("/api/create-payment-intent", async (req, res) => {
+    try {
+      if (!req.body.amount) {
+        return res.status(400).json({ message: "Amount is required" });
+      }
+      
+      const { amount, planId, userId } = req.body;
+      
+      // Create a payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100), // Convert to cents
+        currency: "usd",
+        metadata: {
+          planId: planId ? planId.toString() : undefined,
+          userId: userId ? userId.toString() : undefined
+        }
+      });
+      
+      res.status(200).json({ 
+        clientSecret: paymentIntent.client_secret, 
+        paymentIntentId: paymentIntent.id 
+      });
+    } catch (error: any) {
+      console.error("Error creating payment intent:", error);
+      res.status(500).json({ 
+        message: "Failed to create payment intent", 
+        error: error.message 
+      });
+    }
+  });
+  
+  app.post("/api/confirm-payment", async (req, res) => {
+    try {
+      const { paymentIntentId, planId, userId, serviceId } = req.body;
+      
+      if (!paymentIntentId) {
+        return res.status(400).json({ message: "Payment intent ID is required" });
+      }
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      // Retrieve the payment intent to check its status
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.status !== 'succeeded') {
+        return res.status(400).json({ 
+          message: "Payment has not succeeded", 
+          status: paymentIntent.status 
+        });
+      }
+      
+      // Create a purchase record in our database
+      const purchase = await storage.createPurchase({
+        userId: parseInt(userId),
+        planId: planId ? parseInt(planId) : null,
+        serviceId: serviceId ? parseInt(serviceId) : null,
+        status: "completed",
+        amount: paymentIntent.amount / 100, // Convert back from cents
+        transactionId: paymentIntentId,
+        purchaseDate: new Date()
+      });
+      
+      // If this is a plan purchase, update the plan sales count
+      if (planId) {
+        const plan = await storage.getWorkoutPlan(parseInt(planId));
+        if (plan) {
+          // Update the plan with incremented sales count
+          await storage.updateWorkoutPlan(plan.id, {
+            sales: (plan.sales || 0) + 1
+          });
+        }
+      }
+      
+      res.status(200).json({ 
+        success: true, 
+        purchase 
+      });
+    } catch (error: any) {
+      console.error("Error confirming payment:", error);
+      res.status(500).json({ 
+        message: "Failed to confirm payment", 
+        error: error.message 
+      });
+    }
+  });
+  
+  app.get("/api/checkout-config", (req, res) => {
+    // Send the publishable key to the client
+    if (!process.env.VITE_STRIPE_PUBLIC_KEY) {
+      return res.status(500).json({ message: "Stripe public key not configured" });
+    }
+    
+    res.status(200).json({
+      publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY
+    });
+  });
+  
   const httpServer = createServer(app);
 
   return httpServer;
