@@ -257,7 +257,7 @@ export default function MyPlans() {
                     <div className="font-medium">${purchase.amount.toFixed(2)}</div>
                     <Button 
                       size="sm"
-                      onClick={() => setLocation(`/workout-plans/${purchase.planId}`)}
+                      onClick={() => setLocation(`/purchased-plans/${purchase.planId}`)}
                     >
                       View Plan
                       <ChevronRight className="ml-1 h-4 w-4" />

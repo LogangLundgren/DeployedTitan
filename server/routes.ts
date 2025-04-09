@@ -2296,6 +2296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/workout-plans/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const includePlanTemplates = req.query.includePlanTemplates === 'true';
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Valid workout plan ID is required" });
@@ -2309,9 +2310,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const planDays = await storage.getWorkoutPlanDays(id);
       
+      // Fetch plan templates if requested
+      let planTemplates = [];
+      if (includePlanTemplates) {
+        planTemplates = await storage.getPlanTemplates(id);
+        
+        // For each template, fetch the exercises
+        for (const planTemplate of planTemplates) {
+          if (planTemplate.template) {
+            const exercises = await storage.getTemplateExercises(planTemplate.template.id);
+            planTemplate.template.exercises = exercises;
+          }
+        }
+      }
+      
       res.status(200).json({
         ...plan,
-        days: planDays
+        days: planDays,
+        planTemplates: includePlanTemplates ? planTemplates : undefined
       });
     } catch (error) {
       console.error("Get workout plan details error:", error);

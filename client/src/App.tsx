@@ -12,6 +12,7 @@ import Goals from "@/pages/Goals";
 import Social from "@/pages/Social";
 import Marketplace from "@/pages/Marketplace";
 import WorkoutPlanDetail from "@/pages/WorkoutPlanDetail";
+import PurchasedPlanDetail from "@/pages/PurchasedPlanDetail";
 import CoachProfile from "@/pages/CoachProfile";
 import MyPlans from "@/pages/MyPlans";
 import BecomeCoach from "@/pages/BecomeCoach";
@@ -57,6 +58,7 @@ function Router() {
           <Route path="/social" component={Social} />
           <Route path="/marketplace" component={Marketplace} />
           <Route path="/workout-plans/:id" component={WorkoutPlanDetail} />
+          <Route path="/purchased-plans/:id" component={PurchasedPlanDetail} />
           <Route path="/coaches/:id" component={CoachProfile} />
           <Route path="/my-plans" component={MyPlans} />
           <Route path="/become-coach" component={BecomeCoach} />

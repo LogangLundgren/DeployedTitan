@@ -65,6 +65,7 @@ export interface IStorage {
   createTemplateExercise(templateExercise: InsertTemplateExercise): Promise<TemplateExercise>;
   deleteTemplateExercise(id: number): Promise<boolean>;
   updateTemplateExercise(id: number, templateExercise: Partial<TemplateExercise>): Promise<TemplateExercise | undefined>;
+  getTemplateExercises(templateId: number): Promise<TemplateExercise[]>;
   
   // Notification operations
   getNotifications(userId: number): Promise<Notification[]>;
@@ -587,6 +588,23 @@ export class MemStorage implements IStorage {
   
   async deleteTemplateExercise(id: number): Promise<boolean> {
     return this.templateExercises.delete(id);
+  }
+  
+  async getTemplateExercises(templateId: number): Promise<TemplateExercise[]> {
+    const exercises = Array.from(this.templateExercises.values())
+      .filter(te => te.templateId === templateId)
+      .sort((a, b) => a.order - b.order);
+      
+    // For each template exercise, fetch the exercise details
+    return Promise.all(
+      exercises.map(async (te) => {
+        const exercise = await this.getExercise(te.exerciseId);
+        return {
+          ...te,
+          exercise: exercise!
+        };
+      })
+    );
   }
   
   // Notification operations
