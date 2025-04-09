@@ -179,35 +179,41 @@ export default function WorkoutPlanDetail() {
     enabled: !isNaN(planId)
   });
 
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+
   const handlePurchase = async () => {
     try {
-      // In a real app, this would integrate with Stripe
-      // For now, we'll just create a purchase record
-      await apiRequest('POST', '/api/purchases', {
-        userId: 1, // Assuming user 1 is logged in
-        planId,
-        serviceId: null,
-        transactionId: `plan-${Date.now()}`,
-        amount: plan.price,
-        status: 'completed',
-        purchaseDate: new Date()
-      });
-
-      toast({
-        title: "Purchase Successful!",
-        description: "The workout plan has been added to your account.",
-        variant: "default",
-      });
-
-      setPurchaseDialogOpen(false);
+      setIsProcessingPayment(true);
       
-      // Redirect to user's plans
-      // setLocation('/my-plans');
+      // Step 1: Create a payment intent
+      const paymentResponse = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: plan.price,
+          planId: plan.id,
+          userId: 1, // Assuming user 1 is logged in
+        })
+      });
+      
+      if (!paymentResponse.ok) {
+        throw new Error('Failed to create payment intent');
+      }
+      
+      const { clientSecret, paymentIntentId } = await paymentResponse.json();
+      setPaymentIntentId(paymentIntentId);
+      
+      // Step 2: Redirect to checkout page with the client secret
+      setLocation(`/checkout?clientSecret=${clientSecret}&planId=${planId}`);
     } catch (error) {
-      console.error('Purchase error:', error);
+      console.error('Payment initialization error:', error);
+      setIsProcessingPayment(false);
       toast({
-        title: "Purchase Failed",
-        description: "There was an issue processing your purchase. Please try again.",
+        title: "Payment Failed",
+        description: "There was an issue processing your payment. Please try again.",
         variant: "destructive",
       });
     }
@@ -604,11 +610,16 @@ export default function WorkoutPlanDetail() {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPurchaseDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setPurchaseDialogOpen(false)} disabled={isProcessingPayment}>
               Cancel
             </Button>
-            <Button onClick={handlePurchase}>
-              Complete Purchase
+            <Button onClick={handlePurchase} disabled={isProcessingPayment}>
+              {isProcessingPayment ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></div>
+                  Processing...
+                </>
+              ) : "Complete Purchase"}
             </Button>
           </DialogFooter>
         </DialogContent>

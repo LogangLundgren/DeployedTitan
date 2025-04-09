@@ -16,6 +16,8 @@ import CoachProfile from "@/pages/CoachProfile";
 import MyPlans from "@/pages/MyPlans";
 import BecomeCoach from "@/pages/BecomeCoach";
 import CreatePlan from "@/pages/CreatePlan";
+import Checkout from "@/pages/Checkout";
+import PaymentSuccess from "@/pages/PaymentSuccess";
 import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
@@ -59,6 +61,8 @@ function Router() {
           <Route path="/my-plans" component={MyPlans} />
           <Route path="/become-coach" component={BecomeCoach} />
           <Route path="/create-plan" component={CreatePlan} />
+          <Route path="/checkout" component={Checkout} />
+          <Route path="/payment-success" component={PaymentSuccess} />
           {/* Fallback to 404 */}
           <Route component={NotFound} />
         </Switch>
