@@ -2780,6 +2780,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Testing-only endpoint for registering as a coach without payment
+  // NOTE: This endpoint should be removed before production launch!
+  app.post("/api/register-as-coach-test", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      // Update the user to coach status
+      const user = await storage.updateUserCoachStatus(parseInt(userId), true);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Create a notification for the user
+      await storage.createNotification({
+        userId: parseInt(userId),
+        title: "Coach Registration Complete (Test Mode)",
+        message: "This is a test registration. You're now registered as a coach. Set up your profile to start creating and selling workout plans.",
+        type: "registration"
+      });
+      
+      res.status(200).json({
+        success: true,
+        user: {
+          id: user.id,
+          isCoach: user.isCoach
+        }
+      });
+    } catch (error: any) {
+      console.error("Error in test coach registration:", error);
+      res.status(500).json({
+        message: "Failed to register as coach",
+        error: error.message
+      });
+    }
+  });
+
   app.get("/api/checkout-config", (req, res) => {
     // Send the publishable key to the client
     if (!process.env.VITE_STRIPE_PUBLIC_KEY) {

@@ -4,7 +4,7 @@ import { useStripe, Elements, PaymentElement, useElements } from '@stripe/react-
 import { loadStripe } from '@stripe/stripe-js';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '../hooks/use-auth';
 
 // UI components
 import { ArrowLeft, ShieldCheck, CreditCard, BadgeCheck, ReceiptText, Users, PieChart, BookOpen } from 'lucide-react';
@@ -149,8 +149,53 @@ export default function BecomeCoach() {
   const [, navigate] = useLocation();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [stripeLoaded, setStripeLoaded] = useState(false);
-  const { user } = useAuth();
+  const [isRegistering, setIsRegistering] = useState(false);
+  const { user, loginMutation } = useAuth();
   const { toast } = useToast();
+
+  // Function to directly register as coach without payment (for testing)
+  const registerAsFreeCoach = async () => {
+    if (!user) return;
+    
+    setIsRegistering(true);
+    try {
+      // Call the API to update user coach status directly
+      const response = await fetch("/api/register-as-coach-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id })
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to register as coach");
+      }
+      
+      // Refresh user data
+      if (user.username && user.password) {
+        await loginMutation.mutateAsync({ 
+          username: user.username, 
+          password: user.password 
+        });
+      }
+      
+      toast({
+        title: "Registration Successful!",
+        description: "You are now registered as a coach!",
+      });
+      
+      // Redirect to profile page
+      navigate('/profile');
+    } catch (error) {
+      console.error("Coach registration error:", error);
+      toast({
+        title: "Error Registering as Coach",
+        description: "Failed to complete registration. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegistering(false);
+    }
+  };
 
   useEffect(() => {
     // Check if user is already a coach
@@ -159,7 +204,7 @@ export default function BecomeCoach() {
         title: 'Already Registered',
         description: 'You are already registered as a coach',
       });
-      navigate('/coach-profile');
+      navigate('/profile');
       return;
     }
 
@@ -241,6 +286,37 @@ export default function BecomeCoach() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Testing-only free registration button */}
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <h3 className="text-amber-800 font-medium mb-2">Testing Mode</h3>
+                <p className="text-amber-700 text-sm mb-4">
+                  For development purposes only. This will be removed before launch.
+                </p>
+                <Button 
+                  onClick={registerAsFreeCoach}
+                  disabled={isRegistering}
+                  variant="outline"
+                  className="w-full bg-white border-amber-300 hover:bg-amber-100"
+                >
+                  {isRegistering ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-amber-700 border-t-transparent"></div>
+                      Processing...
+                    </>
+                  ) : "Register as Coach (Free Testing)"}
+                </Button>
+              </div>
+              
+              <div className="relative py-4 text-center mb-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-200"></span>
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-4 text-sm text-gray-500">OR</span>
+                </div>
+              </div>
+              
+              {/* Normal Stripe payment form */}
               {stripeLoaded && clientSecret ? (
                 <Elements 
                   stripe={stripePromise} 
@@ -249,9 +325,9 @@ export default function BecomeCoach() {
                   <CoachRegistrationForm />
                 </Elements>
               ) : (
-                <div className="py-8 text-center">
+                <div className="py-4 text-center">
                   <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                  <p className="mt-4">Loading payment form...</p>
+                  <p className="mt-2">Loading payment form...</p>
                 </div>
               )}
             </CardContent>
