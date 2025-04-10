@@ -2,12 +2,14 @@ import { useState } from "react";
 import { User } from "@shared/schema";
 import { Link } from "wouter";
 import { NotificationDropdown } from "../notifications/NotificationDropdown";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { user } = useAuth();
   
-  // Demo user data with all required fields
-  const user: User = {
+  // Fallback user data if auth context isn't available
+  const defaultUser: User = {
     id: 1,
     username: 'demo',
     name: 'John Smith',
@@ -19,7 +21,11 @@ export default function Header() {
     experienceYears: null,
     goals: null,
     certifications: null,
-    socialMedia: null
+    socialMedia: null,
+    isCoach: false,
+    coachRegistrationDate: null,
+    stripeCustomerId: null,
+    stripeSubscriptionId: null
   };
   
   return (
@@ -86,6 +92,20 @@ export default function Header() {
                   </svg>
                   <span>Profile</span>
                 </Link>
+                
+                {/* Only show Become a Coach option if user is not already a coach */}
+                {(!user?.isCoach && user) && (
+                  <Link href="/become-coach" className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50" onClick={() => setDropdownOpen(false)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>Become a Coach</span>
+                  </Link>
+                )}
+                
                 <div className="border-t border-gray-100 my-1"></div>
                 <a href="#" className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-gray-50">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
