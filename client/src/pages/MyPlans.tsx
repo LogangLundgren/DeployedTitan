@@ -9,7 +9,12 @@ import {
   FileText,
   ShoppingBag,
   Filter,
-  CalendarCheck
+  CalendarCheck,
+  PlusCircle,
+  Dumbbell,
+  LayoutGrid,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { 
   Tabs,
@@ -29,11 +34,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 
 interface User {
   id: number;
-  name: string;
+  name: string | null;
   username: string;
+  email: string | null;
+  isCoach: boolean | null;
+  coachRegistrationDate: string | null;
 }
 
 interface WorkoutPlan {
@@ -45,6 +54,13 @@ interface WorkoutPlan {
   category: string;
   price: number;
   rating: number | null;
+  coachId: number;
+  isPublished?: boolean;
+  isFeatured?: boolean;
+  sales?: number;
+  ratingsCount?: number;
+  equipment?: string | null;
+  featuredImageUrl?: string | null;
 }
 
 interface CoachingService {
@@ -75,10 +91,26 @@ export default function MyPlans() {
   const [searchQuery, setSearchQuery] = useState("");
   const userId = 1; // Assume user 1 is logged in - in a real app, would come from auth context
   
+  // Fetch user info to check if they're a coach
+  const { data: user, isLoading: isUserLoading } = useQuery({
+    queryKey: ['/api/users', userId],
+    queryFn: () => fetch(`/api/users/${userId}`).then(res => res.json())
+  });
+
+  // Fetch coach's workout plans if user is a coach
+  const { 
+    data: coachPlans = [], 
+    isLoading: isCoachPlansLoading 
+  } = useQuery({
+    queryKey: ['/api/workout-plans', 'coach', userId],
+    queryFn: () => fetch(`/api/workout-plans?coachId=${userId}`).then(res => res.json()),
+    enabled: !!user?.isCoach
+  });
+  
   // Fetch user's purchases
   const { 
     data: purchases = [], 
-    isLoading,
+    isLoading: isPurchasesLoading,
     error
   } = useQuery({
     queryKey: ['/api/purchases', userId],
@@ -142,19 +174,34 @@ export default function MyPlans() {
   const planPurchases = filteredPurchases.filter((p: Purchase) => p.planId !== null);
   const servicePurchases = filteredPurchases.filter((p: Purchase) => p.serviceId !== null);
 
+  const isLoading = isUserLoading || isPurchasesLoading || (user?.isCoach && isCoachPlansLoading);
+
   return (
     <div className="container mx-auto py-6 px-4 md:px-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Purchases</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {user?.isCoach ? "My Plans & Purchases" : "My Purchases"}
+          </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            View and manage your purchased workout plans and coaching services
+            {user?.isCoach 
+              ? "Manage your created workout plans and view your purchases" 
+              : "View and manage your purchased workout plans and coaching services"
+            }
           </p>
         </div>
-        <Button onClick={() => setLocation('/marketplace')}>
-          <ShoppingBag className="mr-2 h-4 w-4" />
-          Browse Marketplace
-        </Button>
+        <div className="flex gap-3">
+          {user?.isCoach && (
+            <Button variant="default" onClick={() => setLocation('/create-plan')}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create New Plan
+            </Button>
+          )}
+          <Button variant={user?.isCoach ? "outline" : "default"} onClick={() => setLocation('/marketplace')}>
+            <ShoppingBag className="mr-2 h-4 w-4" />
+            Browse Marketplace
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -187,17 +234,116 @@ export default function MyPlans() {
         </div>
       </div>
 
-      <Tabs defaultValue="plans">
+      <Tabs defaultValue={user?.isCoach ? "coach-plans" : "plans"}>
         <TabsList className="mb-6">
+          {user?.isCoach && (
+            <TabsTrigger value="coach-plans">
+              <Dumbbell className="mr-2 h-4 w-4" />
+              My Coach Plans
+            </TabsTrigger>
+          )}
           <TabsTrigger value="plans">
             <FileText className="mr-2 h-4 w-4" />
-            Workout Plans
+            Purchased Plans
           </TabsTrigger>
           <TabsTrigger value="services">
             <CalendarCheck className="mr-2 h-4 w-4" />
             Coaching Services
           </TabsTrigger>
         </TabsList>
+        {/* Coach Plans Tab Content */}
+        {user?.isCoach && (
+          <TabsContent value="coach-plans">
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+                <p className="mt-2">Loading your coach plans...</p>
+              </div>
+            ) : coachPlans.length > 0 ? (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">Your Workout Plans ({coachPlans.length})</h3>
+                  <Button variant="outline" size="sm" onClick={() => setLocation('/create-plan')}>
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Create New Plan
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {coachPlans.map((plan: WorkoutPlan) => (
+                    <Card key={plan.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start">
+                          <Badge 
+                            className={`${plan.isPublished ? 'bg-green-500' : 'bg-amber-500'}`}
+                          >
+                            {plan.isPublished ? 'Published' : 'Draft'}
+                          </Badge>
+                          {plan.isFeatured && (
+                            <Badge variant="outline" className="bg-primary/10 text-primary">
+                              Featured
+                            </Badge>
+                          )}
+                        </div>
+                        <CardTitle className="text-lg mt-2">{plan.title}</CardTitle>
+                        <CardDescription className="line-clamp-2">
+                          {plan.description}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="pb-2">
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          <Badge variant="outline" className="bg-slate-100">
+                            {plan.difficultyLevel}
+                          </Badge>
+                          <Badge variant="outline" className="bg-slate-100">
+                            {plan.category}
+                          </Badge>
+                          <Badge variant="outline" className="bg-slate-100">
+                            {plan.durationWeeks} weeks
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                          <div>
+                            <p className="text-gray-500">Price</p>
+                            <p className="font-medium">${plan.price}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Sales</p>
+                            <p className="font-medium">{plan.sales || 0}</p>
+                          </div>
+                        </div>
+                        <StarRating rating={plan.rating} />
+                      </CardContent>
+                      <Separator />
+                      <CardFooter className="pt-4 pb-4 justify-between">
+                        <Button variant="ghost" size="sm" onClick={() => setLocation(`/edit-plan/${plan.id}`)}>
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button variant="default" size="sm" onClick={() => setLocation(`/workout-plan/${plan.id}`)}>
+                          View Details
+                          <ChevronRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 border rounded-lg">
+                <Dumbbell className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-xl font-medium mb-2">No Workout Plans</h3>
+                <p className="text-gray-500 mb-6">
+                  You haven't created any workout plans yet.
+                </p>
+                <Button onClick={() => setLocation('/create-plan')}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Create Your First Plan
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+        )}
         
         <TabsContent value="plans">
           {isLoading ? (
