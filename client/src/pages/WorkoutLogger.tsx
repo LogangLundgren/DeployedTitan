@@ -16,7 +16,7 @@ import { Clock, FileText, DollarSign, Plus } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import Templates from "./Templates";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 
 type TabType = 'new' | 'history' | 'analytics' | 'templates';
 
@@ -127,7 +127,7 @@ export default function WorkoutLogger() {
                     <path d="M12 2v20"/>
                     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                   </svg>
-                  New Workout
+                  Programs
                 </div>
               </TabsTrigger>
               <TabsTrigger 
@@ -201,6 +201,15 @@ export default function WorkoutLogger() {
               ) : (
                 // When no workout is started, show the template selector
                 <div>
+                  <div className="p-4 flex justify-between items-center border-b">
+                    <h3 className="text-lg font-semibold">Your Workout Programs</h3>
+                    <Link href="/templates/new">
+                      <Button size="sm">
+                        <Plus className="mr-1 h-4 w-4" />
+                        New Template
+                      </Button>
+                    </Link>
+                  </div>
                   <TemplateSelector 
                     userId={userId}
                     onWorkoutCreated={handleWorkoutCreated} 

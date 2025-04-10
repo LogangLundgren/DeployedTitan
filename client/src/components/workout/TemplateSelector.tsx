@@ -141,7 +141,7 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
             <CardFooter className="flex justify-between pt-0">
               <Link href={`/templates/${template.id}`}>
                 <Button variant="outline" size="sm">
-                  View Details
+                  Edit Details
                 </Button>
               </Link>
               <Button 
