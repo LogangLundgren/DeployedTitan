@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import Templates from "./Templates";
 import { useLocation, Link } from "wouter";
 
-type TabType = 'new' | 'history' | 'analytics' | 'templates';
+type TabType = 'new' | 'history' | 'analytics';
 
 export default function WorkoutLogger() {
   const [activeTab, setActiveTab] = useState<TabType>('new');
@@ -28,8 +28,13 @@ export default function WorkoutLogger() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
-    if (tabParam && ['new', 'history', 'analytics', 'templates'].includes(tabParam)) {
+    if (tabParam && ['new', 'history', 'analytics'].includes(tabParam)) {
       setActiveTab(tabParam as TabType);
+    } else if (tabParam === 'templates') {
+      // Redirect templates tab to new (programs) tab
+      setActiveTab('new');
+      const newUrl = `/workouts?tab=new`;
+      window.history.replaceState(null, '', newUrl);
     }
   }, [location]);
   
@@ -154,22 +159,7 @@ export default function WorkoutLogger() {
                   Analytics
                 </div>
               </TabsTrigger>
-              <TabsTrigger 
-                value="templates"
-                className="h-12 px-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none data-[state=active]:text-primary"
-              >
-                <div className="flex items-center gap-2">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
-                    <path d="M9 16.2v5"></path>
-                    <path d="M15 16.2v5"></path>
-                    <path d="M9 2v5"></path>
-                    <path d="M15 2v5"></path>
-                    <path d="M15 14a3 3 0 0 0-6 0"></path>
-                  </svg>
-                  Templates
-                </div>
-              </TabsTrigger>
+
             </TabsList>
           </div>
           
@@ -205,16 +195,32 @@ export default function WorkoutLogger() {
                     <h3 className="text-lg font-semibold">Your Workout Programs</h3>
                     <Button 
                       size="sm"
-                      onClick={() => updateActiveTab('templates')}
+                      onClick={() => document.getElementById('createTemplateButton')?.click()}
                     >
                       <Plus className="mr-1 h-4 w-4" />
                       New Template
                     </Button>
                   </div>
-                  <TemplateSelector 
-                    userId={userId}
-                    onWorkoutCreated={handleWorkoutCreated} 
-                  />
+                  <div className="mb-8">
+                    <TemplateSelector 
+                      userId={userId}
+                      onWorkoutCreated={handleWorkoutCreated} 
+                    />
+                  </div>
+                  
+                  <div className="border-t pt-6">
+                    <div className="p-4 flex justify-between items-center border-b">
+                      <h3 className="text-lg font-semibold">Your Workout Templates</h3>
+                      <Button 
+                        size="sm"
+                        onClick={() => document.getElementById('createTemplateButton')?.click()}
+                      >
+                        <Plus className="mr-1 h-4 w-4" />
+                        New Template
+                      </Button>
+                    </div>
+                    <Templates />
+                  </div>
                 </div>
               )}
             </TabsContent>
@@ -234,19 +240,7 @@ export default function WorkoutLogger() {
               <EnhancedAnalytics userId={userId} />
             </TabsContent>
             
-            <TabsContent value="templates" className="p-0 m-0">
-              <div className="p-4 flex justify-between items-center border-b">
-                <h3 className="text-lg font-semibold">Your Workout Templates</h3>
-                <Button 
-                  size="sm"
-                  onClick={() => document.getElementById('createTemplateButton')?.click()}
-                >
-                  <Plus className="mr-1 h-4 w-4" />
-                  New Template
-                </Button>
-              </div>
-              <Templates />
-            </TabsContent>
+
           </CardContent>
         </Tabs>
       </Card>
