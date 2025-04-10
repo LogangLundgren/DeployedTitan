@@ -12,10 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, FileText, DollarSign } from "lucide-react";
+import { Clock, FileText, DollarSign, Plus } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import Templates from "./Templates";
 
-type TabType = 'new' | 'history' | 'analytics';
+type TabType = 'new' | 'history' | 'analytics' | 'templates';
 
 export default function WorkoutLogger() {
   const [activeTab, setActiveTab] = useState<TabType>('new');
@@ -133,6 +135,22 @@ export default function WorkoutLogger() {
                   Analytics
                 </div>
               </TabsTrigger>
+              <TabsTrigger 
+                value="templates"
+                className="h-12 px-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none data-[state=active]:text-primary"
+              >
+                <div className="flex items-center gap-2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+                    <path d="M9 16.2v5"></path>
+                    <path d="M15 16.2v5"></path>
+                    <path d="M9 2v5"></path>
+                    <path d="M15 2v5"></path>
+                    <path d="M15 14a3 3 0 0 0-6 0"></path>
+                  </svg>
+                  Templates
+                </div>
+              </TabsTrigger>
             </TabsList>
           </div>
           
@@ -185,6 +203,10 @@ export default function WorkoutLogger() {
             
             <TabsContent value="analytics" className="p-0 m-0">
               <EnhancedAnalytics userId={userId} />
+            </TabsContent>
+            
+            <TabsContent value="templates" className="p-0 m-0">
+              <Templates />
             </TabsContent>
           </CardContent>
         </Tabs>

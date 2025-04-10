@@ -41,7 +41,6 @@ function Router() {
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/workouts" component={WorkoutLogger} />
-          <Route path="/templates" component={Templates} />
           <Route path="/templates/:id" component={TemplateDetail} />
           <Route path="/profile" component={Profile} />
           <Route path="/goals" component={Goals} />
