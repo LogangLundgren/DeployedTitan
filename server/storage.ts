@@ -2232,6 +2232,32 @@ export class DbStorage implements IStorage {
     return result[0];
   }
   
+  async updateUserCoachStatus(id: number, isCoach: boolean): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set({ 
+        isCoach,
+        coachRegistrationDate: isCoach ? new Date() : null
+      })
+      .where(eq(users.id, id))
+      .returning();
+      
+    return result[0];
+  }
+  
+  async updateUserStripeInfo(id: number, stripeInfo: { customerId?: string, subscriptionId?: string }): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set({
+        stripeCustomerId: stripeInfo.customerId ?? null,
+        stripeSubscriptionId: stripeInfo.subscriptionId ?? null
+      })
+      .where(eq(users.id, id))
+      .returning();
+      
+    return result[0];
+  }
+  
   // Exercise operations
   async getExercises(): Promise<Exercise[]> {
     return await db.select().from(exercises);
@@ -2549,6 +2575,35 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error('Error deleting template exercise:', error);
       return false;
+    }
+  }
+  
+  async getTemplateExercises(templateId: number): Promise<TemplateExercise[]> {
+    try {
+      // Get all template exercises for the template
+      const templateExercisesResult = await db
+        .select()
+        .from(templateExercises)
+        .where(eq(templateExercises.templateId, templateId))
+        .orderBy(templateExercises.order);
+        
+      // For each template exercise, fetch the exercise details
+      return await Promise.all(
+        templateExercisesResult.map(async (te) => {
+          const exerciseResult = await db
+            .select()
+            .from(exercises)
+            .where(eq(exercises.id, te.exerciseId));
+            
+          return {
+            ...te,
+            exercise: exerciseResult[0]
+          };
+        })
+      );
+    } catch (error) {
+      console.error('Error getting template exercises:', error);
+      return [];
     }
   }
   

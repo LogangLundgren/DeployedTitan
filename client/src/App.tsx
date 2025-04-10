@@ -23,29 +23,19 @@ import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
 import { NotificationsProvider } from "./context/NotificationsContext";
-import { useQuery } from "@tanstack/react-query";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { User } from "@shared/schema";
 
 function Router() {
-  // Demo user data with all required fields from the schema
-  const demoUser: User = {
-    id: 1,
-    username: 'demo',
-    name: 'John Smith',
-    email: 'demo@example.com',
-    password: '',
-    bio: null,
-    location: null,
-    fitnessLevel: null,
-    experienceYears: null,
-    goals: null,
-    certifications: null,
-    socialMedia: null
-  };
+  const { user } = useAuth();
+  
+  // Fallback to ensure we always have a user id for notifications
+  // In a real app, we might handle this with loading states
+  const userId = user?.id || 1;
   
   return (
     <div className="min-h-screen flex flex-col">
-      <NotificationsProvider userId={demoUser.id}>
+      <NotificationsProvider userId={userId}>
         <Header />
         <Navigation />
         <Switch>
@@ -77,8 +67,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <AuthProvider>
+        <Router />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
