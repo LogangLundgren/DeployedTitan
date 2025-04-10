@@ -324,7 +324,7 @@ export default function TemplateDetail() {
 
   return (
     <div className="container mx-auto py-6">
-      <Link href="/templates">
+      <Link href="/workouts?tab=templates">
         <Button variant="ghost" className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Templates
@@ -645,7 +645,7 @@ export default function TemplateDetail() {
           <p className="text-muted-foreground mb-6">
             The template you're looking for doesn't exist or you don't have permission to view it.
           </p>
-          <Link href="/templates">
+          <Link href="/workouts?tab=templates">
             <Button>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Templates
