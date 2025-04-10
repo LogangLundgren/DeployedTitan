@@ -2618,6 +2618,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Coach registration payment intent
+  app.post("/api/create-coach-payment-intent", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      // Fixed price for coach registration: $4.99
+      const amount = 499; // in cents
+      
+      // Create a payment intent for coach registration
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: "usd",
+        metadata: {
+          userId: userId.toString(),
+          type: "coach_registration"
+        }
+      });
+      
+      res.status(200).json({
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id
+      });
+    } catch (error: any) {
+      console.error("Error creating coach payment intent:", error);
+      res.status(500).json({
+        message: "Failed to create coach payment intent",
+        error: error.message
+      });
+    }
+  });
+  
   app.post("/api/confirm-payment", async (req, res) => {
     try {
       const { paymentIntentId, planId, userId, serviceId } = req.body;
@@ -2671,6 +2706,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         message: "Failed to confirm payment", 
         error: error.message 
+      });
+    }
+  });
+  
+  // Confirm coach registration payment and update user status
+  app.post("/api/confirm-coach-registration", async (req, res) => {
+    try {
+      const { paymentIntentId, userId } = req.body;
+      
+      if (!paymentIntentId) {
+        return res.status(400).json({ message: "Payment intent ID is required" });
+      }
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      // Retrieve the payment intent to check its status
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      // Verify this is a coach registration payment
+      if (paymentIntent.metadata.type !== 'coach_registration') {
+        return res.status(400).json({ message: "Invalid payment type" });
+      }
+      
+      if (paymentIntent.status !== 'succeeded') {
+        return res.status(400).json({ 
+          message: "Payment has not succeeded", 
+          status: paymentIntent.status 
+        });
+      }
+      
+      // Record the purchase first
+      const purchase = await storage.createPurchase({
+        userId: parseInt(userId),
+        status: "completed",
+        amount: paymentIntent.amount / 100, // Convert back from cents
+        transactionId: paymentIntentId,
+        purchaseDate: new Date(),
+        planId: null,
+        serviceId: null
+      });
+      
+      // Update the user to coach status
+      const user = await storage.updateUserCoachStatus(parseInt(userId), true);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Create a notification for the user
+      await storage.createNotification({
+        userId: parseInt(userId),
+        title: "Coach Registration Complete",
+        message: "Congratulations! You're now registered as a coach. Set up your profile to start creating and selling workout plans.",
+        type: "registration"
+      });
+      
+      res.status(200).json({
+        success: true,
+        user: {
+          id: user.id,
+          isCoach: user.isCoach
+        }
+      });
+    } catch (error: any) {
+      console.error("Error confirming coach registration:", error);
+      res.status(500).json({
+        message: "Failed to confirm coach registration",
+        error: error.message
       });
     }
   });
