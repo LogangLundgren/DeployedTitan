@@ -289,6 +289,92 @@ export default function Profile() {
     );
   }
   
+  // Get coach profile if user is a coach
+  const { data: coachProfile } = useQuery({
+    queryKey: ['/api/coaches/profile', user?.id],
+    queryFn: async () => {
+      try {
+        const response = await fetch(`/api/coaches/profile?userId=${user?.id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch coach profile');
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching coach profile:", error);
+        return null;
+      }
+    },
+    refetchOnWindowFocus: false,
+    enabled: !!user && !!user.isCoach
+  });
+
+  // Coach profile refs
+  const coachTitleRef = useRef<HTMLInputElement>(null);
+  const coachBiographyRef = useRef<HTMLTextAreaElement>(null);
+  const coachExperienceRef = useRef<HTMLInputElement>(null);
+  const coachSpecialtiesRef = useRef<HTMLTextAreaElement>(null);
+  const coachHourlyRateRef = useRef<HTMLInputElement>(null);
+  const coachAvailableForHireRef = useRef<HTMLInputElement>(null);
+
+  // Coach profile mutation
+  const updateCoachProfileMutation = useMutation({
+    mutationFn: async (coachData: any) => {
+      return await apiRequest(`/api/coaches/profile/${coachProfile?.id || 'new'}`, {
+        method: coachProfile ? 'PATCH' : 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(coachData)
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/coaches/profile', user?.id] });
+      setIsCoachProfileEditing(false);
+      setIsSaving(false);
+      
+      toast({
+        title: "Coach profile updated",
+        description: "Your coach profile has been successfully updated.",
+        variant: "default",
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to update coach profile:", error);
+      setIsSaving(false);
+      
+      toast({
+        title: "Update failed",
+        description: "There was a problem updating your coach profile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Handle coach profile save
+  const handleSaveCoachProfile = () => {
+    if (!user || !user.isCoach) return;
+    
+    setIsSaving(true);
+    
+    const updatedCoachProfile = {
+      userId: user.id,
+      title: coachTitleRef.current?.value || coachProfile?.title || `${user.name}'s Coaching`,
+      biography: coachBiographyRef.current?.value || coachProfile?.biography || '',
+      experience: coachExperienceRef.current?.value || coachProfile?.experience || '',
+      specialties: coachSpecialtiesRef.current?.value || coachProfile?.specialties || '',
+      hourlyRate: coachHourlyRateRef.current?.value ? 
+        parseFloat(coachHourlyRateRef.current.value) : coachProfile?.hourlyRate || 0,
+      isAvailableForHire: coachAvailableForHireRef.current?.checked ?? coachProfile?.isAvailableForHire ?? true
+    };
+    
+    updateCoachProfileMutation.mutate(updatedCoachProfile);
+  };
+
+  // View your public coach profile
+  const handleViewCoachProfile = () => {
+    setLocation(`/coach/${user?.id}`);
+  };
+
   return (
     <main className="flex-grow container mx-auto px-4 py-6">
       <div className="mb-6">
@@ -296,23 +382,39 @@ export default function Profile() {
         <p className="text-gray-500">Manage your profile and personal information</p>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Card */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-start">
-              <CardTitle className="text-xl">Profile Details</CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsEditing(!isEditing)}
-                className="h-8 px-2"
-              >
-                <Edit className="h-4 w-4 mr-1" />
-                {isEditing ? "Cancel" : "Edit"}
-              </Button>
-            </div>
-          </CardHeader>
+      {user && user.isCoach === true && (
+        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="mb-6">
+          <TabsList>
+            <TabsTrigger value="profile">
+              <UserIcon className="h-4 w-4 mr-2" />
+              Personal Profile
+            </TabsTrigger>
+            <TabsTrigger value="coach">
+              <BadgeCheck className="h-4 w-4 mr-2" />
+              Coach Profile
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+      
+      {(selectedTab === "profile" || !user || user.isCoach !== true) && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Profile Card */}
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <CardTitle className="text-xl">Profile Details</CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="h-8 px-2"
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  {isEditing ? "Cancel" : "Edit"}
+                </Button>
+              </div>
+            </CardHeader>
           <CardContent className="pt-4">
             <div className="flex flex-col items-center mb-6">
               <div className="relative mb-4">
@@ -571,6 +673,261 @@ export default function Profile() {
           </CardContent>
         </Card>
       </div>
+      )}
+      
+      {/* Coach Profile Section */}
+      {selectedTab === "coach" && user && user.isCoach === true && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <CardTitle className="text-xl">Coach Details</CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsCoachProfileEditing(!isCoachProfileEditing)}
+                  className="h-8 px-2"
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  {isCoachProfileEditing ? "Cancel" : "Edit"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="flex flex-col items-center mb-6">
+                <div className="relative mb-4">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src="" alt={user.name || user.username} />
+                    <AvatarFallback className="text-lg bg-primary/10 text-primary">
+                      {(user.name || user.username || "C").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isCoachProfileEditing && (
+                    <div className="absolute -right-2 bottom-0 bg-primary text-white p-1.5 rounded-full shadow-md cursor-pointer">
+                      <Camera className="h-4 w-4" />
+                    </div>
+                  )}
+                </div>
+                
+                {isCoachProfileEditing ? (
+                  <div className="w-full space-y-2">
+                    <div>
+                      <Label htmlFor="coachTitle">Coach Title</Label>
+                      <Input 
+                        id="coachTitle" 
+                        ref={coachTitleRef} 
+                        defaultValue={coachProfile?.title} 
+                        placeholder="Your coaching business name" 
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="text-xl font-semibold">
+                      {coachProfile?.title || `${user.name}'s Coaching`}
+                    </h3>
+                    <div className="flex items-center mt-1">
+                      <BadgeCheck className="h-4 w-4 text-primary mr-1" />
+                      <span className="text-sm text-primary font-medium">Verified Coach</span>
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              <div className="space-y-4">
+                {!isCoachProfileEditing ? (
+                  <>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Coach Since</p>
+                      <p>{user.coachRegistrationDate ? new Date(user.coachRegistrationDate).toLocaleDateString() : "Recently"}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Hourly Rate</p>
+                      <p className="font-semibold">${coachProfile?.hourlyRate || "0.00"}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Available for Hire</p>
+                      <p className="flex items-center">
+                        {coachProfile?.isAvailableForHire ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 text-green-500 mr-1" /> 
+                            Currently Available
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="h-4 w-4 text-orange-500 mr-1" /> 
+                            Not Available
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <Label htmlFor="coachHourlyRate">Hourly Rate ($)</Label>
+                      <Input 
+                        id="coachHourlyRate" 
+                        ref={coachHourlyRateRef} 
+                        type="number" 
+                        min="0" 
+                        step="0.01" 
+                        defaultValue={coachProfile?.hourlyRate || 0} 
+                      />
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="coachAvailableForHire"
+                        ref={coachAvailableForHireRef}
+                        defaultChecked={coachProfile?.isAvailableForHire ?? true}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <Label htmlFor="coachAvailableForHire" className="cursor-pointer">
+                        Available for Hire
+                      </Label>
+                    </div>
+                  </>
+                )}
+                
+                {isCoachProfileEditing && (
+                  <div className="mt-4">
+                    <Button 
+                      className="w-full" 
+                      onClick={handleSaveCoachProfile}
+                      disabled={updateCoachProfileMutation.isPending}
+                    >
+                      {updateCoachProfileMutation.isPending ? "Saving..." : "Save Coach Profile"}
+                    </Button>
+                  </div>
+                )}
+                
+                {!isCoachProfileEditing && (
+                  <div className="mt-4">
+                    <Button 
+                      className="w-full"
+                      onClick={handleViewCoachProfile}
+                      variant="outline"
+                    >
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      View Public Profile
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Coach Information */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-xl">Coach Profile</CardTitle>
+              <CardDescription>
+                Your public coach information that clients will see
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Biography Section */}
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <h3 className="font-medium">Coach Biography</h3>
+                    {isCoachProfileEditing && <Edit className="h-4 w-4 text-gray-400" />}
+                  </div>
+                  
+                  {isCoachProfileEditing ? (
+                    <Textarea
+                      ref={coachBiographyRef}
+                      placeholder="Tell potential clients about your coaching style, philosophy, and approach"
+                      defaultValue={coachProfile?.biography}
+                      className="min-h-[100px]"
+                    />
+                  ) : (
+                    <p className="text-gray-700">{coachProfile?.biography || "No coach biography provided."}</p>
+                  )}
+                </div>
+                
+                <Separator />
+                
+                {/* Coach Experience */}
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <h3 className="font-medium">Experience & Expertise</h3>
+                    {isCoachProfileEditing && <Edit className="h-4 w-4 text-gray-400" />}
+                  </div>
+                  
+                  {isCoachProfileEditing ? (
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <Label htmlFor="coachExperience">Experience</Label>
+                        <Input 
+                          id="coachExperience" 
+                          ref={coachExperienceRef} 
+                          defaultValue={coachProfile?.experience} 
+                          placeholder="Years of experience, credentials, etc." 
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="coachSpecialties">Specialties</Label>
+                        <Textarea 
+                          id="coachSpecialties" 
+                          ref={coachSpecialtiesRef} 
+                          defaultValue={coachProfile?.specialties} 
+                          placeholder="Your coaching specialties (e.g., strength training, weight loss, bodybuilding)" 
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Experience</p>
+                        <p>{coachProfile?.experience || "Not specified"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Specialties</p>
+                        <p>{coachProfile?.specialties || "No specialties listed"}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <Separator />
+                
+                {/* Statistics and Ratings */}
+                <div>
+                  <h3 className="font-medium mb-3">Coach Statistics</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="p-3 bg-gray-50 rounded-lg flex flex-col items-center">
+                      <DollarSign className="h-8 w-8 text-green-500 mb-1" />
+                      <span className="text-2xl font-bold">
+                        {coachProfile?.sales || 0}
+                      </span>
+                      <span className="text-sm text-gray-500">Plans Sold</span>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg flex flex-col items-center">
+                      <Star className="h-8 w-8 text-amber-400 mb-1" />
+                      <span className="text-2xl font-bold">
+                        {coachProfile?.rating || '0.0'}
+                      </span>
+                      <span className="text-sm text-gray-500">Average Rating</span>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg flex flex-col items-center">
+                      <CheckCircle2 className="h-8 w-8 text-blue-500 mb-1" />
+                      <span className="text-2xl font-bold">
+                        {coachProfile?.ratingsCount || 0}
+                      </span>
+                      <span className="text-sm text-gray-500">Reviews</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       
       {/* Account Settings Section */}
       <Card className="mt-6">
