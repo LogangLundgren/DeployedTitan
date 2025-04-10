@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { WorkoutWithDetails } from "@shared/schema";
 import WorkoutForm from "@/components/workout/WorkoutForm";
 import WorkoutHistory from "@/components/workout/WorkoutHistory";
@@ -16,11 +16,30 @@ import { Clock, FileText, DollarSign, Plus } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import Templates from "./Templates";
+import { useLocation } from "wouter";
 
 type TabType = 'new' | 'history' | 'analytics' | 'templates';
 
 export default function WorkoutLogger() {
   const [activeTab, setActiveTab] = useState<TabType>('new');
+  const [location, setLocation] = useLocation();
+  
+  // Check URL parameters for tab selection
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam && ['new', 'history', 'analytics', 'templates'].includes(tabParam)) {
+      setActiveTab(tabParam as TabType);
+    }
+  }, [location]);
+  
+  // Function to update the active tab and the URL
+  const updateActiveTab = (value: TabType) => {
+    setActiveTab(value);
+    // Update URL with tab parameter but maintain the current path
+    const newUrl = `/workouts?tab=${value}`;
+    window.history.replaceState(null, '', newUrl);
+  };
   const [currentWorkout, setCurrentWorkout] = useState<WorkoutWithDetails | null>(null);
   const [isWorkoutStarted, setIsWorkoutStarted] = useState(false);
   
@@ -35,7 +54,7 @@ export default function WorkoutLogger() {
   
   // Handle when a workout is saved and redirect to history
   const handleWorkoutSaved = () => {
-    setActiveTab('history');
+    updateActiveTab('history');
     setIsWorkoutStarted(false);
     setCurrentWorkout(null);
   };
@@ -89,10 +108,10 @@ export default function WorkoutLogger() {
               if (confirm("Are you sure you want to abandon your current workout?")) {
                 setCurrentWorkout(null);
                 setIsWorkoutStarted(false);
-                setActiveTab(value);
+                updateActiveTab(value as TabType);
               }
             } else {
-              setActiveTab(value as TabType);
+              updateActiveTab(value as TabType);
             }
           }}
           className="w-full"

@@ -633,7 +633,7 @@ export default function CreatePlan() {
                         type="button" 
                         variant="outline"
                         size="sm"
-                        onClick={() => setLocation('/templates')}
+                        onClick={() => setLocation('/workouts?tab=templates')}
                       >
                         <PlusCircle className="h-4 w-4 mr-1" />
                         Create New Template
@@ -655,7 +655,7 @@ export default function CreatePlan() {
                         </p>
                         <Button 
                           type="button"
-                          onClick={() => setLocation('/templates')}
+                          onClick={() => setLocation('/workouts?tab=templates')}
                         >
                           Create Your First Template
                         </Button>
