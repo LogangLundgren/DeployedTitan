@@ -16,6 +16,10 @@ export const users = pgTable("users", {
   certifications: text("certifications"),
   // Store social media as JSON in a text field
   socialMedia: text("social_media"),
+  // Coach related fields
+  isCoach: boolean("is_coach").default(false),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -30,6 +34,9 @@ export const insertUserSchema = createInsertSchema(users).pick({
   goals: true,
   certifications: true,
   socialMedia: true,
+  isCoach: true,
+  stripeCustomerId: true,
+  stripeSubscriptionId: true,
 });
 
 export const exercises = pgTable("exercises", {

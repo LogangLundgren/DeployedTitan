@@ -30,6 +30,8 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
+  updateUserCoachStatus(id: number, isCoach: boolean): Promise<User | undefined>;
+  updateUserStripeInfo(id: number, stripeInfo: { customerId?: string, subscriptionId?: string }): Promise<User | undefined>;
   
   // Exercise operations
   getExercises(): Promise<Exercise[]>;
@@ -292,6 +294,28 @@ export class MemStorage implements IStorage {
     if (!user) return undefined;
     
     const updatedUser = { ...user, ...userUpdate };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  
+  async updateUserCoachStatus(id: number, isCoach: boolean): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    
+    const updatedUser = { ...user, isCoach };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  
+  async updateUserStripeInfo(id: number, stripeInfo: { customerId?: string, subscriptionId?: string }): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    
+    const updatedUser = { 
+      ...user, 
+      stripeCustomerId: stripeInfo.customerId ?? user.stripeCustomerId,
+      stripeSubscriptionId: stripeInfo.subscriptionId ?? user.stripeSubscriptionId 
+    };
     this.users.set(id, updatedUser);
     return updatedUser;
   }
