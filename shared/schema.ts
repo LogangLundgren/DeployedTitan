@@ -18,6 +18,7 @@ export const users = pgTable("users", {
   socialMedia: text("social_media"),
   // Coach related fields
   isCoach: boolean("is_coach").default(false),
+  coachRegistrationDate: timestamp("coach_registration_date"),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
 });
@@ -35,6 +36,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   certifications: true,
   socialMedia: true,
   isCoach: true,
+  coachRegistrationDate: true,
   stripeCustomerId: true,
   stripeSubscriptionId: true,
 });

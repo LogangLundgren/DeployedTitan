@@ -68,9 +68,13 @@ const CoachRegistrationForm = () => {
     if (paymentIntent && paymentIntent.status === 'succeeded') {
       // Payment succeeded, record coach registration
       try {
-        const confirmResponse = await apiRequest('POST', '/api/confirm-coach-registration', {
-          paymentIntentId: paymentIntent.id,
-          userId: user.id,
+        const confirmResponse = await fetch('/api/confirm-coach-registration', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentIntentId: paymentIntent.id,
+            userId: user.id,
+          })
         });
 
         if (!confirmResponse.ok) {
@@ -168,8 +172,10 @@ export default function BecomeCoach() {
 
         // Create a payment intent for coach registration
         if (user) {
-          const response = await apiRequest('POST', '/api/create-coach-payment-intent', {
-            userId: user.id,
+          const response = await fetch('/api/create-coach-payment-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id })
           });
 
           if (!response.ok) {
