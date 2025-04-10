@@ -1359,6 +1359,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Coach profile routes for the settings page
+  app.get("/api/coaches/profile", async (req, res) => {
+    try {
+      const userId = parseInt(req.query.userId as string);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
+      }
+      
+      const coachProfile = await storage.getCoachProfile(userId);
+      
+      if (!coachProfile) {
+        return res.status(404).json({ message: "Coach profile not found" });
+      }
+      
+      res.status(200).json(coachProfile);
+    } catch (error) {
+      console.error("Get coach profile error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/coaches/profile/new", async (req, res) => {
+    try {
+      const coachProfileData = {
+        data: {
+          userId: req.body.userId,
+          title: req.body.title,
+          biography: req.body.biography,
+          experience: req.body.experience,
+          specialties: req.body.specialties,
+          hourlyRate: req.body.hourlyRate || 0,
+          isAvailableForHire: req.body.isAvailableForHire || true,
+          rating: null,
+          ratingsCount: 0,
+          isVerified: false
+        }
+      };
+      
+      // Check if profile already exists for this user
+      const existingProfile = await storage.getCoachProfile(coachProfileData.data.userId);
+      
+      if (existingProfile) {
+        return res.status(400).json({ message: "Coach profile already exists for this user" });
+      }
+      
+      const coachProfile = await storage.createCoachProfile(coachProfileData.data);
+      res.status(201).json(coachProfile);
+    } catch (error) {
+      console.error("Create coach profile error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.patch("/api/coaches/profile/:id", async (req, res) => {
+    try {
+      const id = req.params.id === 'new' ? 0 : parseInt(req.params.id);
+      
+      // If it's a new profile request, handle it with the POST endpoint
+      if (id === 0) {
+        const newProfileResponse = await fetch(`${req.protocol}://${req.get('host')}/api/coaches/profile/new`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(req.body)
+        });
+        
+        const newProfileData = await newProfileResponse.json();
+        return res.status(newProfileResponse.status).json(newProfileData);
+      }
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid coach profile ID is required" });
+      }
+      
+      const coachProfile = await storage.getCoachProfileById(id);
+      
+      if (!coachProfile) {
+        return res.status(404).json({ message: "Coach profile not found" });
+      }
+      
+      const updatedProfileData = {
+        id,
+        userId: req.body.userId || coachProfile.userId,
+        title: req.body.title !== undefined ? req.body.title : coachProfile.title,
+        biography: req.body.biography !== undefined ? req.body.biography : coachProfile.biography,
+        experience: req.body.experience !== undefined ? req.body.experience : coachProfile.experience,
+        specialties: req.body.specialties !== undefined ? req.body.specialties : coachProfile.specialties,
+        hourlyRate: req.body.hourlyRate !== undefined ? req.body.hourlyRate : coachProfile.hourlyRate,
+        isAvailableForHire: req.body.isAvailableForHire !== undefined ? req.body.isAvailableForHire : coachProfile.isAvailableForHire,
+        rating: coachProfile.rating,
+        ratingsCount: coachProfile.ratingsCount,
+        isVerified: coachProfile.isVerified
+      };
+      
+      const updatedProfile = await storage.updateCoachProfile(updatedProfileData);
+      res.status(200).json(updatedProfile);
+    } catch (error) {
+      console.error("Update coach profile error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   app.get("/api/coaches/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
