@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { CheckCircle2, Trash2, Plus, Dumbbell, Loader2, Edit, MoreVertical, Copy } from 'lucide-react';
@@ -22,6 +22,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,13 +32,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -44,18 +40,34 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 
-// Template create/edit form schema
+// Temporary until we have auth
+const DEMO_USER_ID = 1;
+
+// Form validation schema
 const templateFormSchema = z.object({
-  name: z.string().min(1, { message: 'Template name is required' }),
+  name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
   category: z.string().optional(),
-  userId: z.number()
+  userId: z.number(),
 });
 
+// Form typed values
 type TemplateFormValues = z.infer<typeof templateFormSchema>;
 
-// Define Template and TemplateWithExercises types
+// Exercise interface
 interface Exercise {
   id: number;
   name: string;
@@ -63,6 +75,7 @@ interface Exercise {
   subcategory: string | null;
 }
 
+// Template exercise interface for exercises in a template
 interface TemplateExercise {
   id: number;
   templateId: number;
@@ -75,6 +88,7 @@ interface TemplateExercise {
   exerciseDetails: Exercise;
 }
 
+// Basic template interface
 interface Template {
   id: number;
   name: string;
@@ -84,147 +98,132 @@ interface Template {
   createdAt: string;
 }
 
+// Extended template with exercises
 interface TemplateWithExercises extends Template {
   exercises: TemplateExercise[];
 }
 
+// Interface for a workout with details
 interface WorkoutWithDetails {
   id: number;
   userId: number;
   date: string;
   notes: string | null;
-  exercises: any[];
+  exercises: any[]; // Simplified for this example
   totalSets: number;
   totalExercises: number;
   volume: number;
 }
 
-// Temporary user ID until we implement authentication
-const DEMO_USER_ID = 1;
+// Helper function to format dates
+function formatDate(dateString: string) {
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  };
+  return new Date(dateString).toLocaleDateString(undefined, options);
+}
 
 export default function Templates() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
+  const isStandalonePage = location === '/templates';
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  
-  // Fetch all templates for current user
-  const { data: templates, isLoading: isLoadingTemplates } = useQuery({
+
+  // Query to get templates
+  const { data: templates, isLoading: isLoadingTemplates } = useQuery<Template[]>({
     queryKey: ['/api/templates', DEMO_USER_ID],
-    queryFn: async () => {
-      return await apiRequest<Template[]>(`/api/templates?userId=${DEMO_USER_ID}`);
-    }
+    queryFn: () => apiRequest('GET', `/api/templates?userId=${DEMO_USER_ID}`).then(res => res.json())
   });
 
-  // Create template mutation
+  // Mutation to create template
   const createTemplateMutation = useMutation({
     mutationFn: async (values: TemplateFormValues) => { 
-      console.log('API request with values:', JSON.stringify(values));
-      return await apiRequest<Template>('/api/templates', {
-        method: 'POST',
-        body: JSON.stringify(values),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const res = await apiRequest('POST', '/api/templates', values);
+      return await res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', DEMO_USER_ID] });
+      setIsCreateDialogOpen(false);
       toast({
         title: 'Template created',
         description: 'Your workout template has been created successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', DEMO_USER_ID] });
-      setIsCreateDialogOpen(false);
+      createForm.reset();
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
-        description: `Failed to create template: ${error.message}`,
+        title: 'Failed to create template',
+        description: error.message,
         variant: 'destructive',
       });
     }
   });
 
-  // Update template mutation
+  // Mutation to update template
   const updateTemplateMutation = useMutation({
-    mutationFn: async ({ id, values }: { id: number; values: Partial<Template> }) => {
-      return await apiRequest(`/api/templates/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(values),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+    mutationFn: async (values: TemplateFormValues & { id: number }) => {
+      const { id, ...rest } = values;
+      const res = await apiRequest('PATCH', `/api/templates/${id}`, rest);
+      return await res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', DEMO_USER_ID] });
+      setIsEditDialogOpen(false);
       toast({
         title: 'Template updated',
         description: 'Your workout template has been updated successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', DEMO_USER_ID] });
-      setIsEditDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
-        description: `Failed to update template: ${error.message}`,
+        title: 'Failed to update template',
+        description: error.message,
         variant: 'destructive',
       });
     }
   });
 
-  // Delete template mutation
+  // Mutation to delete template
   const deleteTemplateMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/templates/${id}`, {
-        method: 'DELETE'
-      });
+      await apiRequest('DELETE', `/api/templates/${id}`);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', DEMO_USER_ID] });
+      setIsDeleteDialogOpen(false);
       toast({
         title: 'Template deleted',
         description: 'Your workout template has been deleted successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', DEMO_USER_ID] });
-      setIsDeleteDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
-        title: 'Error',
-        description: `Failed to delete template: ${error.message}`,
+        title: 'Failed to delete template',
+        description: error.message,
         variant: 'destructive',
       });
     }
   });
 
-  // Create workout from template mutation
+  // Mutation to create a workout from a template
   const createWorkoutFromTemplateMutation = useMutation({
     mutationFn: async (templateId: number) => {
-      const response = await apiRequest(`/api/templates/${templateId}/create-workout`, {
-        method: 'POST',
-        body: JSON.stringify({ userId: DEMO_USER_ID }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      return response as WorkoutWithDetails;
+      const res = await apiRequest('POST', '/api/workouts/from-template', { templateId, userId: DEMO_USER_ID });
+      return await res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (workout: WorkoutWithDetails) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workouts', DEMO_USER_ID] });
       toast({
-        title: 'Workout created',
-        description: 'A new workout has been created from the template.',
+        title: 'Workout started',
+        description: 'Your workout has been created from the template.',
       });
-      // Navigate to the workout page
-      window.location.href = `/workout/${data.id}`;
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to create workout: ${error.message}`,
-        variant: 'destructive',
-      });
+      // Ideally we would navigate to the workout page here
     }
   });
 
@@ -250,7 +249,7 @@ export default function Templates() {
     }
   });
 
-  // Reset edit form when selected template changes
+  // Set values in edit form when a template is selected
   useEffect(() => {
     if (selectedTemplate) {
       editForm.reset({
@@ -262,37 +261,22 @@ export default function Templates() {
     }
   }, [selectedTemplate, editForm]);
 
-  // Function to format date string
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  };
-
-  // Handler for create template form submission
+  // Handler for form submission to create a template
   const onCreateSubmit = (values: TemplateFormValues) => {
-    console.log('Creating template with values:', values);
     createTemplateMutation.mutate(values);
   };
 
-  // Handler for edit template form submission
+  // Handler for form submission to edit a template
   const onEditSubmit = (values: TemplateFormValues) => {
     if (selectedTemplate) {
-      updateTemplateMutation.mutate({ 
-        id: selectedTemplate.id, 
-        values: {
-          name: values.name,
-          description: values.description,
-          category: values.category
-        } 
+      updateTemplateMutation.mutate({
+        ...values,
+        id: selectedTemplate.id
       });
     }
   };
 
-  // Handler for template deletion
+  // Handler for deleting a template
   const onDelete = () => {
     if (selectedTemplate) {
       deleteTemplateMutation.mutate(selectedTemplate.id);
@@ -305,20 +289,110 @@ export default function Templates() {
   };
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Workout Templates</h1>
-          <p className="text-muted-foreground mt-1">
-            Create and manage reusable workout templates
-          </p>
+    <div className={isStandalonePage ? "container mx-auto py-6" : ""}>
+      {isStandalonePage && (
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">Workout Templates</h1>
+            <p className="text-muted-foreground mt-1">
+              Create and manage reusable workout templates
+            </p>
+          </div>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Template
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Workout Template</DialogTitle>
+                <DialogDescription>
+                  Create a new workout template to reuse in future workouts.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...createForm}>
+                <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
+                  <FormField
+                    control={createForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Push Day" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Brief description of this template..." 
+                            {...field} 
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createForm.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value || ''}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Strength">Strength</SelectItem>
+                            <SelectItem value="Hypertrophy">Hypertrophy</SelectItem>
+                            <SelectItem value="Endurance">Endurance</SelectItem>
+                            <SelectItem value="HIIT">HIIT</SelectItem>
+                            <SelectItem value="Recovery">Recovery</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button 
+                      type="submit" 
+                      disabled={createTemplateMutation.isPending}
+                    >
+                      {createTemplateMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Create Template
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
+      )}
+
+      {!isStandalonePage && (
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Template
-            </Button>
+            <Button className="hidden" id="createTemplateButton">New Template</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -401,7 +475,7 @@ export default function Templates() {
             </Form>
           </DialogContent>
         </Dialog>
-      </div>
+      )}
 
       {isLoadingTemplates ? (
         <div className="flex justify-center items-center py-12">
@@ -466,7 +540,7 @@ export default function Templates() {
                 <Link href={`/templates/${template.id}`}>
                   <Button variant="outline" className="w-full">
                     <Dumbbell className="mr-2 h-4 w-4" />
-                    View Details & Edit Exercises
+                    Edit Details & Exercises
                   </Button>
                 </Link>
               </CardContent>

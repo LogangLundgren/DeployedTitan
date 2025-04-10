@@ -203,12 +203,13 @@ export default function WorkoutLogger() {
                 <div>
                   <div className="p-4 flex justify-between items-center border-b">
                     <h3 className="text-lg font-semibold">Your Workout Programs</h3>
-                    <Link href="/templates/new">
-                      <Button size="sm">
-                        <Plus className="mr-1 h-4 w-4" />
-                        New Template
-                      </Button>
-                    </Link>
+                    <Button 
+                      size="sm"
+                      onClick={() => updateActiveTab('templates')}
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      New Template
+                    </Button>
                   </div>
                   <TemplateSelector 
                     userId={userId}
@@ -234,6 +235,16 @@ export default function WorkoutLogger() {
             </TabsContent>
             
             <TabsContent value="templates" className="p-0 m-0">
+              <div className="p-4 flex justify-between items-center border-b">
+                <h3 className="text-lg font-semibold">Your Workout Templates</h3>
+                <Button 
+                  size="sm"
+                  onClick={() => document.getElementById('createTemplateButton')?.click()}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  New Template
+                </Button>
+              </div>
               <Templates />
             </TabsContent>
           </CardContent>
