@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { 
   Card, 
   CardContent, 
@@ -11,6 +12,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
+import { 
   Edit, 
   User as UserIcon,
   Instagram,
@@ -19,7 +26,12 @@ import {
   Award,
   Camera,
   Upload,
-  Check
+  CheckCircle,
+  Clock,
+  DollarSign,
+  CheckCircle2,
+  BadgeCheck,
+  BookOpen
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,10 +41,13 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
+  const [isCoachProfileEditing, setIsCoachProfileEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedTab, setSelectedTab] = useState("profile");
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [location, setLocation] = useLocation();
   
   // Theme management
   useEffect(() => {
