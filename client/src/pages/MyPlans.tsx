@@ -113,14 +113,21 @@ export default function MyPlans() {
     queryFn: () => fetch(`/api/users/${userId}`).then(res => res.json())
   });
 
-  // Fetch coach's workout plans if user is a coach
+  // Fetch coach profile if user is a coach
+  const { data: coachProfile, isLoading: isCoachProfileLoading } = useQuery({
+    queryKey: ['/api/users', userId, 'coach-profile'],
+    queryFn: () => fetch(`/api/users/${userId}/coach-profile`).then(res => res.json()),
+    enabled: !!user?.isCoach
+  });
+  
+  // Fetch coach's workout plans if user is a coach and we have their coach profile
   const { 
     data: coachPlans = [], 
     isLoading: isCoachPlansLoading 
   } = useQuery({
-    queryKey: ['/api/workout-plans', 'coach', userId],
-    queryFn: () => fetch(`/api/workout-plans?coachId=${userId}&publishedOnly=false`).then(res => res.json()),
-    enabled: !!user?.isCoach
+    queryKey: ['/api/workout-plans', 'coach', coachProfile?.id],
+    queryFn: () => fetch(`/api/workout-plans?coachId=${coachProfile?.id}&publishedOnly=false`).then(res => res.json()),
+    enabled: !!user?.isCoach && !!coachProfile?.id
   });
   
   // Fetch user's purchases
@@ -141,7 +148,7 @@ export default function MyPlans() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', 'coach', userId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', 'coach', coachProfile?.id] });
       toast({
         title: "Plan deleted",
         description: "The workout plan has been deleted successfully."
