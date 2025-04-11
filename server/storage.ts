@@ -1826,6 +1826,21 @@ export class DbStorage implements IStorage {
     }
   }
   
+  async getAllWorkoutPlans(): Promise<WorkoutPlan[]> {
+    try {
+      // Fetch all workout plans without any filtering
+      const plans = await db.select()
+        .from(workoutPlans)
+        .orderBy(desc(workoutPlans.createdAt));
+      
+      console.log("DEBUGGING - Database getAllWorkoutPlans fetched", plans.length, "plans");
+      return plans;
+    } catch (error) {
+      console.error("Error fetching all workout plans:", error);
+      return [];
+    }
+  }
+  
   async getWorkoutPlan(id: number): Promise<WorkoutPlan | undefined> {
     try {
       const result = await db
