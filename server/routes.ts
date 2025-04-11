@@ -79,7 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash the password
       const hashedPassword = await hashPassword(password);
       
-      // Create the user
+      // Create the user with onboarding initialized
       const user = await storage.createUser({
         username,
         password: hashedPassword,
@@ -95,7 +95,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isCoach: false,
         coachRegistrationDate: null,
         stripeCustomerId: null,
-        stripeSubscriptionId: null
+        stripeSubscriptionId: null,
+        onboardingStep: 'not_started',
+        onboardingCompleted: false
       });
       
       // Set session
