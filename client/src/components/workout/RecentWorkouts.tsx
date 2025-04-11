@@ -161,9 +161,9 @@ export default function RecentWorkouts({ workouts, isLoading, onDelete }: Recent
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button 
-                          variant="outline" 
+                          variant="default" 
                           size="icon" 
-                          className="h-8 w-8 border border-gray-200 bg-white hover:bg-gray-50"
+                          className="h-8 w-8 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
                         >
                           <span className="sr-only">Open menu</span>
                           <MoreHorizontal className="h-5 w-5" />

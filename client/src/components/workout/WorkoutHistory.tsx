@@ -298,9 +298,9 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button 
-                              variant="outline" 
+                              variant="default" 
                               size="icon" 
-                              className="h-8 w-8 border border-gray-200 bg-white hover:bg-gray-50"
+                              className="h-8 w-8 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
                             >
                               <span className="sr-only">Open menu</span>
                               <svg width="20" height="20" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -403,14 +403,23 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
             <Button
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isDeleting}
             >
               Cancel
             </Button>
             <Button 
               variant="destructive" 
               onClick={handleDeleteWorkout}
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting ? (
+                <>
+                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  Deleting...
+                </>
+              ) : (
+                <>Delete</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
