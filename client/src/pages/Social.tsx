@@ -890,12 +890,23 @@ function PeopleDiscover() {
   // Initialize users with isFollowing data from the context
   useEffect(() => {
     if (users.length > 0) {
-      setUsers(users.map(user => ({
+      // Create a shallow copy with updated isFollowing flags but don't trigger 
+      // an infinite update loop by comparing with current state
+      const updatedUsers = users.map(user => ({
         ...user,
         isFollowing: isFollowing(user.id)
-      })));
+      }));
+      
+      // Only update state if there's an actual change
+      const hasChanges = updatedUsers.some((user, idx) => 
+        user.isFollowing !== users[idx].isFollowing
+      );
+      
+      if (hasChanges) {
+        setUsers(updatedUsers);
+      }
     }
-  }, [followedUsers, users]);
+  }, [followedUsers, users, isFollowing]);
   
   const followUserMutation = useMutation({
     mutationFn: (userId: number) => {

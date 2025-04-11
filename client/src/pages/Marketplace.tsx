@@ -257,26 +257,49 @@ export default function Marketplace() {
           )}
         </CardContent>
         <Separator />
-        <CardFooter className="pt-4 pb-4 flex justify-between items-center">
-          <div className="font-bold text-lg">${plan.price.toFixed(2)}</div>
+        <CardFooter className="pt-4 pb-4 flex flex-col gap-2">
+          <div className="flex justify-between items-center w-full">
+            <div className="font-bold text-lg">${plan.price.toFixed(2)}</div>
+            
+            {/* Different actions for coach vs users */}
+            {isOwner ? (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setLocation(`/workout-plans/${plan.id}`)}
+              >
+                Edit Details
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button 
+                  size="sm"
+                  variant="outline" 
+                  onClick={() => setLocation(`/workout-plans/${plan.id}`)}
+                >
+                  View Plan
+                  <Eye className="h-4 w-4 ml-1" />
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={() => setLocation(`/checkout?planId=${plan.id}`)}
+                >
+                  Buy Now
+                </Button>
+              </div>
+            )}
+          </div>
           
-          {/* Different buttons for coach vs users */}
-          {isOwner ? (
+          {/* Contact coach button - only show for non-owners */}
+          {!isOwner && plan.coach && (
             <Button 
               size="sm" 
-              variant="outline"
-              onClick={() => setLocation(`/workout-plans/${plan.id}`)}
+              variant="secondary"
+              className="w-full"
+              onClick={() => setLocation(`/users/${plan.coach?.userId}`)}
             >
-              Edit Details
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          ) : (
-            <Button 
-              size="sm" 
-              onClick={() => setLocation(`/workout-plans/${plan.id}`)}
-            >
-              View Plan
-              <Eye className="h-4 w-4 ml-1" />
+              Contact Coach
             </Button>
           )}
         </CardFooter>
@@ -311,13 +334,26 @@ export default function Marketplace() {
         </div>
       </CardContent>
       <Separator />
-      <CardFooter className="pt-4 pb-4 flex justify-between items-center">
-        <div className="font-medium">
-          {coach.hourlyRate ? `$${coach.hourlyRate.toFixed(2)}/hr` : "Contact for rates"}
+      <CardFooter className="pt-4 pb-4 flex flex-col gap-2">
+        <div className="flex justify-between items-center w-full">
+          <div className="font-medium">
+            {coach.hourlyRate ? `$${coach.hourlyRate.toFixed(2)}/hr` : "Contact for rates"}
+          </div>
+          <Button 
+            size="sm" 
+            onClick={() => setLocation(`/coach-profile/${coach.id}`)}
+          >
+            View Profile
+            <Eye className="h-4 w-4 ml-1" />
+          </Button>
         </div>
-        <Button size="sm" onClick={() => setLocation(`/coach-profile/${coach.id}`)}>
-          View Profile
-          <ChevronRight className="h-4 w-4 ml-1" />
+        <Button 
+          size="sm" 
+          variant="secondary"
+          className="w-full"
+          onClick={() => setLocation(`/users/${coach.userId}`)}
+        >
+          Contact Coach
         </Button>
       </CardFooter>
     </Card>
