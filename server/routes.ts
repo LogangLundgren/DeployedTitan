@@ -1608,6 +1608,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const category = req.query.category as string;
       const publishedOnly = req.query.publishedOnly === 'true'; // Only true when explicitly set to true
       
+      console.log("MARKETPLACE DEBUG - API request params:", { 
+        coachId, userId, limit, featured, query, category, publishedOnly 
+      });
+      
       let plans;
       
       if (coachId) {
@@ -1622,14 +1626,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (query) {
         // For marketplace search, only show published plans by default
         plans = await storage.searchWorkoutPlans(query, category, limit);
-        if (publishedOnly) {
-          plans = plans.filter(plan => plan.isPublished);
-        }
+        console.log("MARKETPLACE DEBUG - Results after DB query:", 
+          plans.map(p => ({id: p.id, title: p.title, isPublished: p.isPublished}))
+        );
       } else {
         // For general browsing in marketplace
-        plans = await storage.searchWorkoutPlans("", category, limit);
+        console.log("MARKETPLACE DEBUG - Fetching ALL plans with published flag:", publishedOnly);
+        // Important - this API is called from marketplace with publishedOnly=true
+        // Get all plans from the database first
+        plans = await storage.getAllWorkoutPlans();
+        
+        console.log("MARKETPLACE DEBUG - Got ALL plans before filtering:", 
+          plans.map(p => ({id: p.id, title: p.title, isPublished: p.isPublished}))
+        );
+        
+        // Filter by category if needed
+        if (category) {
+          plans = plans.filter(plan => plan.category === category);
+        }
+        
+        // Now filter published plans only
         if (publishedOnly) {
-          plans = plans.filter(plan => plan.isPublished);
+          console.log("MARKETPLACE DEBUG - Filtering for published plans only");
+          // CRITICAL FIX: Force a proper boolean check here
+          plans = plans.filter(plan => plan.isPublished === true);
+          console.log("MARKETPLACE DEBUG - After published filtering:", 
+            plans.map(p => ({id: p.id, title: p.title, isPublished: p.isPublished}))
+          );
+        }
+        
+        // Apply limit if needed
+        if (limit && limit > 0) {
+          plans = plans.slice(0, limit);
         }
       }
       
