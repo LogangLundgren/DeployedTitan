@@ -404,7 +404,7 @@ export default function CreatePlan() {
 
         // Update the workout plan using fetch directly for better error handling
         const planResponse = await fetch(`/api/workout-plans/${editPlanId}`, {
-          method: 'PATCH',
+          method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },

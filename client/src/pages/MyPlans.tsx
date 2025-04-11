@@ -420,8 +420,8 @@ export default function MyPlans() {
                             size="sm" 
                             onClick={() => setLocation(`/workout-plan/${plan.id}`)}
                           >
-                            View Details
-                            <ChevronRight className="ml-1 h-4 w-4" />
+                            Preview
+                            <Eye className="ml-1 h-4 w-4" />
                           </Button>
                         </div>
                         <div className="w-full">
