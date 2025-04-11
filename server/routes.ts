@@ -1758,6 +1758,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         equipment: z.union([z.string(), z.array(z.string())]).optional(),
         isFeatured: z.boolean().optional(),
         isSoldOut: z.boolean().optional(),
+        isPublished: z.boolean().optional(),
+        planTemplates: z.array(z.number()).optional(),
       });
       
       const updateData = updateSchema.safeParse(req.body);
@@ -1777,7 +1779,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : updateData.data.equipment
       };
       
-      const updatedWorkoutPlan = await storage.updateWorkoutPlan(id, processedData);
+      // Extract planTemplates from update data to handle separately
+      const { planTemplates, ...dataToUpdate } = processedData;
+      
+      // Update the workout plan
+      const updatedWorkoutPlan = await storage.updateWorkoutPlan(id, dataToUpdate);
+      
+      // If plan templates are provided, update them
+      if (planTemplates && planTemplates.length > 0) {
+        // First, get existing plan templates
+        const existingTemplates = await storage.getPlanTemplates(id);
+        
+        // Delete all existing plan template associations
+        for (const template of existingTemplates) {
+          await storage.deletePlanTemplate(template.id);
+        }
+        
+        // Create new plan template associations
+        for (const templateId of planTemplates) {
+          await storage.createPlanTemplate({
+            planId: id,
+            templateId,
+            weekNumber: 1, // Default values
+            dayNumber: 1,
+            order: 1,
+            notes: null
+          });
+        }
+      }
       
       if (!updatedWorkoutPlan) {
         return res.status(404).json({ message: "Workout plan not found" });
