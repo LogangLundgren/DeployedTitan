@@ -1012,10 +1012,20 @@ function PeopleDiscover() {
               <CardFooter className="pt-0 flex flex-col gap-2">
                 <Button 
                   variant={user.isFollowing ? "outline" : "default"} 
-                  className="w-full"
+                  className={`w-full ${user.isFollowing ? "bg-green-100 hover:bg-red-50 hover:text-red-500 hover:border-red-200 group" : ""}`}
                   onClick={() => handleFollowUser(user.id)}
                 >
-                  {user.isFollowing ? "Following" : "Follow"}
+                  {user.isFollowing ? (
+                    <>
+                      <span className="group-hover:hidden flex items-center">
+                        <svg className="mr-1 h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Following
+                      </span>
+                      <span className="hidden group-hover:block">Unfollow</span>
+                    </>
+                  ) : "Follow"}
                 </Button>
                 <Button 
                   variant="secondary" 

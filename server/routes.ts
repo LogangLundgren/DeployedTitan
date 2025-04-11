@@ -1595,19 +1595,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const featured = req.query.featured === 'true';
       const query = req.query.query as string;
       const category = req.query.category as string;
+      const publishedOnly = req.query.publishedOnly !== 'false'; // Default to true unless explicitly set to false
       
       let plans;
       
       if (coachId) {
+        // When viewing as a coach, show all plans
         plans = await storage.getWorkoutPlans(coachId);
       } else if (userId) {
+        // When viewing purchased plans, show all
         plans = await storage.getPurchasedWorkoutPlans(userId);
       } else if (featured) {
+        // Featured plans should already be filtered by isPublished
         plans = await storage.getFeaturedWorkoutPlans(limit);
       } else if (query) {
+        // For marketplace search, only show published plans by default
         plans = await storage.searchWorkoutPlans(query, category, limit);
+        if (publishedOnly) {
+          plans = plans.filter(plan => plan.isPublished);
+        }
       } else {
-        return res.status(400).json({ message: "At least one of coachId, userId, featured, or query is required" });
+        // For general browsing in marketplace
+        plans = await storage.searchWorkoutPlans("", category, limit);
+        if (publishedOnly) {
+          plans = plans.filter(plan => plan.isPublished);
+        }
       }
       
       res.status(200).json(plans);
@@ -2385,16 +2397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // These will be added when implementing Stripe integration
   
   // Workout Plans endpoints
-  app.get("/api/workout-plans", async (req, res) => {
-    try {
-      const coachId = req.query.coachId ? parseInt(req.query.coachId as string) : undefined;
-      const plans = await storage.getWorkoutPlans(coachId);
-      res.status(200).json(plans);
-    } catch (error) {
-      console.error("Get workout plans error:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
+  // This endpoint has been moved above
   
   app.get("/api/workout-plans/:id", async (req, res) => {
     try {
