@@ -39,14 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     isLoading,
     error,
-  } = useQuery<User, Error>({
+  } = useQuery<User | null, Error>({
     queryKey: ['/api/user'],
     queryFn: async () => {
       try {
         // Fetch user data from the auth endpoint
-        const res = await fetch('/api/user', {
-          credentials: 'include' // Important for sending cookies
-        });
+        const res = await apiRequest('GET', '/api/user');
         
         if (!res.ok) {
           if (res.status === 401) {
@@ -57,10 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error('Failed to fetch user');
         }
         
-        return res.json();
+        return await res.json();
       } catch (error) {
         console.error("Error fetching user in useAuth:", error);
-        throw error;
+        return null;
       }
     },
     refetchOnWindowFocus: true, // Ensure we get fresh data when the window gets focus
@@ -70,21 +68,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Login mutation using the real backend API
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Important for cookies
-        body: JSON.stringify(credentials),
-      });
+      const response = await apiRequest('POST', '/api/auth/login', credentials);
       
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Login failed');
       }
       
-      return response.json();
+      const data = await response.json();
+      return data.user || data; // Extract user from response if present
     },
     onSuccess: (userData: User) => {
       // Update the user data in the cache
@@ -109,37 +101,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Register mutation using the real backend API
   const registerMutation = useMutation({
     mutationFn: async (userData: RegisterData) => {
-      const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Important for cookies
-        body: JSON.stringify(userData),
-      });
+      const response = await apiRequest('POST', '/api/auth/register', userData);
       
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Registration failed');
       }
       
-      // Get the new user data
-      const newUser = await response.json();
-      
-      // After registration, log in the user
-      await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          username: userData.username,
-          password: userData.password
-        }),
-      });
-      
-      return newUser;
+      // Get the new user data from response
+      const data = await response.json();
+      return data.user || data; // User is already in session after registration
     },
     onSuccess: (userData: User) => {
       // Update the user data in the cache
@@ -164,17 +135,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Logout mutation using the real backend API
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include', // Important for cookies
-      });
+      const response = await apiRequest('POST', '/api/auth/logout');
       
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Logout failed');
       }
       
-      return response.json();
+      return response.status === 204 ? {} : response.json();
     },
     onSuccess: () => {
       // Clear user data from the cache
