@@ -39,9 +39,10 @@ export default function OnboardingLayout({
   isLastStep = false,
 }: OnboardingLayoutProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-
+  
   useEffect(() => {
     // If user already completed onboarding, redirect to dashboard
     if (user?.onboardingCompleted) {
@@ -87,6 +88,19 @@ export default function OnboardingLayout({
       setIsSubmitting(false);
     }
   };
+  
+  const handleSkipOnboarding = async () => {
+    setIsSkipping(true);
+    try {
+      // Use the dedicated endpoint to skip onboarding for existing users
+      await apiRequest("POST", "/api/user/skip-onboarding", {});
+      setLocation("/");
+    } catch (error) {
+      console.error("Error skipping onboarding:", error);
+    } finally {
+      setIsSkipping(false);
+    }
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4">
@@ -94,6 +108,31 @@ export default function OnboardingLayout({
         <CardHeader>
           <CardTitle className="text-2xl font-bold">{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
+          
+          {/* Skip onboarding option for existing users */}
+          {user && !user.onboardingCompleted && (
+            <div className="mt-2 text-right">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleSkipOnboarding}
+                disabled={isSkipping}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                {isSkipping ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Skipping...
+                  </span>
+                ) : (
+                  "Skip Onboarding"
+                )}
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {children}
@@ -103,7 +142,7 @@ export default function OnboardingLayout({
             <Button
               variant="outline"
               onClick={onBack}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isSkipping}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
@@ -113,7 +152,7 @@ export default function OnboardingLayout({
           )}
           <Button
             onClick={handleNext}
-            disabled={!canProgress || isSubmitting}
+            disabled={!canProgress || isSubmitting || isSkipping}
             className="ml-auto"
           >
             {isSubmitting ? (
