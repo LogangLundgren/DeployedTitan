@@ -1871,26 +1871,51 @@ export class DbStorage implements IStorage {
         return undefined;
       }
       
-      // Create a copy of update data to avoid modifying the input
-      const updateData = { ...planUpdate };
+      // TROUBLESHOOTING: Debug goals and equipment fields
+      console.log("Input goals:", planUpdate.goals);
+      console.log("Input equipment:", planUpdate.equipment);
       
-      // Ensure we have at least one field to update
-      if (Object.keys(updateData).length === 0) {
-        console.log("No update fields provided, forcing updatedAt change");
-        updateData.updatedAt = new Date();
-      }
+      // Sanitize update data - remove undefined values
+      const sanitizedUpdate: Record<string, any> = {};
+      
+      // Only include defined properties from the update
+      Object.entries(planUpdate).forEach(([key, value]) => {
+        if (value !== undefined) {
+          sanitizedUpdate[key] = value;
+        }
+      });
+      
+      console.log("Sanitized update:", sanitizedUpdate);
+      
+      // Force updatedAt to ensure there's at least one field to update
+      sanitizedUpdate.updatedAt = new Date();
       
       // Explicitly set isPublished if that's the action we're taking
       if (planUpdate.isPublished === true) {
         console.log("Publishing plan to marketplace");
-        updateData.isPublished = true;
+        sanitizedUpdate.isPublished = true;
       }
       
-      console.log("Final update data:", updateData);
+      // Special handling for goals and equipment
+      if (Array.isArray(sanitizedUpdate.goals)) {
+        sanitizedUpdate.goals = JSON.stringify(sanitizedUpdate.goals);
+      }
+      
+      if (Array.isArray(sanitizedUpdate.equipment)) {
+        sanitizedUpdate.equipment = JSON.stringify(sanitizedUpdate.equipment);
+      }
+      
+      console.log("Final update data for SQL:", sanitizedUpdate);
+      
+      // Make sure we have at least one field to update
+      if (Object.keys(sanitizedUpdate).length === 0) {
+        console.log("ERROR: Still no values to update after sanitization");
+        sanitizedUpdate.updatedAt = new Date(); // Last resort failsafe
+      }
       
       const result = await db
         .update(workoutPlans)
-        .set(updateData)
+        .set(sanitizedUpdate)
         .where(eq(workoutPlans.id, id))
         .returning();
       

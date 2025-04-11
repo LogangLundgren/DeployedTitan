@@ -295,24 +295,40 @@ export default function WorkoutPlanDetail() {
         throw new Error('This workout plan no longer exists');
       }
       
-      // Create a more complete update object to ensure we have fields to update
-      const reqData = { 
+      // TROUBLESHOOTING: Log plan data to debug issues
+      console.log('TROUBLESHOOTING - Plan data for publishing:', {
+        id: plan.id,
         title: plan.title,
-        description: plan.description,
-        price: plan.price,
-        durationWeeks: plan.durationWeeks,
-        difficultyLevel: plan.difficultyLevel,
-        category: plan.category,
         goals: plan.goals,
         equipment: plan.equipment,
-        isFeatured: plan.isFeatured || false,
-        isSoldOut: plan.isSoldOut || false,
-        isPublished: true, // This is the key change we're making
-        planTemplates: templateIds,
-        // Force an update timestamp to ensure something changes
-        updatedAt: new Date()
+        isPublished: plan.isPublished,
+        hasTemplates: templateIds.length > 0
+      });
+      
+      // Create a comprehensive update object with all required fields to prevent errors
+      const reqData = { 
+        // Main change - set to published
+        isPublished: true,
+        
+        // Include all the existing plan data to ensure nothing is lost
+        title: plan.title || "Untitled Plan",
+        description: plan.description || "No description",
+        price: typeof plan.price === 'number' ? plan.price : 0,
+        durationWeeks: typeof plan.durationWeeks === 'number' ? plan.durationWeeks : 1,
+        difficultyLevel: plan.difficultyLevel || "Beginner",
+        category: plan.category || "Other",
+        isFeatured: Boolean(plan.isFeatured),
+        isSoldOut: Boolean(plan.isSoldOut),
+        
+        // Handle arrays properly
+        goals: Array.isArray(plan.goals) ? plan.goals : [],
+        equipment: Array.isArray(plan.equipment) ? plan.equipment : [],
+        
+        // Include template data
+        planTemplates: templateIds
       };
-      console.log('Publish request data:', reqData);
+      
+      console.log('TROUBLESHOOTING - Final request data:', JSON.stringify(reqData, null, 2));
       
       // Now try to publish it
       const response = await fetch(`/api/workout-plans/${plan.id}`, {

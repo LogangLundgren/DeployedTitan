@@ -1765,8 +1765,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid workout plan ID is required" });
       }
       
-      console.log("Updating workout plan with ID:", id);
-      console.log("Request body:", req.body);
+      console.log("TROUBLESHOOTING - Updating workout plan with ID:", id);
+      console.log("TROUBLESHOOTING - Raw request body:", req.body);
+      
+      // Check if this is a publishing request
+      const isPublishingRequest = req.body.isPublished === true;
+      console.log("TROUBLESHOOTING - Is publishing request:", isPublishingRequest);
       
       const updateSchema = z.object({
         title: z.string().optional(),
@@ -1782,20 +1786,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isSoldOut: z.boolean().optional(),
         isPublished: z.boolean().optional(),
         planTemplates: z.array(z.number()).optional(),
+        updatedAt: z.any().optional(), // Allow client to force timestamp updates
       });
       
+      // TROUBLESHOOTING: Use safeParse to get detailed error information
       const updateData = updateSchema.safeParse(req.body);
       
       if (!updateData.success) {
-        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+        console.error("TROUBLESHOOTING - Schema validation failed:", updateData.error.errors);
+        return res.status(400).json({ 
+          message: "Invalid update data", 
+          errors: updateData.error.errors 
+        });
       }
       
-      // Process goals and equipment
+      // Process goals and equipment to ensure proper JSON string format for storage
       const processedData = {
         ...updateData.data,
+        // If goals is an array, stringify it, otherwise keep as is
         goals: Array.isArray(updateData.data.goals) 
           ? JSON.stringify(updateData.data.goals) 
           : updateData.data.goals,
+        // If equipment is an array, stringify it, otherwise keep as is
         equipment: Array.isArray(updateData.data.equipment) 
           ? JSON.stringify(updateData.data.equipment) 
           : updateData.data.equipment
@@ -1804,12 +1816,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract planTemplates from update data to handle separately
       const { planTemplates, ...dataToUpdate } = processedData;
       
-      // Ensure the isPublished flag is set properly if that's being updated
-      if (dataToUpdate.isPublished === true) {
-        console.log("Publishing workout plan to marketplace...");
+      // Ensure we always have data to update
+      dataToUpdate.updatedAt = new Date();
+      
+      // TROUBLESHOOTING: Log the processed data before database update
+      console.log("TROUBLESHOOTING - Final data to update workout plan:", dataToUpdate);
+      
+      // Double check the isPublished flag is set correctly for publishing action
+      if (isPublishingRequest) {
+        console.log("TROUBLESHOOTING - Setting workout plan to published state");
+        dataToUpdate.isPublished = true;
       }
       
-      // Update the workout plan
+      // Update the workout plan with our robust storage function
       const updatedWorkoutPlan = await storage.updateWorkoutPlan(id, dataToUpdate);
       
       if (!updatedWorkoutPlan) {
