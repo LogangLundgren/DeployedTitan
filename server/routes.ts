@@ -53,7 +53,7 @@ import { z } from "zod";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   // User authentication routes
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/register", async (req, res) => {
     try {
       const { username, email, password, name } = req.body;
       
@@ -114,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/login", async (req, res) => {
     try {
       const { username, password } = req.body;
       
@@ -3199,7 +3199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Logout endpoint to clear the authentication cookie
-  app.post("/api/auth/logout", (req: Request, res: Response) => {
+  app.post("/api/logout", (req: Request, res: Response) => {
     try {
       // Clear the authentication cookie
       res.clearCookie('userId', {
