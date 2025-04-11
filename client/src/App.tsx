@@ -22,6 +22,7 @@ import CreatePlan from "@/pages/CreatePlan";
 import Checkout from "@/pages/Checkout";
 import PlanCheckout from "@/pages/PlanCheckout";
 import PaymentSuccess from "@/pages/PaymentSuccess";
+import AuthPage from "@/pages/auth-page";
 import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
@@ -29,42 +30,54 @@ import { NotificationsProvider } from "./context/NotificationsContext";
 import { FollowProvider } from "./context/follow-context";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { User } from "@shared/schema";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   const { user } = useAuth();
   
-  // Fallback to ensure we always have a user id for notifications
-  // In a real app, we might handle this with loading states
+  // Use real user id from authenticated user for notifications
+  // If not authenticated, fallback is handled by protected routes
   const userId = user?.id || 1;
+  
+  // Determine whether to show the main layout based on current route
+  // Don't show header/nav/footer on auth page
+  const isAuthPage = window.location.pathname === '/auth';
   
   return (
     <div className="min-h-screen flex flex-col">
       <NotificationsProvider userId={userId}>
-        <Header />
-        <Navigation />
-        <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/workouts" component={WorkoutLogger} />
-          <Route path="/templates/:id" component={TemplateDetail} />
-          <Route path="/profile" component={Profile} />
-          <Route path="/goals" component={Goals} />
-          <Route path="/social" component={Social} />
-          <Route path="/marketplace" component={Marketplace} />
-          <Route path="/workout-plans/:id" component={WorkoutPlanDetail} />
-          <Route path="/purchased-plans/:id" component={PurchasedPlanDetail} />
-          <Route path="/coaches/:id" component={CoachProfile} />
-          <Route path="/users/:userId" component={UserProfile} />
-          <Route path="/my-plans" component={MyPlans} />
-          <Route path="/become-coach" component={BecomeCoach} />
-          <Route path="/create-plan" component={CreatePlan} />
-          <Route path="/plan-checkout" component={PlanCheckout} />
-          <Route path="/checkout" component={Checkout} />
-          <Route path="/payment-success" component={PaymentSuccess} />
-          <Route path="/admin" component={AdminDashboard} />
-          {/* Fallback to 404 */}
-          <Route component={NotFound} />
-        </Switch>
-        <Footer />
+        {!isAuthPage && <Header />}
+        {!isAuthPage && <Navigation />}
+        <div className={!isAuthPage ? 'flex-1' : 'min-h-screen'}>
+          <Switch>
+            {/* Public routes */}
+            <Route path="/auth" component={AuthPage} />
+            <Route path="/marketplace" component={Marketplace} />
+            
+            {/* Protected routes */}
+            <ProtectedRoute path="/" component={Dashboard} />
+            <ProtectedRoute path="/workouts" component={WorkoutLogger} />
+            <ProtectedRoute path="/templates/:id" component={TemplateDetail} />
+            <ProtectedRoute path="/profile" component={Profile} />
+            <ProtectedRoute path="/goals" component={Goals} />
+            <ProtectedRoute path="/social" component={Social} />
+            <ProtectedRoute path="/workout-plans/:id" component={WorkoutPlanDetail} />
+            <ProtectedRoute path="/purchased-plans/:id" component={PurchasedPlanDetail} />
+            <ProtectedRoute path="/coaches/:id" component={CoachProfile} />
+            <ProtectedRoute path="/users/:userId" component={UserProfile} />
+            <ProtectedRoute path="/my-plans" component={MyPlans} />
+            <ProtectedRoute path="/become-coach" component={BecomeCoach} />
+            <ProtectedRoute path="/create-plan" component={CreatePlan} />
+            <ProtectedRoute path="/plan-checkout" component={PlanCheckout} />
+            <ProtectedRoute path="/checkout" component={Checkout} />
+            <ProtectedRoute path="/payment-success" component={PaymentSuccess} />
+            <ProtectedRoute path="/admin" component={AdminDashboard} />
+            
+            {/* Fallback to 404 */}
+            <Route component={NotFound} />
+          </Switch>
+        </div>
+        {!isAuthPage && <Footer />}
       </NotificationsProvider>
     </div>
   );
