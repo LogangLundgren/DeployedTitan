@@ -63,6 +63,7 @@ interface WorkoutPlan {
   ratingsCount: number | null;
   isFeatured: boolean | null;
   isSoldOut: boolean | null;
+  isPublished: boolean | null;
   createdAt: Date;
   updatedAt: Date;
   coach?: CoachProfile;
@@ -88,14 +89,31 @@ export default function Marketplace() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Fetch featured workout plans
+  // Fetch current user for checking if user is a coach
   const { 
-    data: featuredPlans = [], 
+    data: currentUser
+  } = useQuery({
+    queryKey: ['/api/user'],
+    queryFn: () => fetch('/api/user').then(res => res.json()),
+  });
+  
+  // Fetch coach profile to get coach ID if the user is a coach
+  const { 
+    data: coachProfile 
+  } = useQuery({
+    queryKey: ['/api/users', currentUser?.id, 'coach-profile'],
+    queryFn: () => fetch(`/api/users/${currentUser?.id}/coach-profile`).then(res => res.json()),
+    enabled: !!currentUser?.id,
+  });
+
+  // Fetch all published workout plans
+  const { 
+    data: allPlans = [], 
     isLoading: plansLoading,
     error: plansError
   } = useQuery({
-    queryKey: ['/api/workout-plans', { featured: true }],
-    queryFn: () => fetch(`/api/workout-plans?featured=true&limit=6`).then(res => res.json()),
+    queryKey: ['/api/workout-plans', { publishedOnly: true }],
+    queryFn: () => fetch(`/api/workout-plans?publishedOnly=true`).then(res => res.json()),
     enabled: activeTab === "plans"
   });
 
@@ -190,47 +208,76 @@ export default function Marketplace() {
   };
 
   // Render workout plan card
-  const WorkoutPlanCard = ({ plan }: { plan: WorkoutPlan }) => (
-    <Card className="h-full flex flex-col hover:shadow-md transition-shadow">
-      <CardHeader className="pb-2">
-        {plan.isFeatured && (
-          <Badge className="w-fit mb-2 bg-amber-500">Featured</Badge>
-        )}
-        <CardTitle className="text-lg">{plan.title}</CardTitle>
-        <CardDescription className="line-clamp-2">
-          {plan.description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow pb-2">
-        <div className="flex flex-wrap gap-1 mb-3">
-          <Badge variant="outline" className="bg-slate-100">
-            {plan.difficultyLevel}
-          </Badge>
-          <Badge variant="outline" className="bg-slate-100">
-            {plan.category}
-          </Badge>
-          <Badge variant="outline" className="bg-slate-100">
-            {plan.durationWeeks} weeks
-          </Badge>
-        </div>
-        <StarRating rating={plan.rating} />
-        {plan.sales && (
-          <div className="flex items-center mt-2 text-sm text-gray-600">
-            <Users className="h-4 w-4 mr-1" />
-            {plan.sales} sold
+  const WorkoutPlanCard = ({ plan }: { plan: WorkoutPlan }) => {
+    // Check if the current user is the coach who created this plan
+    const isOwner = coachProfile && coachProfile.id === plan.coachId;
+    
+    return (
+      <Card className="h-full flex flex-col hover:shadow-md transition-shadow">
+        <CardHeader className="pb-2">
+          <div className="flex flex-wrap gap-2 mb-2">
+            {plan.isFeatured && (
+              <Badge className="bg-amber-500">Featured</Badge>
+            )}
+            {isOwner && !plan.isPublished && (
+              <Badge variant="outline" className="border-orange-500 text-orange-500">Draft</Badge>
+            )}
+            {isOwner && plan.isPublished && (
+              <Badge variant="outline" className="border-green-500 text-green-500">Published</Badge>
+            )}
           </div>
-        )}
-      </CardContent>
-      <Separator />
-      <CardFooter className="pt-4 pb-4 flex justify-between items-center">
-        <div className="font-bold text-lg">${plan.price.toFixed(2)}</div>
-        <Button size="sm" onClick={() => setLocation(`/workout-plans/${plan.id}`)}>
-          View Details
-          <ChevronRight className="h-4 w-4 ml-1" />
-        </Button>
-      </CardFooter>
-    </Card>
-  );
+          <CardTitle className="text-lg">{plan.title}</CardTitle>
+          <CardDescription className="line-clamp-2">
+            {plan.description}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex-grow pb-2">
+          <div className="flex flex-wrap gap-1 mb-3">
+            <Badge variant="outline" className="bg-slate-100">
+              {plan.difficultyLevel}
+            </Badge>
+            <Badge variant="outline" className="bg-slate-100">
+              {plan.category}
+            </Badge>
+            <Badge variant="outline" className="bg-slate-100">
+              {plan.durationWeeks} weeks
+            </Badge>
+          </div>
+          <StarRating rating={plan.rating} />
+          {plan.sales && (
+            <div className="flex items-center mt-2 text-sm text-gray-600">
+              <Users className="h-4 w-4 mr-1" />
+              {plan.sales} sold
+            </div>
+          )}
+        </CardContent>
+        <Separator />
+        <CardFooter className="pt-4 pb-4 flex justify-between items-center">
+          <div className="font-bold text-lg">${plan.price.toFixed(2)}</div>
+          
+          {/* Different buttons for coach vs users */}
+          {isOwner ? (
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => setLocation(`/workout-plan-detail/${plan.id}`)}
+            >
+              Edit Details
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          ) : (
+            <Button 
+              size="sm" 
+              onClick={() => setLocation(`/workout-plans/${plan.id}`)}
+            >
+              View Details
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
+    );
+  };
 
   // Render coach card
   const CoachCard = ({ coach }: { coach: CoachProfile }) => (
@@ -345,11 +392,11 @@ export default function Marketplace() {
             </>
           )}
 
-          {/* Featured Plans */}
+          {/* All Published Plans */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold flex items-center">
               <Award className="mr-2 h-6 w-6 text-amber-500" />
-              Featured Workout Plans
+              Available Workout Plans
             </h2>
             <Button 
               variant="link" 
@@ -372,8 +419,8 @@ export default function Marketplace() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredPlans.length > 0 ? (
-                featuredPlans.map((plan: WorkoutPlan) => (
+              {allPlans.length > 0 ? (
+                allPlans.map((plan: WorkoutPlan) => (
                   <WorkoutPlanCard key={plan.id} plan={plan} />
                 ))
               ) : (
