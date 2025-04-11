@@ -121,10 +121,10 @@ export default function Profile() {
   // Coach profile refs
   const coachTitleRef = useRef<HTMLInputElement>(null);
   const coachBiographyRef = useRef<HTMLTextAreaElement>(null);
-  const coachExperienceRef = useRef<HTMLInputElement>(null);
+  const coachExperienceRef = useRef<HTMLTextAreaElement>(null);
   const coachSpecialtiesRef = useRef<HTMLTextAreaElement>(null);
   const coachHourlyRateRef = useRef<HTMLInputElement>(null);
-  const coachAvailableForHireRef = useRef<HTMLInputElement>(null);
+  const coachAvailableForHireRef = useRef<HTMLButtonElement>(null);
 
   // Get the user's profile information
   const { data: user, isLoading, refetch } = useQuery({
@@ -185,18 +185,43 @@ export default function Profile() {
     queryKey: ['/api/coaches/profile', user?.id],
     queryFn: async () => {
       if (!user || !user.isCoach) return null;
+      
       try {
+        // First try the regular coach profile endpoint
         const response = await fetch(`/api/coaches/profile?userId=${user.id}`);
+        
         if (!response.ok) {
           if (response.status === 404) {
-            // 404 is expected if user is not a coach or hasn't created profile
+            // If not found on the first endpoint, try the alternate endpoint
+            console.log("Trying alternate coach profile endpoint...");
+            const altResponse = await fetch(`/api/users/${user.id}/coach-profile`);
+            
+            if (altResponse.ok) {
+              return await altResponse.json();
+            }
+            
+            // If both fail with 404, it's expected for new coaches without profiles
             return null;
           }
           throw new Error('Failed to fetch coach profile');
         }
+        
         return await response.json();
       } catch (error) {
         console.error("Error fetching coach profile:", error);
+        
+        // Try alternate endpoint as a fallback
+        try {
+          console.log("Trying alternate coach profile endpoint as fallback...");
+          const altResponse = await fetch(`/api/users/${user.id}/coach-profile`);
+          
+          if (altResponse.ok) {
+            return await altResponse.json();
+          }
+        } catch (fallbackError) {
+          console.error("Error fetching from fallback endpoint:", fallbackError);
+        }
+        
         return null;
       }
     },
@@ -273,16 +298,33 @@ export default function Profile() {
   // Coach profile mutation
   const updateCoachProfileMutation = useMutation({
     mutationFn: async (coachData: any) => {
-      return await apiRequest(`/api/coaches/profile/${coachProfile?.id || 'new'}`, {
-        method: coachProfile ? 'PATCH' : 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(coachData)
-      });
+      try {
+        const response = await apiRequest(`/api/coaches/profile/${coachProfile?.id || 'new'}`, {
+          method: coachProfile ? 'PATCH' : 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(coachData)
+        });
+        return response;
+      } catch (error) {
+        console.error("Error in primary coach update endpoint, trying alternate...");
+        
+        // Try alternate endpoint
+        return await fetch(`/api/users/${user?.id}/coach-profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(coachData),
+          credentials: 'include'
+        });
+      }
     },
     onSuccess: () => {
+      // Invalidate both possible query keys
       queryClient.invalidateQueries({ queryKey: ['/api/coaches/profile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/coach-profile`] });
       setIsCoachProfileEditing(false);
       setIsSaving(false);
       
@@ -755,15 +797,54 @@ export default function Profile() {
               <div className="flex flex-col items-center mb-6">
                 <div className="relative mb-4">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src="" alt={coachProfile?.title || user.name || user.username} />
+                    <AvatarImage 
+                      src={profileImage || coachProfile?.profileImage || ""} 
+                      alt={coachProfile?.title || user.name || user.username} 
+                    />
                     <AvatarFallback className="text-lg bg-primary/10 text-primary">
                       {((coachProfile?.title || user.name || user.username) || "C").charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   {isCoachProfileEditing && (
-                    <div className="absolute -right-2 bottom-0 bg-primary text-white p-1.5 rounded-full shadow-md cursor-pointer">
-                      <Camera className="h-4 w-4" />
-                    </div>
+                    <>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setUploading(true);
+                            // In a real app, we'd upload to a server here
+                            // For now, just create a local data URL
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const dataUrl = event.target?.result as string;
+                              setProfileImage(dataUrl);
+                              setUploading(false);
+                              
+                              toast({
+                                title: "Coach profile image updated",
+                                description: "Your coach profile image has been updated (simulated).",
+                                variant: "default",
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <div 
+                        className="absolute -right-2 bottom-0 bg-primary text-white p-1.5 rounded-full shadow-md cursor-pointer hover:bg-primary/90 transition-colors"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {uploading ? (
+                          <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                        ) : (
+                          <Camera className="h-4 w-4" />
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
                 
