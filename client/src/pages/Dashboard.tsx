@@ -306,26 +306,23 @@ export default function Dashboard() {
     }
   });
   
-  // Set up a handler to refresh when workouts are deleted
+  // Listen for workout deletion events to refresh data
   useEffect(() => {
-    // Subscribe to workout deletion events
-    const handleWorkoutDeleted = () => {
-      refetchWorkouts();
+    // We're using a simpler approach to prevent any infinite loop issues
+    
+    // Set up listener for the workout deletion mutation event
+    const handleMutationStatusChange = () => {
+      // Only refresh when needed
+      setTimeout(() => {
+        refetchWorkouts();
+      }, 300); // Small delay to avoid race conditions
     };
     
-    // Add event listener
-    queryClient.getQueryCache().subscribe(event => {
-      if (event.type === 'invalidated' && 
-          (Array.isArray(event.query.queryKey) && 
-           (event.query.queryKey[0] === '/api/workouts' || 
-            event.query.queryKey[0] === '/api/workouts/recent'))) {
-        handleWorkoutDeleted();
-      }
-    });
+    // Use a DOM event-based approach which is simpler
+    document.addEventListener('workout-deleted', handleMutationStatusChange);
     
-    // Cleanup subscription on unmount
     return () => {
-      queryClient.getQueryCache().clear();
+      document.removeEventListener('workout-deleted', handleMutationStatusChange);
     };
   }, [refetchWorkouts]);
 

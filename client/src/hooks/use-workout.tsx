@@ -26,6 +26,12 @@ export function useWorkoutDelete() {
       queryClient.invalidateQueries({ queryKey: ['/api/workouts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/workouts/recent'] });
       
+      // Dispatch a custom event to notify components that a workout was deleted
+      // This is a safer approach than relying on query cache subscriptions
+      document.dispatchEvent(new CustomEvent('workout-deleted', {
+        detail: { workoutId: workout.id }
+      }));
+      
       return true;
     } catch (error) {
       console.error('Error deleting workout:', error);
