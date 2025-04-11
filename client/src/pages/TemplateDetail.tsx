@@ -835,6 +835,37 @@ export default function TemplateDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Template Confirmation Dialog */}
+      <Dialog open={isDeleteTemplateDialogOpen} onOpenChange={setIsDeleteTemplateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Template</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this entire template? This will remove all exercises and cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-4 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteTemplateDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => deleteTemplateMutation.mutate()}
+              disabled={isDeleting}
+            >
+              {isDeleting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Delete Template
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
