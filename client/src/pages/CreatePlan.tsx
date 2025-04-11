@@ -265,6 +265,17 @@ export default function CreatePlan() {
       return;
     }
 
+    // Check if coach profile exists before submitting
+    if (!coachProfile || !coachProfile.id) {
+      toast({
+        title: "Coach Profile Required",
+        description: "You need a valid coach profile before you can create workout plans.",
+        variant: "destructive",
+      });
+      setLocation('/become-coach');
+      return;
+    }
+
     setIsSubmitting(true);
     
     const planData = {
@@ -279,7 +290,8 @@ export default function CreatePlan() {
       goals: values.goals,
       equipment: values.equipment,
       isFeatured: false,
-      isSoldOut: false
+      isSoldOut: false,
+      isPublished: false // Start as draft
     };
 
     createPlanMutation.mutate({
