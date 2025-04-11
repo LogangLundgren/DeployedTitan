@@ -15,7 +15,8 @@ import {
   LayoutGrid,
   Edit,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Eye
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";

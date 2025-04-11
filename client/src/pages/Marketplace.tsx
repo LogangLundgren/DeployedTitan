@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Star, Filter, ChevronRight, TrendingUp, Award, Users } from 'lucide-react';
+import { Search, Star, Filter, ChevronRight, TrendingUp, Award, Users, Eye } from 'lucide-react';
 import { queryClient } from '@/lib/queryClient';
 
 interface User {
@@ -270,8 +270,8 @@ export default function Marketplace() {
               size="sm" 
               onClick={() => setLocation(`/workout-plans/${plan.id}`)}
             >
-              View Details
-              <ChevronRight className="h-4 w-4 ml-1" />
+              View Plan
+              <Eye className="h-4 w-4 ml-1" />
             </Button>
           )}
         </CardFooter>
