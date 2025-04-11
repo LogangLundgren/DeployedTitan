@@ -884,47 +884,41 @@ function PeopleDiscover() {
   }, [usersLoading]);
 
   // Follow user mutation
-  // Track followed users locally since we're using mock data
-  const [followedUsers, setFollowedUsers] = useState<number[]>([]);
+  // Use the follow context instead of local state
+  const { followedUsers, followUser, unfollowUser, isFollowing } = useFollow();
   
-  // Initialize with some users already followed 
+  // Initialize users with isFollowing data from the context
   useEffect(() => {
-    if (users.length > 0 && followedUsers.length === 0) {
-      // Mark some users as already followed for demonstration
-      const initialFollowed = users
-        .filter(user => user.isFollowing)
-        .map(user => user.id);
-      
-      setFollowedUsers(initialFollowed);
+    if (users.length > 0) {
+      setUsers(users.map(user => ({
+        ...user,
+        isFollowing: isFollowing(user.id)
+      })));
     }
-  }, [users]);
+  }, [followedUsers, users]);
   
   const followUserMutation = useMutation({
     mutationFn: (userId: number) => {
       // In a real app, this would be a real endpoint
-      const isCurrentlyFollowing = followedUsers.includes(userId);
+      const currentlyFollowing = isFollowing(userId);
       return Promise.resolve({ 
         success: true, 
         userId, 
-        isFollowing: !isCurrentlyFollowing // Toggle the following state
+        isFollowing: !currentlyFollowing // Toggle the following state
       });
     },
     onSuccess: (response) => {
-      // Update local state based on the action
-      if (followedUsers.includes(response.userId)) {
+      // Get user name for toast message
+      const user = users.find(u => u.id === response.userId);
+      const userName = user?.name || "User";
+      
+      // Update follow context based on the action
+      if (isFollowing(response.userId)) {
         // Unfollow
-        setFollowedUsers(prev => prev.filter(id => id !== response.userId));
-        toast({
-          title: "User unfollowed",
-          description: "You are no longer following this user.",
-        });
+        unfollowUser(response.userId, userName);
       } else {
         // Follow
-        setFollowedUsers(prev => [...prev, response.userId]);
-        toast({
-          title: "User followed",
-          description: "You are now following this user.",
-        });
+        followUser(response.userId, userName);
       }
       
       // Update the UI by updating the users array with the new isFollowing state
@@ -1367,9 +1361,13 @@ function PublicProfileView() {
                     </div>
                   </div>
                   <Progress 
-                    value={goal.progress || 0} 
-                    className={goal.completed ? "bg-green-100" : ""}
+                    value={calculateProgress(goal.currentValue || 0, goal.targetValue || 100)} 
+                    className={`h-2 ${goal.completed ? "bg-green-100" : ""}`}
                   />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>{goal.currentValue || 0} / {goal.targetValue || 100}</span>
+                    <span>{calculateProgress(goal.currentValue || 0, goal.targetValue || 100)}%</span>
+                  </div>
                 </div>
               ))}
             </div>
