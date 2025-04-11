@@ -419,7 +419,7 @@ export default function MyPlans() {
                           <Button 
                             variant="default" 
                             size="sm" 
-                            onClick={() => setLocation(`/workout-plan-detail/${plan.id}`)}
+                            onClick={() => setLocation(`/workout-plans/${plan.id}`)}
                           >
                             Preview
                             <Eye className="ml-1 h-4 w-4" />

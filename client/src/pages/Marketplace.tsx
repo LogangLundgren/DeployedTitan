@@ -265,7 +265,7 @@ export default function Marketplace() {
             <Button 
               size="sm" 
               variant="outline"
-              onClick={() => setLocation(`/workout-plan-detail/${plan.id}`)}
+              onClick={() => setLocation(`/workout-plans/${plan.id}`)}
             >
               Edit Details
               <ChevronRight className="h-4 w-4 ml-1" />
