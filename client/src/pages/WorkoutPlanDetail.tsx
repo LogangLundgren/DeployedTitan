@@ -14,7 +14,9 @@ import {
   Award, 
   ShoppingCart,
   Trash,
-  Plus
+  Plus,
+  Edit,
+  Eye
 } from 'lucide-react';
 import { 
   Accordion,
@@ -168,6 +170,7 @@ export default function WorkoutPlanDetail() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const planId = parseInt(params.id);
+  const { user } = useAuth();
 
   const { 
     data: plan, 
@@ -605,8 +608,9 @@ export default function WorkoutPlanDetail() {
                   )}
                 </div>
                 
-                {/* Coach actions */}
-                {plan.coach && (
+                {/* Check if current user is the plan owner */}
+                {user && plan.coach && plan.coach.userId === user.id ? (
+                  /* Coach owner actions */
                   <>
                     {!plan.isPublished ? (
                       <Button 
@@ -619,19 +623,22 @@ export default function WorkoutPlanDetail() {
                         {isPublishing ? 'Publishing...' : 'Publish Plan'}
                       </Button>
                     ) : (
-                      <Button 
-                        className="w-full text-base py-6" 
-                        size="lg"
-                        disabled={plan.isSoldOut}
-                        onClick={() => setPurchaseDialogOpen(true)}
-                      >
-                        <ShoppingCart className="mr-2 h-5 w-5" />
-                        Purchase Plan
-                      </Button>
+                      <div className="text-center text-sm text-gray-500 mb-4">
+                        This plan is published and visible in the marketplace
+                      </div>
                     )}
                     
                     <Button 
-                      className="w-full" 
+                      className="w-full mb-2" 
+                      variant="outline"
+                      onClick={() => setLocation(`/create-plan/${plan.id}`)}
+                    >
+                      <Edit className="mr-2 h-5 w-5" />
+                      Edit Plan
+                    </Button>
+                    
+                    <Button 
+                      className="w-full mb-2" 
                       variant="outline"
                       onClick={() => setAddTemplateDialogOpen(true)}
                     >
@@ -648,10 +655,8 @@ export default function WorkoutPlanDetail() {
                       Delete Plan
                     </Button>
                   </>
-                )}
-
-                {/* Customer actions */}
-                {!plan.coach && (
+                ) : (
+                  /* Customer/Viewer actions */
                   <Button 
                     className="w-full text-base py-6" 
                     size="lg"
@@ -662,6 +667,8 @@ export default function WorkoutPlanDetail() {
                     Purchase Plan
                   </Button>
                 )}
+
+
 
                 <div className="text-sm text-gray-500 text-center">
                   One-time purchase, lifetime access
