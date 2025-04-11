@@ -1105,6 +1105,285 @@ function PeopleDiscover() {
   );
 }
 
+// Public Profile View component
+function PublicProfileView() {
+  const userId = 1; // Hardcoded for demo, would be the current user's ID
+  
+  // Fetch user data
+  const { data: userData, isLoading: userLoading } = useQuery({
+    queryKey: ['/api/users', userId],
+    queryFn: () => fetch(`/api/users/${userId}`).then(res => res.json()),
+  });
+  
+  // Fetch user's workouts
+  const { data: userWorkouts = [], isLoading: workoutsLoading } = useQuery({
+    queryKey: ['/api/workouts', userId],
+    queryFn: () => fetch(`/api/workouts?userId=${userId}`).then(res => res.json()),
+  });
+  
+  // Fetch user's goals
+  const { data: userGoals = [], isLoading: goalsLoading } = useQuery({
+    queryKey: ['/api/goals', userId],
+    queryFn: () => fetch(`/api/goals?userId=${userId}`).then(res => res.json()),
+  });
+
+  // Fetch coach profile if user is a coach
+  const { data: coachProfile, isLoading: coachLoading } = useQuery({
+    queryKey: ['/api/users', userId, 'coach-profile'],
+    queryFn: () => fetch(`/api/users/${userId}/coach-profile`).then(res => res.json()),
+    // Only attempt to fetch if user exists and is a coach
+    enabled: !!userData?.isCoach,
+  });
+  
+  // Calculate stats
+  const stats = {
+    totalWorkouts: userWorkouts.length,
+    totalGoals: userGoals.length,
+    completedGoals: userGoals.filter((g: any) => g.completed).length,
+    followers: 158, // Mock data
+    following: 93,  // Mock data
+  };
+  
+  if (userLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-64 bg-muted animate-pulse rounded-lg"></div>
+      </div>
+    );
+  }
+  
+  if (!userData) {
+    return (
+      <div className="space-y-6">
+        <div className="p-8 text-center">
+          <h3 className="text-lg font-medium">Could not load profile</h3>
+          <p className="text-muted-foreground">Please try again later</p>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="space-y-8">
+      {/* Profile header */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            <div className="relative">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={userData.profilePicture || ""} />
+                <AvatarFallback className="text-2xl">{getInitials(userData.name || "User")}</AvatarFallback>
+              </Avatar>
+              {userData.isCoach && (
+                <Badge className="absolute -top-2 -right-2 bg-primary text-white">Coach</Badge>
+              )}
+            </div>
+            
+            <div className="space-y-2 flex-1">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">{userData.name}</h2>
+                  <p className="text-muted-foreground">@{userData.username}</p>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button variant="outline" asChild>
+                    <Link href="/profile">Edit Profile</Link>
+                  </Button>
+                  <Button variant="outline">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="mr-1"
+                    >
+                      <path d="M18 21a8 8 0 0 0-16 0" />
+                      <circle cx="10" cy="8" r="5" />
+                      <path d="M22 21a8 8 0 0 0-8-8" />
+                    </svg>
+                    Share Profile
+                  </Button>
+                </div>
+              </div>
+              
+              <p>{userData.bio || "No bio provided yet."}</p>
+              
+              <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
+                <div className="text-center px-4">
+                  <div className="font-semibold text-xl">{stats.totalWorkouts}</div>
+                  <div className="text-xs text-muted-foreground">Workouts</div>
+                </div>
+                <div className="text-center px-4">
+                  <div className="font-semibold text-xl">{stats.completedGoals} / {stats.totalGoals}</div>
+                  <div className="text-xs text-muted-foreground">Goals</div>
+                </div>
+                <div className="text-center px-4">
+                  <div className="font-semibold text-xl">{stats.followers}</div>
+                  <div className="text-xs text-muted-foreground">Followers</div>
+                </div>
+                <div className="text-center px-4">
+                  <div className="font-semibold text-xl">{stats.following}</div>
+                  <div className="text-xs text-muted-foreground">Following</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Coach information if applicable */}
+      {userData.isCoach && coachProfile && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Coach Profile</CardTitle>
+            <CardDescription>Coaching information and services</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h3 className="font-semibold text-lg">{coachProfile.title}</h3>
+              <p className="text-muted-foreground">{coachProfile.biography}</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium">Experience</h4>
+                <p>{coachProfile.experience}</p>
+              </div>
+              <div>
+                <h4 className="font-medium">Specialties</h4>
+                <p>{coachProfile.specialties}</p>
+              </div>
+            </div>
+            
+            {coachProfile.isAvailableForHire && (
+              <div className="bg-green-50 text-green-800 p-4 rounded-lg flex items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-2"
+                >
+                  <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+                <span>Available for coaching</span>
+                <div className="ml-auto font-semibold">${coachProfile.hourlyRate}/hour</div>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter>
+            <Button asChild className="w-full">
+              <Link href={`/marketplace?coach=${userId}`}>View Workout Plans</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
+      
+      {/* Recent workouts */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Workouts</CardTitle>
+          <CardDescription>Latest training sessions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {workoutsLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-16 bg-muted animate-pulse rounded"></div>
+              ))}
+            </div>
+          ) : userWorkouts.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-muted-foreground">No workouts tracked yet</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {userWorkouts.slice(0, 5).map((workout: any) => (
+                <div key={workout.id} className="flex justify-between items-center border-b pb-4">
+                  <div>
+                    <h3 className="font-medium">{workout.name}</h3>
+                    <p className="text-sm text-muted-foreground">{formatDate(workout.date)}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium">{workout.duration} min</div>
+                    <Badge variant="outline">{workout.category || "Workout"}</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+        <CardFooter>
+          <Button variant="outline" asChild className="w-full">
+            <Link href="/workouts">View All Workouts</Link>
+          </Button>
+        </CardFooter>
+      </Card>
+      
+      {/* Goals */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Fitness Goals</CardTitle>
+          <CardDescription>Progress tracking</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {goalsLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-16 bg-muted animate-pulse rounded"></div>
+              ))}
+            </div>
+          ) : userGoals.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-muted-foreground">No goals set yet</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {userGoals.slice(0, 3).map((goal: any) => (
+                <div key={goal.id} className="space-y-2">
+                  <div className="flex justify-between">
+                    <div className="font-medium">{goal.title}</div>
+                    <div className="text-sm">
+                      {goal.completed ? (
+                        <Badge variant="outline" className="bg-green-100 text-green-800">Completed</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {goal.targetDate ? `Due ${formatDate(goal.targetDate)}` : "In Progress"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Progress 
+                    value={goal.progress || 0} 
+                    className={goal.completed ? "bg-green-100" : ""}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+        <CardFooter>
+          <Button variant="outline" asChild className="w-full">
+            <Link href="/goals">View All Goals</Link>
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}
+
 // Main Social component
 export default function Social() {
   return (
@@ -1115,6 +1394,7 @@ export default function Social() {
         <TabsList className="mb-6">
           <TabsTrigger value="feed">Activity Feed</TabsTrigger>
           <TabsTrigger value="discover">Discover People</TabsTrigger>
+          <TabsTrigger value="profile">My Public Profile</TabsTrigger>
         </TabsList>
         
         <TabsContent value="feed">
@@ -1123,6 +1403,10 @@ export default function Social() {
         
         <TabsContent value="discover">
           <PeopleDiscover />
+        </TabsContent>
+        
+        <TabsContent value="profile">
+          <PublicProfileView />
         </TabsContent>
       </Tabs>
     </main>

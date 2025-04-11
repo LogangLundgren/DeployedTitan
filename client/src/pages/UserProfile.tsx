@@ -138,14 +138,30 @@ export default function UserProfile() {
     }
   });
   
+  // Local state to track follow status for immediate UI updates
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  
+  // Initialize isFollowing state when userProfile data is loaded
+  useEffect(() => {
+    if (userProfile) {
+      setIsFollowing(!!userProfile.isFollowing);
+    }
+  }, [userProfile]);
+  
   const handleFollowUser = () => {
     if (!userProfile) return;
     
+    // Toggle the follow state
+    const newFollowState = !isFollowing;
+    setIsFollowing(newFollowState);
+    
+    // In a real app, this would call an API endpoint
+    // For now we'll just show a toast notification
     toast({
-      title: `${userProfile.isFollowing ? "Unfollowed" : "Followed"} ${userProfile.name}`,
-      description: userProfile.isFollowing 
-        ? `You are no longer following ${userProfile.name}.`
-        : `You are now following ${userProfile.name}. You'll see their workouts in your feed.`,
+      title: `${newFollowState ? "Followed" : "Unfollowed"} ${userProfile.name}`,
+      description: newFollowState 
+        ? `You are now following ${userProfile.name}. You'll see their workouts in your feed.`
+        : `You are no longer following ${userProfile.name}.`,
     });
   };
   
@@ -228,11 +244,11 @@ export default function UserProfile() {
             </CardContent>
             <CardFooter>
               <Button 
-                className={`w-full ${userProfile.isFollowing ? "bg-green-100 hover:bg-red-50 hover:text-red-500 hover:border-red-200 group" : ""}`}
-                variant={userProfile.isFollowing ? "outline" : "default"}
+                className={`w-full ${isFollowing ? "bg-green-100 hover:bg-red-50 hover:text-red-500 hover:border-red-200 group" : ""}`}
+                variant={isFollowing ? "outline" : "default"}
                 onClick={handleFollowUser}
               >
-                {userProfile.isFollowing ? (
+                {isFollowing ? (
                   <>
                     <span className="group-hover:hidden flex items-center">
                       <svg className="mr-1 h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
