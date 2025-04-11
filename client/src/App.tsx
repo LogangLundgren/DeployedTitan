@@ -20,6 +20,7 @@ import MyPlans from "@/pages/MyPlans";
 import BecomeCoach from "@/pages/BecomeCoach";
 import CreatePlan from "@/pages/CreatePlan";
 import Checkout from "@/pages/Checkout";
+import PlanCheckout from "@/pages/PlanCheckout";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
@@ -56,6 +57,7 @@ function Router() {
           <Route path="/my-plans" component={MyPlans} />
           <Route path="/become-coach" component={BecomeCoach} />
           <Route path="/create-plan" component={CreatePlan} />
+          <Route path="/plan-checkout" component={PlanCheckout} />
           <Route path="/checkout" component={Checkout} />
           <Route path="/payment-success" component={PaymentSuccess} />
           <Route path="/admin" component={AdminDashboard} />

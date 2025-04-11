@@ -48,7 +48,14 @@ export default function PlanCheckout() {
       setError(null);
       
       try {
-        const response = await apiRequest('POST', '/api/init-plan-checkout', { planId });
+        const response = await fetch("/api/init-plan-checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ planId }),
+          credentials: "include"
+        });
         const data = await response.json();
         
         if (!response.ok) {

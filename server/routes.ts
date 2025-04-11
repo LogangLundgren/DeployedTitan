@@ -3118,7 +3118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Endpoint to initialize a checkout for a workout plan
-  app.post("/api/init-plan-checkout", async (req, res) => {
+  app.post("/api/init-plan-checkout", async (req: Request, res: Response) => {
     try {
       const { planId } = req.body;
       
@@ -3132,8 +3132,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Workout plan not found" });
       }
       
-      // Get the current authenticated user
-      const userId = req.isAuthenticated() ? req.user.id : null;
+      // Check if the user is authenticated
+      // @ts-ignore - Express types don't include the passport authentication properties
+      const userId = req.user?.id;
       
       if (!userId) {
         return res.status(401).json({ message: "User must be logged in to purchase plans" });
