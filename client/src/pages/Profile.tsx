@@ -47,6 +47,7 @@ export default function Profile() {
   const [isCoachProfileEditing, setIsCoachProfileEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedTab, setSelectedTab] = useState("profile");
+  const [coachAvailability, setCoachAvailability] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -124,7 +125,13 @@ export default function Profile() {
   const coachExperienceRef = useRef<HTMLTextAreaElement>(null);
   const coachSpecialtiesRef = useRef<HTMLTextAreaElement>(null);
   const coachHourlyRateRef = useRef<HTMLInputElement>(null);
-  const coachAvailableForHireRef = useRef<HTMLButtonElement>(null);
+
+  // Initialize coach availability state
+  useEffect(() => {
+    if (coachProfile) {
+      setCoachAvailability(coachProfile.isAvailableForHire !== false);
+    }
+  }, [coachProfile]);
 
   // Get the user's profile information
   const { data: user, isLoading, refetch } = useQuery({
@@ -391,7 +398,7 @@ export default function Profile() {
       specialties: coachSpecialtiesRef.current?.value || coachProfile?.specialties || '',
       hourlyRate: coachHourlyRateRef.current?.value ? 
         parseFloat(coachHourlyRateRef.current.value) : coachProfile?.hourlyRate || 0,
-      isAvailableForHire: coachAvailableForHireRef.current?.checked ?? coachProfile?.isAvailableForHire ?? true
+      isAvailableForHire: coachAvailability
     };
     
     updateCoachProfileMutation.mutate(updatedCoachProfile);
@@ -889,9 +896,9 @@ export default function Profile() {
                     
                     <div className="flex items-center space-x-2">
                       <Switch 
-                        id="availableForHire" 
-                        ref={coachAvailableForHireRef}
-                        defaultChecked={coachProfile?.isAvailableForHire !== false}
+                        id="availableForHire"
+                        checked={coachAvailability}
+                        onCheckedChange={setCoachAvailability}
                       />
                       <Label htmlFor="availableForHire">Available for Hire</Label>
                     </div>
