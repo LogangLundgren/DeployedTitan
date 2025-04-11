@@ -34,6 +34,7 @@ import {
   insertUserSuggestionSchema,
   Workout,
   TemplateExercise,
+  User,
   WorkoutWithDetails,
   Goal,
   Milestone,
