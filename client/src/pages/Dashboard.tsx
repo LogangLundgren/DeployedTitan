@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { WorkoutWithDetails, Exercise } from "@shared/schema";
 import PersonalRecords from "@/components/workout/PersonalRecords";
 import MonthlyComparison from "@/components/workout/MonthlyComparison";
@@ -29,6 +29,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 // Define the type for our filtered workout data
 interface WorkoutData {
@@ -41,6 +45,240 @@ interface WorkoutData {
 
 // Define the metric options
 type MetricType = 'weight' | 'reps' | 'volume';
+
+// GoalsDisplay component to handle fetching and displaying goals
+function GoalsDisplay({ userId }: { userId: number }) {
+  const { data: goals = [], isLoading: goalsLoading } = useQuery({
+    queryKey: ['/api/goals', userId],
+    queryFn: () => fetch(`/api/goals?userId=${userId}`).then(res => res.json()),
+  });
+  
+  // Helper function to calculate progress percentage
+  const calculateProgress = (current: number, target: number) => {
+    return Math.min(Math.round((current / target) * 100), 100);
+  };
+  
+  // Helper function to format dates
+  const formatDate = (date: Date | string | null) => {
+    if (!date) return 'No date set';
+    return format(new Date(date), "MMM d, yyyy");
+  };
+  
+  if (goalsLoading) {
+    return (
+      <>
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader className="h-20 bg-gray-100"></CardHeader>
+            <CardContent className="h-24 py-4">
+              <div className="h-4 bg-gray-100 mb-2 rounded"></div>
+              <div className="h-4 bg-gray-100 w-3/4 rounded"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </>
+    );
+  }
+  
+  if (goals.length === 0) {
+    return (
+      <div className="col-span-3 lg:col-span-4">
+        <Card className="border-dashed border-2">
+          <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="rounded-full bg-muted p-3 mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
+              </svg>
+            </div>
+            <p className="text-muted-foreground mb-4">You don't have any goals yet</p>
+            <Link href="/goals">
+              <span className="inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90">
+                Create Your First Goal
+              </span>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  return (
+    <>
+      {goals.slice(0, 3).map((goal: any) => (
+        <Card key={goal.id}>
+          <CardHeader className="pb-4">
+            <Badge variant={goal.isPublic ? "default" : "outline"}>
+              {goal.category}
+            </Badge>
+            <CardTitle className="mt-2">{goal.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <div className="mb-4">
+              <div className="flex justify-between text-sm mb-1">
+                <span>Progress</span>
+                <span>
+                  {goal.currentValue} / {goal.targetValue} {goal.metricType}
+                </span>
+              </div>
+              <Progress 
+                value={calculateProgress(goal.currentValue, goal.targetValue)} 
+                className="h-2" 
+              />
+            </div>
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Started: {formatDate(goal.startDate)}</span>
+              <span>Target: {formatDate(goal.targetDate)}</span>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+      
+      {/* Always show the "Add New Goal" card */}
+      <Link href="/goals">
+        <Card className="border-dashed border-2 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-center h-full">
+          <CardContent className="flex flex-col items-center justify-center py-10">
+            <div className="rounded-full bg-primary/10 p-3 mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v8" />
+                <path d="M8 12h8" />
+              </svg>
+            </div>
+            <p className="text-primary font-medium">Add New Goal</p>
+          </CardContent>
+        </Card>
+      </Link>
+    </>
+  );
+}
+
+// User Feedback component
+function UserFeedbackForm() {
+  const { toast } = useToast();
+  const [feedback, setFeedback] = useState("");
+  const [subject, setSubject] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!feedback.trim()) {
+      toast({
+        title: "Feedback required",
+        description: "Please enter your feedback before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // In a real app, this would send the feedback to the server
+      // Example API call:
+      // await fetch('/api/feedback', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ subject, feedback }),
+      // });
+      
+      // Simulate API delay for demo purposes
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setSubmitted(true);
+      setFeedback("");
+      setSubject("");
+      
+      toast({
+        title: "Feedback submitted",
+        description: "Thank you for your feedback! We appreciate your input.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "There was a problem submitting your feedback. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const resetForm = () => {
+    setSubmitted(false);
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Help Us Improve</CardTitle>
+        <CardDescription>
+          Share your feedback and suggestions to help us make Titan Fitness better for you.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {submitted ? (
+          <div className="flex flex-col items-center py-8 text-center">
+            <div className="rounded-full bg-green-100 p-3 mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Thank You!</h3>
+            <p className="text-muted-foreground mb-6">
+              Your feedback has been submitted and will help us improve Titan Fitness.
+            </p>
+            <Button onClick={resetForm} variant="outline">Submit Another Suggestion</Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="subject" className="text-sm font-medium">
+                Subject
+              </label>
+              <Input 
+                id="subject"
+                placeholder="E.g., Feature request, UI improvements"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="feedback" className="text-sm font-medium">
+                Your Suggestion
+              </label>
+              <Textarea
+                id="feedback"
+                placeholder="Share your ideas, feedback, or report issues..."
+                rows={5}
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                required
+              />
+            </div>
+            <Button 
+              type="submit" 
+              className="w-full"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Submitting...
+                </>
+              ) : "Submit Feedback"}
+            </Button>
+          </form>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Dashboard() {
   // In a real app, this would use the authenticated user's ID
@@ -183,110 +421,8 @@ export default function Dashboard() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {/* Fetch real goals from API */}
-          {(() => {
-            const { data: goals = [], isLoading: goalsLoading } = useQuery({
-              queryKey: ['/api/goals', userId],
-              queryFn: () => fetch(`/api/goals?userId=${userId}`).then(res => res.json()),
-            });
-            
-            // Helper function to calculate progress percentage
-            const calculateProgress = (current: number, target: number) => {
-              return Math.min(Math.round((current / target) * 100), 100);
-            };
-            
-            // Helper function to format dates
-            const formatDate = (date: Date | string | null) => {
-              if (!date) return 'No date set';
-              return format(new Date(date), "MMM d, yyyy");
-            };
-            
-            return (
-              <>
-                {goalsLoading ? (
-                  // Show skeleton loaders while loading
-                  <>
-                    {[...Array(3)].map((_, i) => (
-                      <Card key={i} className="animate-pulse">
-                        <CardHeader className="h-20 bg-gray-100"></CardHeader>
-                        <CardContent className="h-24 py-4">
-                          <div className="h-4 bg-gray-100 mb-2 rounded"></div>
-                          <div className="h-4 bg-gray-100 w-3/4 rounded"></div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </>
-                ) : goals.length === 0 ? (
-                  // Show message when no goals exist
-                  <div className="col-span-3 lg:col-span-4">
-                    <Card className="border-dashed border-2">
-                      <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                        <div className="rounded-full bg-muted p-3 mb-3">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
-                            <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
-                          </svg>
-                        </div>
-                        <p className="text-muted-foreground mb-4">You don't have any goals yet</p>
-                        <Link href="/goals">
-                          <span className="inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90">
-                            Create Your First Goal
-                          </span>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  </div>
-                ) : (
-                  // Display the user's goals
-                  <>
-                    {goals.slice(0, 3).map((goal: any) => (
-                      <Card key={goal.id}>
-                        <CardHeader className="pb-4">
-                          <Badge variant={goal.isPublic ? "default" : "outline"}>
-                            {goal.category}
-                          </Badge>
-                          <CardTitle className="mt-2">{goal.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="pb-4">
-                          <div className="mb-4">
-                            <div className="flex justify-between text-sm mb-1">
-                              <span>Progress</span>
-                              <span>
-                                {goal.currentValue} / {goal.targetValue} {goal.metricType}
-                              </span>
-                            </div>
-                            <Progress 
-                              value={calculateProgress(goal.currentValue, goal.targetValue)} 
-                              className="h-2" 
-                            />
-                          </div>
-                          <div className="flex justify-between text-sm text-muted-foreground">
-                            <span>Started: {formatDate(goal.startDate)}</span>
-                            <span>Target: {formatDate(goal.targetDate)}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </>
-                )}
-                
-                {/* Always show the "Add New Goal" card */}
-                <Link href="/goals">
-                  <Card className="border-dashed border-2 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-center h-full">
-                    <CardContent className="flex flex-col items-center justify-center py-10">
-                      <div className="rounded-full bg-primary/10 p-3 mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-                          <circle cx="12" cy="12" r="10" />
-                          <path d="M12 8v8" />
-                          <path d="M8 12h8" />
-                        </svg>
-                      </div>
-                      <p className="text-primary font-medium">Add New Goal</p>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </>
-            );
-          })()}
+          {/* Use regular React patterns instead of IIFE to avoid hook rules violations */}
+          <GoalsDisplay userId={userId} />
         </div>
       </div>
 
@@ -475,6 +611,14 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </Tabs>
+      
+      {/* User Feedback "Suggestions Box" Section */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Your Feedback</h2>
+        </div>
+        <UserFeedbackForm />
+      </div>
     </main>
   );
 }
