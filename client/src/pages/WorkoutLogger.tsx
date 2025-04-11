@@ -201,25 +201,11 @@ export default function WorkoutLogger() {
                       New Template
                     </Button>
                   </div>
-                  <div className="mb-8">
+                  <div>
                     <TemplateSelector 
                       userId={userId}
                       onWorkoutCreated={handleWorkoutCreated} 
                     />
-                  </div>
-                  
-                  <div className="border-t pt-6">
-                    <div className="p-4 flex justify-between items-center border-b">
-                      <h3 className="text-lg font-semibold">Your Workout Templates</h3>
-                      <Button 
-                        size="sm"
-                        onClick={() => document.getElementById('createTemplateButton')?.click()}
-                      >
-                        <Plus className="mr-1 h-4 w-4" />
-                        New Template
-                      </Button>
-                    </div>
-                    <Templates />
                   </div>
                 </div>
               )}

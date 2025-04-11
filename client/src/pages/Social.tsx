@@ -115,11 +115,16 @@ function ActivityFeed() {
       const response = await fetch(`/api/workouts?userId=1`).then(res => res.json());
       
       // Add extra stats to workout data
-      return response.map((workout: Workout) => ({
+      const workoutsWithStats = response.map((workout: Workout) => ({
         ...workout,
         totalExercises: Math.floor(Math.random() * 8) + 1, // Mock data for demo
         volume: Math.floor(Math.random() * 5000) + 500 // Mock data for demo
       })) as WorkoutWithExtraStats[];
+      
+      // Sort by date, newest first
+      return workoutsWithStats.sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
     }
   });
 
