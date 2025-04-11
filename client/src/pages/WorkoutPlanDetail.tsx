@@ -557,6 +557,15 @@ export default function WorkoutPlanDetail() {
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   Purchase Plan
                 </Button>
+                
+                <Button 
+                  className="w-full" 
+                  variant="destructive"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash className="mr-2 h-5 w-5" />
+                  Delete Plan
+                </Button>
 
                 <div className="text-sm text-gray-500 text-center">
                   One-time purchase, lifetime access
@@ -662,6 +671,39 @@ export default function WorkoutPlanDetail() {
                   Processing...
                 </>
               ) : "Complete Purchase"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Workout Plan</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this workout plan? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="flex flex-col gap-2 p-4 border rounded-md bg-gray-50">
+              <span className="font-medium text-lg">{plan.title}</span>
+              <span className="text-sm text-gray-500">{plan.durationWeeks} weeks • {plan.category}</span>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeletePlan} disabled={isDeleting}>
+              {isDeleting ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></div>
+                  Deleting...
+                </>
+              ) : "Delete Plan"}
             </Button>
           </DialogFooter>
         </DialogContent>
