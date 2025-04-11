@@ -194,41 +194,15 @@ export default function WorkoutPlanDetail() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
 
-  const handlePurchase = async () => {
-    try {
-      setIsProcessingPayment(true);
-      
-      // Step 1: Create a payment intent
-      const paymentResponse = await fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: plan.price,
-          planId: plan.id,
-          userId: 1, // Assuming user 1 is logged in
-        })
-      });
-      
-      if (!paymentResponse.ok) {
-        throw new Error('Failed to create payment intent');
-      }
-      
-      const { clientSecret, paymentIntentId } = await paymentResponse.json();
-      setPaymentIntentId(paymentIntentId);
-      
-      // Step 2: Redirect to checkout page with the client secret
-      setLocation(`/checkout?clientSecret=${clientSecret}&planId=${planId}`);
-    } catch (error) {
-      console.error('Payment initialization error:', error);
-      setIsProcessingPayment(false);
-      toast({
-        title: "Payment Failed",
-        description: "There was an issue processing your payment. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const handlePurchase = () => {
+    // Close the purchase dialog if it's open
+    setPurchaseDialogOpen(false);
+    
+    // Reset any payment processing state
+    setIsProcessingPayment(false);
+    
+    // Redirect to the plan checkout page which will handle Stripe integration
+    setLocation(`/plan-checkout?planId=${plan.id}`);
   };
   
   const handleDeletePlan = async () => {
