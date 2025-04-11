@@ -170,17 +170,31 @@ export default function MyPlans() {
   // Publish/unpublish workout plan mutation
   const publishPlanMutation = useMutation({
     mutationFn: async ({ planId, isPublished }: { planId: number, isPublished: boolean }) => {
-      return await apiRequest(`/api/workout-plans/${planId}`, {
-        method: "PUT",
-        body: JSON.stringify({ isPublished })
-      });
+      console.log("Publishing plan with isPublished =", isPublished);
+      // Use the specialized publish endpoint for publishing, and regular update for unpublishing
+      if (isPublished) {
+        return await apiRequest(`/api/workout-plans/${planId}/publish`, {
+          method: "POST",
+          body: JSON.stringify({}) // Empty body since the endpoint knows to set isPublished=true
+        });
+      } else {
+        return await apiRequest(`/api/workout-plans/${planId}`, {
+          method: "PUT",
+          body: JSON.stringify({ isPublished: false })
+        });
+      }
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', 'coach', coachProfile?.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] }); // Also invalidate marketplace plans
+      
+      // Use the mutation variables to determine the action, not the response data
+      // which might not have the updated values yet
+      const isPublishing = variables.isPublished;
+      
       toast({
-        title: data.isPublished ? "Plan published" : "Plan unpublished",
-        description: data.isPublished 
+        title: isPublishing ? "Plan published" : "Plan unpublished",
+        description: isPublishing 
           ? "Your workout plan is now live in the marketplace!" 
           : "Your workout plan has been removed from the marketplace.",
       });
