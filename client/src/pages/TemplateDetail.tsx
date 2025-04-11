@@ -207,9 +207,17 @@ export default function TemplateDetail() {
   const deleteTemplateMutation = useMutation({
     mutationFn: async () => {
       setIsDeleting(true);
-      return await apiRequest(`/api/templates/${templateId}`, {
-        method: 'DELETE'
-      });
+      try {
+        return await apiRequest(`/api/templates/${templateId}`, {
+          method: 'DELETE'
+        });
+      } catch (error: any) {
+        // Check if error is related to foreign key constraint
+        if (error.message && error.message.includes('foreign key constraint')) {
+          throw new Error('This template cannot be deleted because it is being used in workout plans. Remove it from all workout plans first.');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -220,10 +228,10 @@ export default function TemplateDetail() {
       // Navigate back to templates page
       window.location.href = '/workouts?tab=templates';
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: 'Error',
-        description: `Failed to delete template: ${error.message}`,
+        title: 'Cannot Delete Template',
+        description: error.message,
         variant: 'destructive',
       });
       setIsDeleting(false);

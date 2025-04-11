@@ -594,13 +594,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid template ID is required" });
       }
       
-      const deleted = await storage.deleteTemplate(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ message: "Template not found" });
+      try {
+        const deleted = await storage.deleteTemplate(id);
+        
+        if (!deleted) {
+          return res.status(404).json({ message: "Template not found" });
+        }
+        
+        res.status(204).end();
+      } catch (error: any) {
+        // Check if the error is a foreign key constraint violation
+        if (error.code === '23503') {
+          return res.status(400).json({ 
+            message: "This template cannot be deleted because it is being used in workout plans",
+            detail: error.detail
+          });
+        }
+        throw error; // Re-throw for the outer catch block
       }
-      
-      res.status(204).end();
     } catch (error) {
       console.error("Delete template error:", error);
       res.status(500).json({ message: "Internal server error" });
