@@ -1788,6 +1788,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         planTemplates: z.array(z.number()).optional(),
         updatedAt: z.any().optional(), // Allow client to force timestamp updates
       });
+      // CRITICAL: Special handling for publish requests with just isPublished=true
+      if (req.body.isPublished === true && Object.keys(req.body).length === 1) {
+        console.log("PUBLISH UPDATE DETECTED - Direct publish request!");
+        
+        // Get the existing plan first to maintain all other data
+        const existingPlan = await storage.getWorkoutPlan(id);
+        if (!existingPlan) {
+          return res.status(404).json({ message: "Workout plan not found" });
+        }
+        
+        // Only update the isPublished flag
+        const updatedPlan = await storage.updateWorkoutPlan(id, {
+          isPublished: true,
+          updatedAt: new Date()
+        });
+        
+        if (!updatedPlan) {
+          return res.status(500).json({ message: "Failed to publish workout plan" });
+        }
+        
+        return res.status(200).json(updatedPlan);
+      }
       
       // TROUBLESHOOTING: Use safeParse to get detailed error information
       const updateData = updateSchema.safeParse(req.body);
@@ -1893,6 +1915,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dedicated endpoint for publishing workout plans
   app.post("/api/workout-plans/:id/publish", async (req, res) => {
     try {
+      console.log("PUBLISH ENDPOINT TRIGGERED - THIS IS OUR NEW ENDPOINT");
+      
       const id = parseInt(req.params.id);
       
       if (isNaN(id)) {

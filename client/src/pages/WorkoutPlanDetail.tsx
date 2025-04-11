@@ -273,19 +273,19 @@ export default function WorkoutPlanDetail() {
     if (!plan || !plan.id) return;
     
     try {
+      console.log('FINAL FIX - Publish button clicked for plan:', plan.id);
       setIsPublishing(true);
       
-      // CRITICAL FIX: Create a minimal data payload with ONLY 'isPublished' set to true.
-      // This ensures that we're only updating the publishing status directly.
-      const publishData = {
-        isPublished: true
-      };
+      // CRITICAL FIX: Just make a direct PUT call to update isPublished on the plan
+      const publishData = { isPublished: true };
+      console.log('FINAL FIX - Request data:', JSON.stringify(publishData));
       
-      console.log('FIX ATTEMPT - Sending minimal publish request:', publishData);
+      const planId = plan.id;
+      console.log(`FINAL FIX - Making request to /api/workout-plans/${planId}`);
       
-      // Direct API call to publish the plan
-      const response = await fetch(`/api/workout-plans/${plan.id}/publish`, {
-        method: 'POST',
+      // Use PUT method instead of trying with the publish endpoint
+      const response = await fetch(`/api/workout-plans/${planId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
