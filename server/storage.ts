@@ -1689,6 +1689,52 @@ export class MemStorage implements IStorage {
     });
   }
   
+  // User Suggestions operations
+  async getUserSuggestions(): Promise<UserSuggestion[]> {
+    return Array.from(this.userSuggestions.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getUserSuggestion(id: number): Promise<UserSuggestion | undefined> {
+    return this.userSuggestions.get(id);
+  }
+  
+  async createUserSuggestion(insertSuggestion: InsertUserSuggestion): Promise<UserSuggestion> {
+    const id = this.userSuggestionCurrentId++;
+    const now = new Date();
+    
+    const suggestion: UserSuggestion = {
+      ...insertSuggestion,
+      id,
+      status: insertSuggestion.status || 'new',
+      adminNotes: insertSuggestion.adminNotes || null,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.userSuggestions.set(id, suggestion);
+    return suggestion;
+  }
+  
+  async updateUserSuggestionStatus(id: number, status: string, adminNotes?: string): Promise<UserSuggestion | undefined> {
+    const suggestion = this.userSuggestions.get(id);
+    if (!suggestion) return undefined;
+    
+    const updatedSuggestion = {
+      ...suggestion,
+      status,
+      adminNotes: adminNotes !== undefined ? adminNotes : suggestion.adminNotes,
+      updatedAt: new Date()
+    };
+    
+    this.userSuggestions.set(id, updatedSuggestion);
+    return updatedSuggestion;
+  }
+  
+  async deleteUserSuggestion(id: number): Promise<boolean> {
+    return this.userSuggestions.delete(id);
+  }
+  
   // Seed default exercises
   private seedDefaultExercises() {
     const defaultExercises: Omit<Exercise, 'id'>[] = [
