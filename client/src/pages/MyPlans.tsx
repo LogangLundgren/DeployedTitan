@@ -149,6 +149,7 @@ export default function MyPlans() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', 'coach', coachProfile?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] }); // Also invalidate marketplace plans
       toast({
         title: "Plan deleted",
         description: "The workout plan has been deleted successfully."
@@ -174,7 +175,8 @@ export default function MyPlans() {
       });
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', 'coach', userId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', 'coach', coachProfile?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] }); // Also invalidate marketplace plans
       toast({
         title: data.isPublished ? "Plan published" : "Plan unpublished",
         description: data.isPublished 
@@ -248,7 +250,7 @@ export default function MyPlans() {
   const planPurchases = filteredPurchases.filter((p: Purchase) => p.planId !== null);
   const servicePurchases = filteredPurchases.filter((p: Purchase) => p.serviceId !== null);
 
-  const isLoading = isUserLoading || isPurchasesLoading || (user?.isCoach && isCoachPlansLoading);
+  const isLoading = isUserLoading || isPurchasesLoading || (user?.isCoach && (isCoachProfileLoading || isCoachPlansLoading));
 
   return (
     <div className="container mx-auto py-6 px-4 md:px-6">
