@@ -113,7 +113,17 @@ export default function CreatePlan() {
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const userId = 1; // Assuming user 1 is logged in - in a real app, would come from auth context
+  // Fetch the current user
+  const { 
+    data: user, 
+    isLoading: userLoading,
+    error: userError
+  } = useQuery({
+    queryKey: ['/api/user'],
+    queryFn: () => fetch('/api/user').then(res => res.json()),
+  });
+  
+  const userId = user?.id;
 
   // Fetch coach profile
   const { 
@@ -122,7 +132,12 @@ export default function CreatePlan() {
     error: coachProfileError
   } = useQuery({
     queryKey: ['/api/users', userId, 'coach-profile'],
-    queryFn: () => fetch(`/api/users/${userId}/coach-profile`).then(res => res.json()),
+    queryFn: () => {
+      // Only fetch if userId is available
+      if (!userId) return Promise.resolve(null);
+      return fetch(`/api/users/${userId}/coach-profile`).then(res => res.json());
+    },
+    enabled: !!userId, // Only run query when userId exists
   });
 
   // Fetch templates
@@ -131,7 +146,11 @@ export default function CreatePlan() {
     isLoading: templatesLoading
   } = useQuery({
     queryKey: ['/api/templates', { userId }],
-    queryFn: () => fetch(`/api/templates?userId=${userId}`).then(res => res.json()),
+    queryFn: () => {
+      if (!userId) return Promise.resolve([]);
+      return fetch(`/api/templates?userId=${userId}`).then(res => res.json());
+    },
+    enabled: !!userId, // Only run query when userId exists
   });
 
   // Initialize form
@@ -291,13 +310,24 @@ export default function CreatePlan() {
       }
     },
     onSuccess: () => {
+      // Invalidate general workout plans query
       queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] });
+      
+      // Also invalidate coach-specific workout plans query if we have a coach profile
+      if (coachProfile?.id) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['/api/coach-profiles', coachProfile.id, 'workout-plans'] 
+        });
+      }
+      
       toast({
         title: "Workout Plan Created!",
-        description: "Your workout plan has been successfully created and is now available in the marketplace.",
+        description: "Your workout plan has been successfully created and is now available in your My Plans page.",
         variant: "default",
       });
-      setLocation('/marketplace');
+      
+      // Redirect to MyPlans page to see the newly created plan
+      setLocation('/my-plans');
     },
     onError: (error) => {
       console.error('Error creating workout plan:', error);
@@ -367,7 +397,8 @@ export default function CreatePlan() {
     }
   }, [coachProfileError, toast, setLocation]);
 
-  if (coachProfileLoading) {
+  // Show loader if any critical data is loading
+  if (userLoading || (!userError && coachProfileLoading)) {
     return (
       <div className="container mx-auto py-16 text-center">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
