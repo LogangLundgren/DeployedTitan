@@ -2,6 +2,16 @@ import { pgTable, text, serial, integer, boolean, timestamp, real, varchar, pgEn
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Create onboarding step enum
+export const onboardingStepEnum = pgEnum('onboarding_step', [
+  'not_started',
+  'profile_setup',
+  'template_creation',
+  'marketplace_intro',
+  'social_connection',
+  'completed'
+]);
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -21,6 +31,9 @@ export const users = pgTable("users", {
   coachRegistrationDate: timestamp("coach_registration_date"),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  // Onboarding fields
+  onboardingStep: onboardingStepEnum("onboarding_step").default('not_started'),
+  onboardingCompleted: boolean("onboarding_completed").default(false),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -39,6 +52,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   coachRegistrationDate: true,
   stripeCustomerId: true,
   stripeSubscriptionId: true,
+  onboardingStep: true,
+  onboardingCompleted: true,
 });
 
 export const exercises = pgTable("exercises", {

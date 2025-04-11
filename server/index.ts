@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/neon-serverless";
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import ws from 'ws';
 import { configureSession } from "./auth";
+import { runMigrations } from "./migrations";
 
 const app = express();
 app.use(express.json());
@@ -53,6 +54,12 @@ async function initializeDb() {
     neonConfig.webSocketConstructor = ws;
     
     try {
+      // Run migrations first
+      const migrationsSuccess = await runMigrations();
+      if (!migrationsSuccess) {
+        throw new Error('Database migrations failed');
+      }
+      
       // Initialize the database with seed data if needed
       if ('initialize' in storage) {
         await storage.initialize();
