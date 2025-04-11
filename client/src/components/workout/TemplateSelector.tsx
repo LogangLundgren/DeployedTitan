@@ -38,20 +38,25 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
   const { data: templates, isLoading } = useQuery<Template[]>({
     queryKey: ['/api/templates', userId],
     queryFn: async () => {
-      return await apiRequest<Template[]>(`/api/templates?userId=${userId}`);
+      const response = await apiRequest<Template[]>("GET", `/api/templates?userId=${userId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch templates: ${response.statusText}`);
+      }
+      return await response.json();
     }
   });
   
   // Mutation to create a workout from a template
   const createWorkoutMutation = useMutation({
     mutationFn: async ({ templateId, isPublic }: { templateId: number, isPublic: boolean }) => {
-      return await apiRequest<WorkoutWithDetails>(`/api/templates/${templateId}/create-workout`, {
-        method: 'POST',
-        body: JSON.stringify({ userId, isPublic }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+      const response = await apiRequest<WorkoutWithDetails>("POST", `/api/templates/${templateId}/create-workout`, { 
+        userId, 
+        isPublic 
       });
+      if (!response.ok) {
+        throw new Error(`Failed to create workout: ${response.statusText}`);
+      }
+      return await response.json();
     },
     onSuccess: (workout) => {
       toast({

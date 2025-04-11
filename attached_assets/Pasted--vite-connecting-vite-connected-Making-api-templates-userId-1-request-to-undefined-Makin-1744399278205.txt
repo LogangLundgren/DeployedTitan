@@ -1,0 +1,45 @@
+[vite] connecting...
+[vite] connected.
+Making /api/templates?userId=1 request to undefined 
+Making GET request to /api/notifications?userId=1 
+Making GET request to /api/notifications/unread-count?userId=1 
+Failed to execute 'fetch' on 'Window': '/api/templates?userId=1' is not a valid HTTP method.
+at window.fetch (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:218642)
+at apiRequest (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/lib/queryClient.ts:20:10)
+at queryFn (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/components/workout/TemplateSelector.tsx:47:20)
+at Object.fetchFn [as fn] (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:840:14)
+at run (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:494:49)
+at Object.start (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:536:9)
+at _a4.fetch (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:926:41)
+at _a9.executeFetch_fn (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:2211:51)
+at _a9.onSubscribe (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:1898:74)
+at _a9.subscribe (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:24:10)
+User not authenticated
+Making GET request to /api/notifications/unread-count?userId=1 
+Making GET request to /api/notifications?userId=1 
+Making /api/templates?userId=1 request to undefined 
+Failed to execute 'fetch' on 'Window': '/api/templates?userId=1' is not a valid HTTP method.
+at window.fetch (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:218642)
+at apiRequest (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/lib/queryClient.ts:20:10)
+at queryFn (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/components/workout/TemplateSelector.tsx:47:20)
+at Object.fetchFn [as fn] (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:840:14)
+at run (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:494:49)
+at Object.start (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:536:9)
+at _a4.fetch (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:926:41)
+at _a9.executeFetch_fn (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:2211:51)
+at _a9.onSubscribe (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:1898:74)
+at _a9.subscribe (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:24:10)
+Making /api/templates?userId=1 request to undefined 
+Failed to execute 'fetch' on 'Window': '/api/templates?userId=1' is not a valid HTTP method.
+at window.fetch (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:218642)
+at apiRequest (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/lib/queryClient.ts:20:10)
+at queryFn (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/components/workout/TemplateSelector.tsx:47:20)
+at Object.fetchFn [as fn] (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:840:14)
+at run (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:494:49)
+at Object.start (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:536:9)
+at _a4.fetch (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:926:41)
+at _a9.executeFetch_fn (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:2211:51)
+at _a9.onSubscribe (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:1898:74)
+at _a9.subscribe (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:24:10)
+Making GET request to /api/notifications?userId=1 
+Making GET request to /api/notifications/unread-count?userId=1 
