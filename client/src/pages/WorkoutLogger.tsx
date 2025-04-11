@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { WorkoutWithDetails } from "@shared/schema";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import WorkoutForm from "@/components/workout/WorkoutForm";
 import WorkoutHistory from "@/components/workout/WorkoutHistory";
 import TemplateSelector from "@/components/workout/TemplateSelector";
@@ -15,6 +16,26 @@ import {
 import { Clock, FileText, DollarSign, Plus } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import Templates from "./Templates";
 import { useLocation, Link } from "wouter";
 
@@ -193,13 +214,111 @@ export default function WorkoutLogger() {
                 <div>
                   <div className="p-4 flex justify-between items-center border-b">
                     <h3 className="text-lg font-semibold">Your Workout Programs</h3>
-                    <Button 
-                      size="sm"
-                      onClick={() => document.getElementById('createTemplateButton')?.click()}
-                    >
-                      <Plus className="mr-1 h-4 w-4" />
-                      New Template
-                    </Button>
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Plus className="mr-1 h-4 w-4" />
+                          New Template
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Create New Template</DialogTitle>
+                          <DialogDescription>
+                            Create a workout template you can reuse for future workouts.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={(e) => {
+                          e.preventDefault();
+                          const formData = new FormData(e.target as HTMLFormElement);
+                          const name = formData.get('name') as string;
+                          const description = formData.get('description') as string;
+                          const category = formData.get('category') as string;
+                          
+                          // Create the template
+                          fetch('/api/templates', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              name,
+                              description,
+                              category,
+                              userId: 1
+                            }),
+                            credentials: 'include'
+                          })
+                          .then(response => {
+                            if (!response.ok) throw new Error('Failed to create template');
+                            return response.json();
+                          })
+                          .then(data => {
+                            toast({
+                              title: "Template Created",
+                              description: "Your template has been created successfully.",
+                            });
+                            setIsCreateDialogOpen(false);
+                            // Refresh the template selectors
+                            queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+                          })
+                          .catch(error => {
+                            toast({
+                              title: "Error",
+                              description: "Failed to create template. Please try again.",
+                              variant: "destructive"
+                            });
+                            console.error(error);
+                          });
+                        }} 
+                        className="space-y-4"
+                        >
+                          <div className="space-y-2">
+                            <Label htmlFor="name">Template Name</Label>
+                            <Input id="name" name="name" placeholder="e.g., Push Day" required />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="description">Description</Label>
+                            <Textarea 
+                              id="description" 
+                              name="description"
+                              placeholder="Brief description of this template..." 
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="category">Category</Label>
+                            <Select name="category" defaultValue="Strength">
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Strength">Strength</SelectItem>
+                                <SelectItem value="Hypertrophy">Hypertrophy</SelectItem>
+                                <SelectItem value="Endurance">Endurance</SelectItem>
+                                <SelectItem value="HIIT">HIIT</SelectItem>
+                                <SelectItem value="Cardio">Cardio</SelectItem>
+                                <SelectItem value="Flexibility">Flexibility</SelectItem>
+                                <SelectItem value="Recovery">Recovery</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <DialogFooter>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={() => setIsCreateDialogOpen(false)}
+                            >
+                              Cancel
+                            </Button>
+                            <Button type="submit">
+                              Create Template
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                   <div>
                     <TemplateSelector 
