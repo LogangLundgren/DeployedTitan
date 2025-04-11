@@ -161,8 +161,9 @@ export default function MyPlans() {
   // Publish/unpublish workout plan mutation
   const publishPlanMutation = useMutation({
     mutationFn: async ({ planId, isPublished }: { planId: number, isPublished: boolean }) => {
-      return await apiRequest("PUT", `/api/workout-plans/${planId}`, {
-        isPublished
+      return await apiRequest(`/api/workout-plans/${planId}`, {
+        method: "PUT",
+        body: JSON.stringify({ isPublished })
       });
     },
     onSuccess: (data) => {
@@ -381,37 +382,72 @@ export default function MyPlans() {
                         <StarRating rating={plan.rating} />
                       </CardContent>
                       <Separator />
-                      <CardFooter className="pt-4 pb-4 flex justify-between items-center">
-                        <div className="flex gap-2">
+                      <CardFooter className="pt-4 pb-4 flex flex-col gap-3">
+                        <div className="flex w-full justify-between items-center">
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => setLocation(`/edit-plan/${plan.id}`)}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                              onClick={() => {
+                                setPlanToDelete(plan);
+                                setConfirmDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
                           <Button 
-                            variant="ghost" 
+                            variant="default" 
                             size="sm" 
-                            onClick={() => setLocation(`/edit-plan/${plan.id}`)}
+                            onClick={() => setLocation(`/workout-plan/${plan.id}`)}
                           >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                            onClick={() => {
-                              setPlanToDelete(plan);
-                              setConfirmDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
+                            View Details
+                            <ChevronRight className="ml-1 h-4 w-4" />
                           </Button>
                         </div>
-                        <Button 
-                          variant="default" 
-                          size="sm" 
-                          onClick={() => setLocation(`/workout-plan/${plan.id}`)}
-                        >
-                          View Details
-                          <ChevronRight className="ml-1 h-4 w-4" />
-                        </Button>
+                        <div className="w-full">
+                          <Button 
+                            variant={plan.isPublished ? "outline" : "default"}
+                            size="sm"
+                            className={`w-full ${plan.isPublished ? 'border-red-500 text-red-500 hover:bg-red-50' : 'bg-green-500 hover:bg-green-600'}`}
+                            onClick={() => publishPlanMutation.mutate({ 
+                              planId: plan.id, 
+                              isPublished: !plan.isPublished 
+                            })}
+                            disabled={publishPlanMutation.isPending}
+                          >
+                            {publishPlanMutation.isPending ? (
+                              <>
+                                <div className="h-4 w-4 mr-1 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                {plan.isPublished ? 'Unpublishing...' : 'Publishing...'}
+                              </>
+                            ) : (
+                              <>
+                                {plan.isPublished ? (
+                                  <>
+                                    <AlertTriangle className="h-4 w-4 mr-1" />
+                                    Unpublish Plan
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronRight className="h-4 w-4 mr-1" />
+                                    Publish to Marketplace
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </CardFooter>
                     </Card>
                   ))}
