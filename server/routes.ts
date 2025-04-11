@@ -3117,6 +3117,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Endpoint to initialize a checkout for a workout plan
+  app.post("/api/init-plan-checkout", async (req, res) => {
+    try {
+      const { planId } = req.body;
+      
+      if (!planId) {
+        return res.status(400).json({ message: "Plan ID is required" });
+      }
+      
+      const plan = await storage.getWorkoutPlan(parseInt(planId));
+      
+      if (!plan) {
+        return res.status(404).json({ message: "Workout plan not found" });
+      }
+      
+      // Get the current authenticated user
+      const userId = req.isAuthenticated() ? req.user.id : null;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User must be logged in to purchase plans" });
+      }
+      
+      // Create a payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(plan.price * 100), // Convert to cents
+        currency: "usd",
+        metadata: {
+          planId: planId.toString(),
+          userId: userId.toString(),
+          planTitle: plan.title
+        }
+      });
+      
+      res.status(200).json({ 
+        clientSecret: paymentIntent.client_secret,
+        planTitle: plan.title,
+        planPrice: plan.price,
+        paymentIntentId: paymentIntent.id 
+      });
+    } catch (error: any) {
+      console.error("Error initializing plan checkout:", error);
+      res.status(500).json({ 
+        message: "Failed to initialize checkout", 
+        error: error.message 
+      });
+    }
+  });
+  
   // User Suggestions routes
   app.get("/api/user-suggestions", async (req, res) => {
     try {
