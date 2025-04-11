@@ -57,6 +57,7 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
   const [workoutToDelete, setWorkoutToDelete] = useState<WorkoutWithDetails | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { deleteWorkout, isDeleting } = useWorkoutDelete();
   
   const { 
     data: workouts, 
@@ -97,28 +98,14 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
   async function handleDeleteWorkout() {
     if (!workoutToDelete) return;
     
-    try {
-      await apiRequest(`/api/workouts/${workoutToDelete.id}`, {
-        method: 'DELETE'
-      });
-      
-      toast({
-        title: "Workout deleted",
-        description: `Successfully deleted "${workoutToDelete.name}"`,
-      });
-      
-      refetch();
-    } catch (error) {
-      console.error('Error deleting workout:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete workout. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setWorkoutToDelete(null);
-      setIsDeleteDialogOpen(false);
+    const success = await deleteWorkout(workoutToDelete);
+    if (success) {
+      refetch(); // Refresh the workout list in this component
     }
+    
+    // Always close the dialog and reset state
+    setWorkoutToDelete(null);
+    setIsDeleteDialogOpen(false);
   }
   
   // Filter workouts by search term and category

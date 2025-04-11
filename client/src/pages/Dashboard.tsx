@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { WorkoutWithDetails, Exercise } from "@shared/schema";
 import PersonalRecords from "@/components/workout/PersonalRecords";
 import MonthlyComparison from "@/components/workout/MonthlyComparison";

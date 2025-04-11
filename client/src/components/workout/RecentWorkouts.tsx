@@ -4,7 +4,7 @@ import { WorkoutWithDetails } from "@shared/schema";
 import { Link, useLocation } from "wouter";
 import { Trash, MoreHorizontal, Calendar, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { useWorkoutDelete } from "@/hooks/use-workout";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,41 +30,23 @@ interface RecentWorkoutsProps {
 export default function RecentWorkouts({ workouts, isLoading, onDelete }: RecentWorkoutsProps) {
   const [workoutToDelete, setWorkoutToDelete] = useState<WorkoutWithDetails | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { deleteWorkout, isDeleting } = useWorkoutDelete();
   
   const handleDeleteWorkout = async () => {
     if (!workoutToDelete) return;
     
-    try {
-      setIsDeleting(true);
-      
-      await apiRequest(`/api/workouts/${workoutToDelete.id}`, {
-        method: 'DELETE'
-      });
-      
-      toast({
-        title: "Workout deleted",
-        description: `Successfully deleted "${workoutToDelete.name}"`,
-      });
-      
+    const success = await deleteWorkout(workoutToDelete);
+    
+    if (success && onDelete) {
       // Call the onDelete callback to refresh the workout list
-      if (onDelete) {
-        onDelete();
-      }
-    } catch (error) {
-      console.error('Error deleting workout:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete workout. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setWorkoutToDelete(null);
-      setIsDeleteDialogOpen(false);
-      setIsDeleting(false);
+      onDelete();
     }
+    
+    // Always close the dialog and reset state
+    setWorkoutToDelete(null);
+    setIsDeleteDialogOpen(false);
   };
   if (isLoading) {
     return (
