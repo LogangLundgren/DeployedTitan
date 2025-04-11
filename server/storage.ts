@@ -126,6 +126,7 @@ export interface IStorage {
   getWorkoutPlan(id: number): Promise<WorkoutPlan | undefined>;
   checkWorkoutPlanExists(id: number): Promise<boolean>;
   getWorkoutPlans(coachId?: number, publishedOnly?: boolean): Promise<WorkoutPlan[]>;
+  getAllWorkoutPlans(): Promise<WorkoutPlan[]>;
   createWorkoutPlan(plan: InsertWorkoutPlan): Promise<WorkoutPlan>;
   updateWorkoutPlan(id: number, plan: Partial<WorkoutPlan>): Promise<WorkoutPlan | undefined>;
   deleteWorkoutPlan(id: number): Promise<boolean>;
@@ -1178,6 +1179,12 @@ export class MemStorage implements IStorage {
       plans = plans.filter(plan => plan.isPublished === true);
     }
     
+    return plans.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getAllWorkoutPlans(): Promise<WorkoutPlan[]> {
+    // Return all workout plans, regardless of publication status
+    const plans = Array.from(this.workoutPlans.values());
     return plans.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
   
