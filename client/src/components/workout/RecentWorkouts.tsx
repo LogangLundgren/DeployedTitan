@@ -1,13 +1,71 @@
+import { useState } from "react";
 import { format } from "date-fns";
 import { WorkoutWithDetails } from "@shared/schema";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { Trash, MoreHorizontal, Calendar, ExternalLink } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface RecentWorkoutsProps {
   workouts: WorkoutWithDetails[];
   isLoading: boolean;
+  onDelete?: () => void;
 }
 
-export default function RecentWorkouts({ workouts, isLoading }: RecentWorkoutsProps) {
+export default function RecentWorkouts({ workouts, isLoading, onDelete }: RecentWorkoutsProps) {
+  const [workoutToDelete, setWorkoutToDelete] = useState<WorkoutWithDetails | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  
+  const handleDeleteWorkout = async () => {
+    if (!workoutToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      await apiRequest(`/api/workouts/${workoutToDelete.id}`, {
+        method: 'DELETE'
+      });
+      
+      toast({
+        title: "Workout deleted",
+        description: `Successfully deleted "${workoutToDelete.name}"`,
+      });
+      
+      // Call the onDelete callback to refresh the workout list
+      if (onDelete) {
+        onDelete();
+      }
+    } catch (error) {
+      console.error('Error deleting workout:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete workout. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setWorkoutToDelete(null);
+      setIsDeleteDialogOpen(false);
+      setIsDeleting(false);
+    }
+  };
   if (isLoading) {
     return (
       <div>
@@ -90,32 +148,65 @@ export default function RecentWorkouts({ workouts, isLoading }: RecentWorkoutsPr
           }
           
           return (
-            <div key={workout.id} className="cursor-pointer" onClick={() => window.location.href = `/workouts/${workout.id}`}>
+            <div key={workout.id}>
               <div className="group bg-white rounded-lg shadow-sm p-5 hover:shadow-md transition-all duration-200 border border-transparent hover:border-gray-100">
                 <div className="flex justify-between items-start mb-4">
-                  <div>
+                  <div 
+                    className="cursor-pointer" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLocation(`/workouts/${workout.id}`);
+                    }}
+                  >
                     <h4 className="font-semibold text-gray-800 group-hover:text-primary transition-colors">{workout.name}</h4>
                     <div className="flex items-center gap-2 mt-1">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                      </svg>
+                      <Calendar className="h-4 w-4 text-gray-400" />
                       <p className="text-sm text-gray-500">
                         {dateDisplay}
                       </p>
                     </div>
                   </div>
-                  <span className={`
-                    px-2 py-1 rounded-full text-xs font-medium
-                    ${workout.category === 'Strength' ? 'bg-orange-500/10 text-orange-600' : 
-                      workout.category === 'Hypertrophy' ? 'bg-green-500/10 text-green-600' : 
-                      workout.category === 'HIIT' ? 'bg-yellow-500/10 text-yellow-600' : 
-                      'bg-primary/10 text-primary'}
-                  `}>
-                    {workout.category || 'Workout'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`
+                      px-2 py-1 rounded-full text-xs font-medium
+                      ${workout.category === 'Strength' ? 'bg-orange-500/10 text-orange-600' : 
+                        workout.category === 'Hypertrophy' ? 'bg-green-500/10 text-green-600' : 
+                        workout.category === 'HIIT' ? 'bg-yellow-500/10 text-yellow-600' : 
+                        'bg-primary/10 text-primary'}
+                    `}>
+                      {workout.category || 'Workout'}
+                    </span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-[160px]">
+                        <DropdownMenuItem 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLocation(`/workouts/${workout.id}`);
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setWorkoutToDelete(workout);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-3 gap-2 mt-2 bg-gray-50 p-3 rounded-md">
@@ -168,6 +259,41 @@ export default function RecentWorkouts({ workouts, isLoading }: RecentWorkoutsPr
           );
         })}
       </div>
+      
+      {/* Delete confirmation dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Workout</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{workoutToDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteWorkout}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  Deleting...
+                </>
+              ) : (
+                <>Delete</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
