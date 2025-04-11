@@ -200,15 +200,37 @@ export default function CreatePlan() {
   const createPlanMutation = useMutation({
     mutationFn: async (data: any) => {
       try {
-        // First create the workout plan
-        const planResponse = await apiRequest('POST', '/api/workout-plans', data.plan);
+        // First create the workout plan using fetch directly for better error handling
+        const planResponse = await fetch('/api/workout-plans', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data.plan)
+        });
         
         if (!planResponse.ok) {
-          const errorData = await planResponse.json();
-          throw new Error(errorData.message || 'Failed to create workout plan');
+          let errorMessage = `Failed to create workout plan (${planResponse.status})`;
+          try {
+            const errorData = await planResponse.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            console.error('Could not parse error response:', e);
+          }
+          throw new Error(errorMessage);
         }
         
-        const planData = await planResponse.json();
+        let planData;
+        try {
+          planData = await planResponse.json();
+        } catch (e) {
+          console.error('Error parsing plan response:', e);
+          throw new Error('Invalid response from server when creating plan');
+        }
+        
+        if (!planData || !planData.id) {
+          throw new Error('Server returned invalid plan data');
+        }
         
         // Now add the templates to the plan
         const templateErrors = [];
@@ -220,8 +242,8 @@ export default function CreatePlan() {
               const weekNumber = Math.floor(i / 7) + 1;
               const dayNumber = (i % 7) + 1;
               
-              // Use fetch directly to get more details on errors
-              const response = await fetch(`/api/plan-templates`, {
+              // Use fetch directly for better error handling
+              const response = await fetch('/api/plan-templates', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -237,14 +259,19 @@ export default function CreatePlan() {
               });
               
               if (!response.ok) {
-                const errorText = await response.text(); // Get raw response
-                console.error(`Error adding template ${templateId}:`, errorText);
+                let errorMessage = `Server error (${response.status})`;
                 try {
-                  const errorData = JSON.parse(errorText);
-                  templateErrors.push(`Template ${templateId}: ${errorData.message || 'Unknown error'}`);
+                  const errorText = await response.text();
+                  console.error(`Error adding template ${templateId}:`, errorText);
+                  
+                  if (errorText && errorText.startsWith('{')) {
+                    const errorData = JSON.parse(errorText);
+                    errorMessage = errorData.message || errorMessage;
+                  }
                 } catch (e) {
-                  templateErrors.push(`Template ${templateId}: Server error - ${response.status} ${response.statusText}`);
+                  console.error('Error parsing template error:', e);
                 }
+                templateErrors.push(`Template ${templateId}: ${errorMessage}`);
               }
             } catch (error) {
               console.error(`Error adding template at index ${i}:`, error);
