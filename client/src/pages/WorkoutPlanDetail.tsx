@@ -281,7 +281,6 @@ export default function WorkoutPlanDetail() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...plan,
           isPublished: true
         })
       });
