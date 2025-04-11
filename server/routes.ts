@@ -851,12 +851,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Notification routes
-  app.get("/api/notifications", async (req, res) => {
+  app.get("/api/notifications", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = parseInt(req.query.userId as string);
+      // Get user ID from session instead of query parameter
+      const userId = req.session.userId;
       
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       const notifications = await storage.getNotifications(userId);
@@ -868,12 +869,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/notifications/unread-count", async (req, res) => {
+  app.get("/api/notifications/unread-count", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = parseInt(req.query.userId as string);
+      // Get user ID from session instead of query parameter
+      const userId = req.session.userId;
       
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       const count = await storage.getUnreadNotificationsCount(userId);
@@ -902,33 +904,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/notifications/:id/mark-read", async (req, res) => {
+  app.patch("/api/notifications/:id/mark-read", requireAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.session.userId;
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Valid notification ID is required" });
       }
       
-      const notification = await storage.markNotificationAsRead(id);
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // First, verify the notification belongs to this user
+      const notification = await storage.getNotification(id);
       
       if (!notification) {
         return res.status(404).json({ message: "Notification not found" });
       }
       
-      res.status(200).json(notification);
+      if (notification.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updatedNotification = await storage.markNotificationAsRead(id);
+      
+      res.status(200).json(updatedNotification);
     } catch (error) {
       console.error("Mark notification as read error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
   
-  app.patch("/api/notifications/mark-all-read", async (req, res) => {
+  app.patch("/api/notifications/mark-all-read", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = parseInt(req.body.userId as string);
+      // Get user ID from session instead of request body
+      const userId = req.session.userId;
       
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       const success = await storage.markAllNotificationsAsRead(userId);
