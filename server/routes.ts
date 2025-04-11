@@ -8,7 +8,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required environment variable: STRIPE_SECRET_KEY');
 }
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
+  apiVersion: "2025-03-31.basil",
 });
 import { 
   insertUserSchema, 
@@ -64,8 +64,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid username or password" });
       }
       
-      // In a real app, you would use sessions or JWT here
-      // For simplicity, just return the user without the password
+      // Create a simple authentication cookie
+      res.cookie('userId', user.id.toString(), {
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/',
+        sameSite: 'lax'
+      });
+      
+      // Return the user data without password
       const { password: _, ...userWithoutPassword } = user;
       
       res.status(200).json(userWithoutPassword);
@@ -3119,29 +3126,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Endpoint to initialize a checkout for a workout plan
   // Authentication endpoints
-  app.get("/api/auth/status", (req: Request, res: Response) => {
-    // For now, we'll use a hardcoded user for testing
-    // In a production app, this would check session/cookie
-    // and return the real authenticated user
-    const mockUser = {
-      id: 1,
-      username: "Logan Lundgren",
-      isLoggedIn: true
-    };
-    
-    res.status(200).json(mockUser);
+  app.get("/api/auth/status", async (req: Request, res: Response) => {
+    try {
+      // Get userId from cookie
+      const userId = req.cookies?.userId;
+      
+      if (!userId) {
+        return res.status(200).json({ isLoggedIn: false });
+      }
+      
+      const user = await storage.getUser(parseInt(userId));
+      
+      if (!user) {
+        return res.status(200).json({ isLoggedIn: false });
+      }
+      
+      // Return minimal user info
+      res.status(200).json({
+        id: user.id,
+        username: user.username,
+        isLoggedIn: true
+      });
+    } catch (error) {
+      console.error("Auth status error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
   
-  // Add the /api/user endpoint that will use our simplified auth system
-  app.get("/api/user", async (req: Request, res: Response) => {
-    // For now, return the fixed user for our test
+  // Logout endpoint to clear the authentication cookie
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
     try {
-      const user = await storage.getUser(1);
+      // Clear the authentication cookie
+      res.clearCookie('userId', {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax'
+      });
+      
+      res.status(200).json({ message: "Logged out successfully" });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // /api/user endpoint gets the full user data for the authenticated user
+  app.get("/api/user", async (req: Request, res: Response) => {
+    try {
+      // Get userId from cookie
+      const userId = req.cookies?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const user = await storage.getUser(parseInt(userId));
+      
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      console.log("GET /api/user returning:", user);
-      return res.status(200).json(user);
+      
+      // Return user data without password
+      const { password: _, ...userWithoutPassword } = user;
+      
+      // Parse socialMedia if it exists
+      const userResponse = {
+        ...userWithoutPassword,
+        socialMedia: userWithoutPassword.socialMedia ? JSON.parse(userWithoutPassword.socialMedia) : null
+      };
+      
+      console.log("GET /api/user returning:", userResponse);
+      return res.status(200).json(userResponse);
     } catch (error) {
       console.error("Error fetching user:", error);
       return res.status(500).json({ message: "Internal server error" });
@@ -3152,10 +3207,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("CHECKOUT DEBUG - Request body:", req.body);
       
-      // For now, we'll always use the default user (Logan)
-      // In a real app, this would be the authenticated user from session
-      const userId = 1; // Fixed for testing
-      console.log("CHECKOUT DEBUG - Using fixed user ID:", userId);
+      // Get userId from cookie
+      const userIdCookie = req.cookies?.userId;
+      
+      if (!userIdCookie) {
+        console.log("CHECKOUT DEBUG - User not authenticated");
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const userId = parseInt(userIdCookie);
+      console.log("CHECKOUT DEBUG - Using authenticated user ID:", userId);
       
       const { planId } = req.body;
       
