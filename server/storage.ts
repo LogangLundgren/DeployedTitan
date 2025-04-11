@@ -124,7 +124,7 @@ export interface IStorage {
   
   // Workout Plan operations
   getWorkoutPlan(id: number): Promise<WorkoutPlan | undefined>;
-  getWorkoutPlans(coachId: number): Promise<WorkoutPlan[]>;
+  getWorkoutPlans(coachId?: number, publishedOnly?: boolean): Promise<WorkoutPlan[]>;
   createWorkoutPlan(plan: InsertWorkoutPlan): Promise<WorkoutPlan>;
   updateWorkoutPlan(id: number, plan: Partial<WorkoutPlan>): Promise<WorkoutPlan | undefined>;
   deleteWorkoutPlan(id: number): Promise<boolean>;
@@ -1166,10 +1166,18 @@ export class MemStorage implements IStorage {
   }
   
   // Workout Plan operations
-  async getWorkoutPlans(coachId: number): Promise<WorkoutPlan[]> {
-    return Array.from(this.workoutPlans.values())
-      .filter(plan => plan.coachId === coachId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  async getWorkoutPlans(coachId?: number, publishedOnly: boolean = false): Promise<WorkoutPlan[]> {
+    let plans = Array.from(this.workoutPlans.values());
+    
+    if (coachId) {
+      plans = plans.filter(plan => plan.coachId === coachId);
+    }
+    
+    if (publishedOnly && (!coachId || coachId === undefined)) {
+      plans = plans.filter(plan => plan.isPublished === true);
+    }
+    
+    return plans.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
   
   async getWorkoutPlan(id: number): Promise<WorkoutPlan | undefined> {
@@ -1784,21 +1792,22 @@ export class DbStorage implements IStorage {
   }
   
   // Workout Plan operations
-  async getWorkoutPlans(coachId?: number): Promise<WorkoutPlan[]> {
+  async getWorkoutPlans(coachId?: number, publishedOnly: boolean = false): Promise<WorkoutPlan[]> {
     try {
       let query = db.select().from(workoutPlans);
       
       if (coachId) {
         query = query.where(eq(workoutPlans.coachId, coachId));
-      } else {
-        // When not filtered by coach, return only published plans
-        const publishedPlans = await query
-          .orderBy(desc(workoutPlans.createdAt));
-        
-        return publishedPlans.filter(plan => plan.isPublished === true);
       }
       
-      return await query.orderBy(desc(workoutPlans.createdAt));
+      const plans = await query.orderBy(desc(workoutPlans.createdAt));
+      
+      // Apply publishedOnly filter if needed
+      if (publishedOnly && (!coachId || coachId === undefined)) {
+        return plans.filter(plan => plan.isPublished === true);
+      }
+      
+      return plans;
     } catch (error) {
       console.error("Error getting workout plans:", error);
       return [];

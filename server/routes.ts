@@ -1611,8 +1611,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let plans;
       
       if (coachId) {
-        // When viewing as a coach, show all plans
-        plans = await storage.getWorkoutPlans(coachId);
+        // When viewing as a coach, show all plans (both published and unpublished)
+        plans = await storage.getWorkoutPlans(coachId, publishedOnly);
       } else if (userId) {
         // When viewing purchased plans, show all
         plans = await storage.getPurchasedWorkoutPlans(userId);
