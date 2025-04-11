@@ -42,9 +42,9 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { apiRequest } from "@/lib/queryClient";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkoutDelete } from "@/hooks/use-workout";
 
 interface WorkoutHistoryProps {
   userId: number;
