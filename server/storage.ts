@@ -1839,11 +1839,25 @@ export class DbStorage implements IStorage {
   
   async updateWorkoutPlan(id: number, planUpdate: Partial<WorkoutPlan>): Promise<WorkoutPlan | undefined> {
     try {
+      console.log("Updating workout plan with ID:", id);
+      console.log("Update data:", planUpdate);
+      
+      // First check if the plan exists
+      const existingPlan = await this.getWorkoutPlan(id);
+      console.log("Existing plan:", existingPlan);
+      
+      if (!existingPlan) {
+        console.log("Plan not found with ID:", id);
+        return undefined;
+      }
+      
       const result = await db
         .update(workoutPlans)
         .set(planUpdate)
         .where(eq(workoutPlans.id, id))
         .returning();
+      
+      console.log("Update result:", result);
       return result[0];
     } catch (error) {
       console.error("Error updating workout plan:", error);

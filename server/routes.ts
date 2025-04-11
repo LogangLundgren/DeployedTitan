@@ -1746,6 +1746,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid workout plan ID is required" });
       }
       
+      console.log("Updating workout plan with ID:", id);
+      console.log("Request body:", req.body);
+      
       const updateSchema = z.object({
         title: z.string().optional(),
         description: z.string().optional(),
