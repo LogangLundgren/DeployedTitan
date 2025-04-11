@@ -93,6 +93,8 @@ export default function TemplateDetail() {
   const [isAddExerciseDialogOpen, setIsAddExerciseDialogOpen] = useState(false);
   const [isEditExerciseDialogOpen, setIsEditExerciseDialogOpen] = useState(false);
   const [isDeleteExerciseDialogOpen, setIsDeleteExerciseDialogOpen] = useState(false);
+  const [isDeleteTemplateDialogOpen, setIsDeleteTemplateDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<TemplateExercise | null>(null);
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
   const [reordering, setReordering] = useState(false);
@@ -198,6 +200,37 @@ export default function TemplateDetail() {
         description: `Failed to remove exercise: ${error.message}`,
         variant: 'destructive',
       });
+    }
+  });
+  
+  // Delete template mutation
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async () => {
+      setIsDeleting(true);
+      return await apiRequest(`/api/templates/${templateId}`, {
+        method: 'DELETE'
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Template deleted',
+        description: 'The workout template has been deleted successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+      // Navigate back to templates page
+      window.location.href = '/workouts?tab=templates';
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to delete template: ${error.message}`,
+        variant: 'destructive',
+      });
+      setIsDeleting(false);
+    },
+    onSettled: () => {
+      setIsDeleteTemplateDialogOpen(false);
+      setIsDeleting(false);
     }
   });
 
@@ -324,12 +357,22 @@ export default function TemplateDetail() {
 
   return (
     <div className="container mx-auto py-6">
-      <Link href="/workouts?tab=templates">
-        <Button variant="ghost" className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Templates
+      <div className="flex justify-between mb-4">
+        <Link href="/workouts?tab=templates">
+          <Button variant="ghost">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Templates
+          </Button>
+        </Link>
+        <Button 
+          variant="destructive" 
+          onClick={() => setIsDeleteTemplateDialogOpen(true)}
+          disabled={isDeleting}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete Template
         </Button>
-      </Link>
+      </div>
 
       {isLoadingTemplate ? (
         <div className="flex justify-center items-center py-12">
