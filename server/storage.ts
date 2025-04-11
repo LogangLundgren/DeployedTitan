@@ -269,8 +269,63 @@ export class MemStorage implements IStorage {
     this.reviewCurrentId = 1;
     this.userSuggestionCurrentId = 1;
     
+    // Seed initial users
+    this.seedDefaultUsers();
+    
     // Add some default exercises
     this.seedDefaultExercises();
+  }
+  
+  // This method seeds the default users
+  private seedDefaultUsers(): void {
+    // Add Logan Lundgren (default user)
+    const user1 = { 
+      id: 1,
+      username: "Logan Lundgren",
+      password: "password",
+      name: "Logan Lundgren",
+      email: "logan@example.com",
+      bio: "Fitness enthusiast and programmer",
+      location: "Austin, TX",
+      fitnessLevel: "Advanced",
+      experienceYears: 5,
+      goals: "Hit 405lb bench press",
+      certifications: "ACE-CPT",
+      socialMedia: JSON.stringify({
+        instagram: "loganlundgren",
+        twitter: "loganlundgren",
+        facebook: "loganlundgren"
+      }),
+      isCoach: false,
+      coachRegistrationDate: null,
+      stripeCustomerId: null,
+      stripeSubscriptionId: null
+    };
+    
+    // Add Jennifer Keller (coach)
+    const user2 = {
+      id: 2,
+      username: "Jennifer Keller",
+      password: "password",
+      name: "Jennifer Keller",
+      email: "jennifer@example.com",
+      bio: "Marathon runner and nutrition coach",
+      location: "Seattle, WA",
+      fitnessLevel: "Expert",
+      experienceYears: 8,
+      goals: "Complete an ultramarathon",
+      certifications: "NASM-CPT, NASM-CNC",
+      socialMedia: null,
+      isCoach: true,
+      coachRegistrationDate: new Date(),
+      stripeCustomerId: null,
+      stripeSubscriptionId: null
+    };
+    
+    this.users.set(1, user1);
+    this.users.set(2, user2);
+    
+    console.log("Default users seeded:", this.users.size);
   }
 
   // User methods

@@ -3133,13 +3133,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Add the /api/user endpoint that will use our simplified auth system
-  app.get("/api/user", (req: Request, res: Response) => {
+  app.get("/api/user", async (req: Request, res: Response) => {
     // For now, return the fixed user for our test
-    const user = storage.getUser(1);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    try {
+      const user = await storage.getUser(1);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      console.log("GET /api/user returning:", user);
+      return res.status(200).json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      return res.status(500).json({ message: "Internal server error" });
     }
-    res.status(200).json(user);
   });
   
   app.post("/api/init-plan-checkout", async (req: Request, res: Response) => {
