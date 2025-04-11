@@ -138,13 +138,29 @@ export default function Templates() {
   // Query to get templates
   const { data: templates, isLoading: isLoadingTemplates } = useQuery<Template[]>({
     queryKey: ['/api/templates', DEMO_USER_ID],
-    queryFn: () => apiRequest('GET', `/api/templates?userId=${DEMO_USER_ID}`).then(res => res.json())
+    queryFn: async () => {
+      const response = await fetch(`/api/templates?userId=${DEMO_USER_ID}`, {
+        credentials: 'include'
+      });
+      return await response.json();
+    }
   });
 
   // Mutation to create template
   const createTemplateMutation = useMutation({
     mutationFn: async (values: TemplateFormValues) => { 
-      const res = await apiRequest('POST', '/api/templates', values);
+      const res = await fetch('/api/templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText);
+      }
       return await res.json();
     },
     onSuccess: () => {
@@ -169,7 +185,18 @@ export default function Templates() {
   const updateTemplateMutation = useMutation({
     mutationFn: async (values: TemplateFormValues & { id: number }) => {
       const { id, ...rest } = values;
-      const res = await apiRequest('PATCH', `/api/templates/${id}`, rest);
+      const res = await fetch(`/api/templates/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(rest),
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText);
+      }
       return await res.json();
     },
     onSuccess: () => {
@@ -192,7 +219,14 @@ export default function Templates() {
   // Mutation to delete template
   const deleteTemplateMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/templates/${id}`);
+      const res = await fetch(`/api/templates/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/templates', DEMO_USER_ID] });
@@ -214,7 +248,18 @@ export default function Templates() {
   // Mutation to create a workout from a template
   const createWorkoutFromTemplateMutation = useMutation({
     mutationFn: async (templateId: number) => {
-      const res = await apiRequest('POST', '/api/workouts/from-template', { templateId, userId: DEMO_USER_ID });
+      const res = await fetch('/api/workouts/from-template', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ templateId, userId: DEMO_USER_ID }),
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText);
+      }
       return await res.json();
     },
     onSuccess: (workout: WorkoutWithDetails) => {
