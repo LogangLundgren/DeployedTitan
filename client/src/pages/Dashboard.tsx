@@ -166,7 +166,7 @@ export default function Dashboard() {
         <p className="text-gray-500">Welcome to your fitness dashboard</p>
       </div>
       
-      {/* Goals Section - moved from Goals.tsx */}
+      {/* Goals Section - using real data from API */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Your Goals</h2>
@@ -183,82 +183,110 @@ export default function Dashboard() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {/* This is a simplified version of the Goals component */}
-          {/* We'll just show a few sample goals for now */}
-          <Card>
-            <CardHeader className="pb-4">
-              <Badge variant="default">Strength</Badge>
-              <CardTitle className="mt-2">Bench Press 200 lbs</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-4">
-              <div className="mb-4">
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Progress</span>
-                  <span>175 / 200 lbs</span>
-                </div>
-                <Progress value={87.5} className="h-2" />
-              </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Started: Apr 1, 2025</span>
-                <span>Target: Jun 15, 2025</span>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-4">
-              <Badge variant="secondary">Endurance</Badge>
-              <CardTitle className="mt-2">Run 10K under 50 min</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-4">
-              <div className="mb-4">
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Progress</span>
-                  <span>55 / 50 min</span>
-                </div>
-                <Progress value={90} className="h-2" />
-              </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Started: Mar 15, 2025</span>
-                <span>Target: May 20, 2025</span>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-4">
-              <Badge variant="outline">Flexibility</Badge>
-              <CardTitle className="mt-2">Touch toes for 30 sec</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-4">
-              <div className="mb-4">
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Progress</span>
-                  <span>20 / 30 sec</span>
-                </div>
-                <Progress value={66.6} className="h-2" />
-              </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Started: Apr 5, 2025</span>
-                <span>Target: May 5, 2025</span>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Link href="/goals">
-            <Card className="border-dashed border-2 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-center h-full">
-              <CardContent className="flex flex-col items-center justify-center py-10">
-                <div className="rounded-full bg-primary/10 p-3 mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 8v8" />
-                    <path d="M8 12h8" />
-                  </svg>
-                </div>
-                <p className="text-primary font-medium">Add New Goal</p>
-              </CardContent>
-            </Card>
-          </Link>
+          {/* Fetch real goals from API */}
+          {(() => {
+            const { data: goals = [], isLoading: goalsLoading } = useQuery({
+              queryKey: ['/api/goals', userId],
+              queryFn: () => fetch(`/api/goals?userId=${userId}`).then(res => res.json()),
+            });
+            
+            // Helper function to calculate progress percentage
+            const calculateProgress = (current: number, target: number) => {
+              return Math.min(Math.round((current / target) * 100), 100);
+            };
+            
+            // Helper function to format dates
+            const formatDate = (date: Date | string | null) => {
+              if (!date) return 'No date set';
+              return format(new Date(date), "MMM d, yyyy");
+            };
+            
+            return (
+              <>
+                {goalsLoading ? (
+                  // Show skeleton loaders while loading
+                  <>
+                    {[...Array(3)].map((_, i) => (
+                      <Card key={i} className="animate-pulse">
+                        <CardHeader className="h-20 bg-gray-100"></CardHeader>
+                        <CardContent className="h-24 py-4">
+                          <div className="h-4 bg-gray-100 mb-2 rounded"></div>
+                          <div className="h-4 bg-gray-100 w-3/4 rounded"></div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </>
+                ) : goals.length === 0 ? (
+                  // Show message when no goals exist
+                  <div className="col-span-3 lg:col-span-4">
+                    <Card className="border-dashed border-2">
+                      <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                        <div className="rounded-full bg-muted p-3 mb-3">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                            <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
+                          </svg>
+                        </div>
+                        <p className="text-muted-foreground mb-4">You don't have any goals yet</p>
+                        <Link href="/goals">
+                          <span className="inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90">
+                            Create Your First Goal
+                          </span>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : (
+                  // Display the user's goals
+                  <>
+                    {goals.slice(0, 3).map((goal: any) => (
+                      <Card key={goal.id}>
+                        <CardHeader className="pb-4">
+                          <Badge variant={goal.isPublic ? "default" : "outline"}>
+                            {goal.category}
+                          </Badge>
+                          <CardTitle className="mt-2">{goal.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <div className="mb-4">
+                            <div className="flex justify-between text-sm mb-1">
+                              <span>Progress</span>
+                              <span>
+                                {goal.currentValue} / {goal.targetValue} {goal.metricType}
+                              </span>
+                            </div>
+                            <Progress 
+                              value={calculateProgress(goal.currentValue, goal.targetValue)} 
+                              className="h-2" 
+                            />
+                          </div>
+                          <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>Started: {formatDate(goal.startDate)}</span>
+                            <span>Target: {formatDate(goal.targetDate)}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </>
+                )}
+                
+                {/* Always show the "Add New Goal" card */}
+                <Link href="/goals">
+                  <Card className="border-dashed border-2 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-center h-full">
+                    <CardContent className="flex flex-col items-center justify-center py-10">
+                      <div className="rounded-full bg-primary/10 p-3 mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 8v8" />
+                          <path d="M8 12h8" />
+                        </svg>
+                      </div>
+                      <p className="text-primary font-medium">Add New Goal</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </>
+            );
+          })()}
         </div>
       </div>
 
