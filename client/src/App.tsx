@@ -15,6 +15,7 @@ import WorkoutPlanDetail from "@/pages/WorkoutPlanDetail";
 import PurchasedPlanDetail from "@/pages/PurchasedPlanDetail";
 import CoachProfile from "@/pages/CoachProfile";
 import UserProfile from "@/pages/UserProfile";
+import AdminDashboard from "@/pages/AdminDashboard";
 import MyPlans from "@/pages/MyPlans";
 import BecomeCoach from "@/pages/BecomeCoach";
 import CreatePlan from "@/pages/CreatePlan";
@@ -56,6 +57,7 @@ function Router() {
           <Route path="/create-plan" component={CreatePlan} />
           <Route path="/checkout" component={Checkout} />
           <Route path="/payment-success" component={PaymentSuccess} />
+          <Route path="/admin" component={AdminDashboard} />
           {/* Fallback to 404 */}
           <Route component={NotFound} />
         </Switch>

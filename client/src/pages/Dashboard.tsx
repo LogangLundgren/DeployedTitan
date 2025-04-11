@@ -619,6 +619,43 @@ export default function Dashboard() {
         </div>
         <UserFeedbackForm />
       </div>
+      
+      {/* Admin Dashboard Link - Only visible to founders/admins */}
+      <div className="mb-8 mt-12">
+        <Card className="bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800">
+          <CardContent className="pt-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold mb-2 flex items-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="mr-2 text-amber-600 dark:text-amber-400"
+                  >
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" x2="12" y1="19" y2="22"></line>
+                  </svg>
+                  Founder Access
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Access the admin dashboard to view user suggestions and manage platform analytics.
+                </p>
+              </div>
+              <Button asChild>
+                <Link href="/admin">View Admin Dashboard</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   );
 }
