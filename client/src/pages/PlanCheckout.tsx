@@ -36,31 +36,33 @@ export default function PlanCheckout() {
         description: "Please log in to purchase a workout plan",
         variant: "destructive",
       });
-      setLocation('/auth');
+      // For now, just redirect back to the marketplace
+      // In a real app, we would redirect to an auth page
+      setLocation('/marketplace');
       return;
     }
 
-    // Initialize checkout
+    // Only initialize checkout if we have a user and planId
     const initiateCheckout = async () => {
+      // Don't continue if still loading auth or no user
       if (authLoading || !user) return;
       
       setIsLoading(true);
       setError(null);
       
       try {
-        const response = await fetch("/api/init-plan-checkout", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ planId }),
-          credentials: "include"
-        });
-        const data = await response.json();
+        console.log("Initializing checkout with planId:", planId);
+        
+        // Use apiRequest from queryClient to ensure cookies are sent for authentication
+        const response = await apiRequest("POST", "/api/init-plan-checkout", { planId: Number(planId) });
         
         if (!response.ok) {
+          const data = await response.json();
           throw new Error(data.message || 'Failed to initialize checkout');
         }
+        
+        const data = await response.json();
+        console.log("Checkout initialized, redirecting with client secret");
         
         // Redirect to the checkout page with the client secret
         setLocation(`/checkout?planId=${planId}&clientSecret=${data.clientSecret}`);
@@ -77,7 +79,9 @@ export default function PlanCheckout() {
       }
     };
 
-    initiateCheckout();
+    if (user && !authLoading) {
+      initiateCheckout();
+    }
   }, [planId, user, authLoading, setLocation, toast]);
 
   return (
