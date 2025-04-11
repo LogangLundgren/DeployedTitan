@@ -199,41 +199,55 @@ export default function CreatePlan() {
   // Create plan mutation
   const createPlanMutation = useMutation({
     mutationFn: async (data: any) => {
-      // First create the workout plan
-      const planResponse = await apiRequest('POST', '/api/workout-plans', data.plan);
-      
-      if (!planResponse.ok) {
-        const errorData = await planResponse.json();
-        throw new Error(errorData.message || 'Failed to create workout plan');
-      }
-      
-      const planData = await planResponse.json();
-      
-      // Now add the templates to the plan
-      if (data.templateIds.length > 0) {
-        // Create plan templates with order/week/day
-        for (let i = 0; i < data.templateIds.length; i++) {
-          const templateId = data.templateIds[i];
-          const weekNumber = Math.floor(i / 7) + 1;
-          const dayNumber = (i % 7) + 1;
-          
-          const planTemplateResponse = await apiRequest('POST', '/api/plan-templates', {
-            planId: planData.id,
-            templateId,
-            weekNumber,
-            dayNumber,
-            order: i + 1,
-            notes: null
-          });
-          
-          if (!planTemplateResponse.ok) {
-            console.error('Failed to add template to plan:', await planTemplateResponse.json());
-            // Continue adding other templates even if one fails
+      try {
+        // First create the workout plan
+        const planResponse = await apiRequest('POST', '/api/workout-plans', data.plan);
+        
+        if (!planResponse.ok) {
+          const errorData = await planResponse.json();
+          throw new Error(errorData.message || 'Failed to create workout plan');
+        }
+        
+        const planData = await planResponse.json();
+        
+        // Now add the templates to the plan
+        const templateErrors = [];
+        if (data.templateIds && Array.isArray(data.templateIds) && data.templateIds.length > 0) {
+          // Create plan templates with order/week/day
+          for (let i = 0; i < data.templateIds.length; i++) {
+            try {
+              const templateId = data.templateIds[i];
+              const weekNumber = Math.floor(i / 7) + 1;
+              const dayNumber = (i % 7) + 1;
+              
+              const planTemplateResponse = await apiRequest('POST', '/api/plan-templates', {
+                planId: planData.id,
+                templateId,
+                weekNumber,
+                dayNumber,
+                order: i + 1,
+                notes: null
+              });
+              
+              if (!planTemplateResponse.ok) {
+                const errorData = await planTemplateResponse.json();
+                templateErrors.push(`Template ${templateId}: ${errorData.message || 'Unknown error'}`);
+              }
+            } catch (error) {
+              templateErrors.push(`Error adding template at index ${i}: ${error instanceof Error ? error.message : String(error)}`);
+            }
           }
         }
+        
+        if (templateErrors.length > 0) {
+          console.warn('Some templates were not added:', templateErrors);
+        }
+        
+        return planData;
+      } catch (error) {
+        console.error('Error in plan creation:', error);
+        throw error;
       }
-      
-      return planData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] });
