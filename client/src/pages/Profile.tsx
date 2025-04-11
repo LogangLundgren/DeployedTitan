@@ -32,7 +32,8 @@ import {
   CheckCircle2,
   BadgeCheck,
   BookOpen,
-  Star
+  Star,
+  Eye
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,6 +48,9 @@ export default function Profile() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedTab, setSelectedTab] = useState("profile");
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
@@ -385,8 +389,8 @@ export default function Profile() {
   return (
     <main className="flex-grow container mx-auto px-4 py-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Profile</h2>
-        <p className="text-gray-500">Manage your profile and personal information</p>
+        <h2 className="text-2xl font-bold text-foreground">Profile</h2>
+        <p className="text-muted-foreground">Manage your profile and personal information</p>
       </div>
       
       {user && user.isCoach === true && (
@@ -434,15 +438,54 @@ export default function Profile() {
             <div className="flex flex-col items-center mb-6">
               <div className="relative mb-4">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src="" alt={user.name || user.username} />
+                  <AvatarImage 
+                    src={profileImage || user.profileImage || ""} 
+                    alt={user.name || user.username} 
+                  />
                   <AvatarFallback className="text-lg bg-primary/10 text-primary">
                     {(user.name || user.username || "U").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 {isEditing && (
-                  <div className="absolute -right-2 bottom-0 bg-primary text-white p-1.5 rounded-full shadow-md cursor-pointer">
-                    <Camera className="h-4 w-4" />
-                  </div>
+                  <>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef}
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setUploading(true);
+                          // In a real app, we'd upload to a server here
+                          // For now, just create a local data URL
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const dataUrl = event.target?.result as string;
+                            setProfileImage(dataUrl);
+                            setUploading(false);
+                            
+                            toast({
+                              title: "Profile image updated",
+                              description: "Your profile image has been updated (simulated).",
+                              variant: "default",
+                            });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <div 
+                      className="absolute -right-2 bottom-0 bg-primary text-white p-1.5 rounded-full shadow-md cursor-pointer hover:bg-primary/90 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {uploading ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
               
@@ -460,7 +503,7 @@ export default function Profile() {
               ) : (
                 <>
                   <h3 className="text-xl font-semibold">{user.name || user.username}</h3>
-                  {user.name && <p className="text-gray-500">@{user.username}</p>}
+                  {user.name && <p className="text-muted-foreground">@{user.username}</p>}
                 </>
               )}
             </div>
@@ -481,18 +524,18 @@ export default function Profile() {
               ) : (
                 <>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Email</p>
-                    <p>{user.email || "Not provided"}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Email</p>
+                    <p className="text-foreground">{user.email || "Not provided"}</p>
                   </div>
                   
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Location</p>
-                    <p>{user.location || "Not specified"}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Location</p>
+                    <p className="text-foreground">{user.location || "Not specified"}</p>
                   </div>
                   
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Member Since</p>
-                    <p>March 25, 2025</p>
+                    <p className="text-sm font-medium text-muted-foreground">Member Since</p>
+                    <p className="text-foreground">March 25, 2025</p>
                   </div>
                 </>
               )}
@@ -537,7 +580,7 @@ export default function Profile() {
                     className="min-h-[100px]"
                   />
                 ) : (
-                  <p className="text-gray-700">{user.bio || "No bio provided."}</p>
+                  <p className="text-foreground">{user.bio || "No bio provided."}</p>
                 )}
               </div>
               
@@ -547,7 +590,7 @@ export default function Profile() {
               <div>
                 <div className="flex justify-between mb-2">
                   <h3 className="font-medium">Fitness Experience</h3>
-                  {isEditing && <Edit className="h-4 w-4 text-gray-400" />}
+                  {isEditing && <Edit className="h-4 w-4 text-muted-foreground" />}
                 </div>
                 
                 {isEditing ? (
@@ -593,20 +636,20 @@ export default function Profile() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Fitness Level</p>
-                        <p>{user.fitnessLevel || "Not specified"}</p>
+                        <p className="text-sm font-medium text-muted-foreground">Fitness Level</p>
+                        <p className="text-foreground">{user.fitnessLevel || "Not specified"}</p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Years of Experience</p>
-                        <p>{user.experienceYears || "Not specified"}</p>
+                        <p className="text-sm font-medium text-muted-foreground">Years of Experience</p>
+                        <p className="text-foreground">{user.experienceYears || "Not specified"}</p>
                       </div>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Fitness Goals</p>
-                      <p>{user.goals || "No goals specified"}</p>
+                      <p className="text-sm font-medium text-muted-foreground">Fitness Goals</p>
+                      <p className="text-foreground">{user.goals || "No goals specified"}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Certifications</p>
+                      <p className="text-sm font-medium text-muted-foreground">Certifications</p>
                       <p className="flex items-center">
                         {user.certifications ? (
                           <>
@@ -660,26 +703,26 @@ export default function Profile() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {user.socialMedia?.instagram && (
-                      <a href={`https://instagram.com/${user.socialMedia.instagram}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-gray-50">
+                      <a href={`https://instagram.com/${user.socialMedia.instagram}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-accent">
                         <Instagram className="h-5 w-5 mr-2 text-pink-600" />
-                        <span>@{user.socialMedia.instagram}</span>
+                        <span className="text-foreground">@{user.socialMedia.instagram}</span>
                       </a>
                     )}
                     {user.socialMedia?.twitter && (
-                      <a href={`https://twitter.com/${user.socialMedia.twitter}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-gray-50">
+                      <a href={`https://twitter.com/${user.socialMedia.twitter}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-accent">
                         <Twitter className="h-5 w-5 mr-2 text-blue-400" />
-                        <span>@{user.socialMedia.twitter}</span>
+                        <span className="text-foreground">@{user.socialMedia.twitter}</span>
                       </a>
                     )}
                     {user.socialMedia?.facebook && (
-                      <a href={`https://facebook.com/${user.socialMedia.facebook}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-gray-50">
+                      <a href={`https://facebook.com/${user.socialMedia.facebook}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-accent">
                         <Facebook className="h-5 w-5 mr-2 text-blue-600" />
-                        <span>{user.socialMedia.facebook}</span>
+                        <span className="text-foreground">{user.socialMedia.facebook}</span>
                       </a>
                     )}
                     {!user.socialMedia?.instagram && !user.socialMedia?.twitter && 
                      !user.socialMedia?.facebook && (
-                      <p className="text-gray-500 col-span-full">No social media profiles linked</p>
+                      <p className="text-muted-foreground col-span-full">No social media profiles linked</p>
                     )}
                   </div>
                 )}
