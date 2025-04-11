@@ -53,22 +53,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     stripeSubscriptionId: null
   };
 
-  // Use query for getting the current user (returns demo user for now)
+  // Use query for getting the current user from the API
   const {
     data: user,
     isLoading,
     error,
   } = useQuery<User, Error>({
-    queryKey: ['/api/user'],
+    queryKey: ['/api/users/1'],
     queryFn: async () => {
-      // In a real app, this would fetch from the API
-      // const res = await fetch('/api/user');
-      // if (!res.ok) throw new Error('Failed to fetch user');
-      // return res.json();
-      
-      // For demo, return the hardcoded user
-      return demoUser;
+      try {
+        // Fetch real user data from the API
+        const res = await fetch('/api/users/1');
+        if (!res.ok) throw new Error('Failed to fetch user');
+        return res.json();
+      } catch (error) {
+        console.error("Error fetching user in useAuth:", error);
+        // Fallback to demo user if API fails
+        return demoUser;
+      }
     },
+    refetchOnWindowFocus: true, // Ensure we get fresh data when the window gets focus
+    staleTime: 30000, // Consider data stale after 30 seconds
   });
 
   // Mock login mutation
