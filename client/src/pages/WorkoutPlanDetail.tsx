@@ -295,10 +295,22 @@ export default function WorkoutPlanDetail() {
         throw new Error('This workout plan no longer exists');
       }
       
-      // Prepare the update data with both isPublished flag and planTemplates
+      // Create a more complete update object to ensure we have fields to update
       const reqData = { 
-        isPublished: true,
-        planTemplates: templateIds
+        title: plan.title,
+        description: plan.description,
+        price: plan.price,
+        durationWeeks: plan.durationWeeks,
+        difficultyLevel: plan.difficultyLevel,
+        category: plan.category,
+        goals: plan.goals,
+        equipment: plan.equipment,
+        isFeatured: plan.isFeatured || false,
+        isSoldOut: plan.isSoldOut || false,
+        isPublished: true, // This is the key change we're making
+        planTemplates: templateIds,
+        // Force an update timestamp to ensure something changes
+        updatedAt: new Date()
       };
       console.log('Publish request data:', reqData);
       

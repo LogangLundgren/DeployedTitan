@@ -1804,8 +1804,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract planTemplates from update data to handle separately
       const { planTemplates, ...dataToUpdate } = processedData;
       
+      // Ensure the isPublished flag is set properly if that's being updated
+      if (dataToUpdate.isPublished === true) {
+        console.log("Publishing workout plan to marketplace...");
+      }
+      
       // Update the workout plan
       const updatedWorkoutPlan = await storage.updateWorkoutPlan(id, dataToUpdate);
+      
+      if (!updatedWorkoutPlan) {
+        return res.status(404).json({ message: "Workout plan not found" });
+      }
       
       // If plan templates are provided, update them
       if (planTemplates && planTemplates.length > 0) {

@@ -1871,9 +1871,26 @@ export class DbStorage implements IStorage {
         return undefined;
       }
       
+      // Create a copy of update data to avoid modifying the input
+      const updateData = { ...planUpdate };
+      
+      // Ensure we have at least one field to update
+      if (Object.keys(updateData).length === 0) {
+        console.log("No update fields provided, forcing updatedAt change");
+        updateData.updatedAt = new Date();
+      }
+      
+      // Explicitly set isPublished if that's the action we're taking
+      if (planUpdate.isPublished === true) {
+        console.log("Publishing plan to marketplace");
+        updateData.isPublished = true;
+      }
+      
+      console.log("Final update data:", updateData);
+      
       const result = await db
         .update(workoutPlans)
-        .set(planUpdate)
+        .set(updateData)
         .where(eq(workoutPlans.id, id))
         .returning();
       
