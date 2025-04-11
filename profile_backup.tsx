@@ -199,6 +199,109 @@ export default function Profile() {
       setCoachAvailability(coachProfile.isAvailableForHire !== false);
     }
   }, [coachProfile]);
+
+  // Get the user's profile information
+  const { data: user, isLoading, refetch } = useQuery({
+    queryKey: ['/api/users/1'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/users/1');
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+        const userData = await response.json();
+        return userData || { 
+          id: 1, 
+          username: 'demo', 
+          name: 'John Smith', 
+          email: 'demo@example.com',
+          // Additional user fields
+          bio: 'Fitness enthusiast focused on strength training and nutrition. Always looking to push my limits and achieve new personal records.',
+          fitnessLevel: 'Intermediate',
+          experienceYears: 3,
+          goals: 'Build muscle mass and improve overall strength',
+          location: 'New York, NY',
+          socialMedia: {
+            instagram: 'johnsmith_fitness',
+            twitter: 'jsmith_lift',
+            facebook: ''
+          },
+          certifications: 'Certified Personal Trainer (CPT), Strength and Conditioning Specialist'
+        };
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        // Return demo data if the API fails
+        return { 
+          id: 1, 
+          username: 'demo', 
+          name: 'John Smith', 
+          email: 'demo@example.com',
+          // Additional user fields
+          bio: 'Fitness enthusiast focused on strength training and nutrition. Always looking to push my limits and achieve new personal records.',
+          fitnessLevel: 'Intermediate',
+          experienceYears: 3,
+          goals: 'Build muscle mass and improve overall strength',
+          location: 'New York, NY',
+          socialMedia: {
+            instagram: 'johnsmith_fitness',
+            twitter: 'jsmith_lift',
+            facebook: ''
+          },
+          certifications: 'Certified Personal Trainer (CPT), Strength and Conditioning Specialist'
+        };
+      }
+    },
+    refetchOnWindowFocus: false
+  });
+  
+  // Get coach profile if user is a coach
+  const { data: coachProfile } = useQuery({
+    queryKey: ['/api/coaches/profile', user?.id],
+    queryFn: async () => {
+      if (!user || !user.isCoach) return null;
+      
+      try {
+        // First try the regular coach profile endpoint
+        const response = await fetch(`/api/coaches/profile?userId=${user.id}`);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            // If not found on the first endpoint, try the alternate endpoint
+            console.log("Trying alternate coach profile endpoint...");
+            const altResponse = await fetch(`/api/users/${user.id}/coach-profile`);
+            
+            if (altResponse.ok) {
+              return await altResponse.json();
+            }
+            
+            // If both fail with 404, it's expected for new coaches without profiles
+            return null;
+          }
+          throw new Error('Failed to fetch coach profile');
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching coach profile:", error);
+        
+        // Try alternate endpoint as a fallback
+        try {
+          console.log("Trying alternate coach profile endpoint as fallback...");
+          const altResponse = await fetch(`/api/users/${user.id}/coach-profile`);
+          
+          if (altResponse.ok) {
+            return await altResponse.json();
+          }
+        } catch (fallbackError) {
+          console.error("Error fetching from fallback endpoint:", fallbackError);
+        }
+        
+        return null;
+      }
+    },
+    enabled: !!user && !!user.isCoach,
+    refetchOnWindowFocus: false
+  });
   
   // Get the user's recent workouts for displaying stats
   const { data: workouts } = useQuery({
@@ -733,8 +836,9 @@ export default function Profile() {
                         <span className="text-foreground">{user.socialMedia.facebook}</span>
                       </a>
                     )}
-                    {!user.socialMedia?.instagram && !user.socialMedia?.twitter && !user.socialMedia?.facebook && (
-                      <p className="text-muted-foreground col-span-2">No social media profiles linked</p>
+                    {!user.socialMedia?.instagram && !user.socialMedia?.twitter && 
+                     !user.socialMedia?.facebook && (
+                      <p className="text-muted-foreground col-span-full">No social media profiles linked</p>
                     )}
                   </div>
                 )}
@@ -745,16 +849,16 @@ export default function Profile() {
       </div>
       )}
       
-      {selectedTab === "coach" && user.isCoach === true && (
+      {/* Coach Profile Section */}
+      {selectedTab === "coach" && user && user.isCoach === true && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Coach Profile Card */}
           <Card className="lg:col-span-1">
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start">
                 <CardTitle className="text-xl">Coach Details</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
                   onClick={() => setIsCoachProfileEditing(!isCoachProfileEditing)}
                   className="h-8 px-2"
                 >
@@ -764,28 +868,96 @@ export default function Profile() {
               </div>
             </CardHeader>
             <CardContent className="pt-4">
-              <div className="space-y-4">
+              <div className="flex flex-col items-center mb-6">
+                <div className="relative mb-4">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage 
+                      src={profileImage || coachProfile?.profileImage || ""} 
+                      alt={coachProfile?.title || user.name || user.username} 
+                    />
+                    <AvatarFallback className="text-lg bg-primary/10 text-primary">
+                      {((coachProfile?.title || user.name || user.username) || "C").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isCoachProfileEditing && (
+                    <>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setUploading(true);
+                            // In a real app, we'd upload to a server here
+                            // For now, just create a local data URL
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const dataUrl = event.target?.result as string;
+                              setProfileImage(dataUrl);
+                              setUploading(false);
+                              
+                              toast({
+                                title: "Coach profile image updated",
+                                description: "Your coach profile image has been updated (simulated).",
+                                variant: "default",
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <div 
+                        className="absolute -right-2 bottom-0 bg-primary text-white p-1.5 rounded-full shadow-md cursor-pointer hover:bg-primary/90 transition-colors"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {uploading ? (
+                          <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                        ) : (
+                          <Camera className="h-4 w-4" />
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+                
                 {isCoachProfileEditing ? (
-                  <>
+                  <div className="w-full space-y-2">
                     <div>
-                      <Label htmlFor="coachTitle">Professional Title</Label>
+                      <Label htmlFor="coachTitle">Coach Title</Label>
                       <Input 
                         id="coachTitle" 
                         ref={coachTitleRef} 
                         defaultValue={coachProfile?.title || `${user.name}'s Coaching`} 
-                        placeholder="e.g. Certified Personal Trainer" 
+                        placeholder="Your coach title" 
                       />
                     </div>
-                    
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="text-xl font-semibold">{coachProfile?.title || `${user.name}'s Coaching`}</h3>
+                    {coachProfile?.isVerified && (
+                      <p className="text-green-600 text-sm flex items-center mt-1">
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Verified Coach
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+              
+              <div className="space-y-4">
+                {isCoachProfileEditing ? (
+                  <>
                     <div>
                       <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
                       <Input 
                         id="hourlyRate" 
+                        ref={coachHourlyRateRef} 
                         type="number" 
-                        ref={coachHourlyRateRef}
-                        defaultValue={coachProfile?.hourlyRate || "0"} 
-                        min="0" 
-                        step="5"
+                        defaultValue={coachProfile?.hourlyRate || 0} 
+                        placeholder="Your hourly rate" 
                       />
                     </div>
                     

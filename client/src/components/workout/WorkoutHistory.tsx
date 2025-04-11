@@ -132,8 +132,13 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
     return matchesSearch && matchesCategory;
   }) || [];
   
+  // Sort workouts by date (newest first)
+  const sortedWorkouts = [...filteredWorkouts].sort((a, b) => {
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
+  
   // Group workouts by month and year
-  const groupedWorkouts = filteredWorkouts.reduce<Record<string, WorkoutWithDetails[]>>((groups, workout) => {
+  const groupedWorkouts = sortedWorkouts.reduce<Record<string, WorkoutWithDetails[]>>((groups, workout) => {
     const date = new Date(workout.date);
     const monthYear = format(date, 'MMMM yyyy');
     
