@@ -53,7 +53,19 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
     refetch: refetchNotifications
   } = useQuery({
     queryKey: ['notifications', userId],
-    queryFn: () => apiRequest<Notification[]>(`/api/notifications?userId=${userId}`),
+    queryFn: async () => {
+      try {
+        const response = await apiRequest<Notification[]>("GET", `/api/notifications?userId=${userId}`);
+        if (!response.ok) {
+          console.error("Failed to fetch notifications:", response.statusText);
+          return [];
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+        return [];
+      }
+    },
     refetchInterval: 60000, // Refetch every minute
     enabled: !!userId
   });
@@ -66,7 +78,19 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
     refetch: refetchCount
   } = useQuery({
     queryKey: ['notifications-count', userId],
-    queryFn: () => apiRequest<{ count: number }>(`/api/notifications/unread-count?userId=${userId}`),
+    queryFn: async () => {
+      try {
+        const response = await apiRequest<{ count: number }>("GET", `/api/notifications/unread-count?userId=${userId}`);
+        if (!response.ok) {
+          console.error("Failed to fetch unread count:", response.statusText);
+          return { count: 0 };
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching unread count:", error);
+        return { count: 0 };
+      }
+    },
     refetchInterval: 60000, // Refetch every minute
     enabled: !!userId
   });
@@ -78,9 +102,11 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
   // Mark a notification as read
   const markAsRead = async (id: number) => {
     try {
-      await apiRequest(`/api/notifications/${id}/mark-read`, {
-        method: 'PATCH'
-      });
+      const response = await apiRequest("PATCH", `/api/notifications/${id}/mark-read`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed with status: ${response.status}`);
+      }
       
       // Invalidate queries to refresh data
       await Promise.all([
@@ -100,13 +126,11 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      await apiRequest('/api/notifications/mark-all-read', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ userId })
-      });
+      const response = await apiRequest("PATCH", '/api/notifications/mark-all-read', { userId });
+      
+      if (!response.ok) {
+        throw new Error(`Failed with status: ${response.status}`);
+      }
       
       // Invalidate queries to refresh data
       await Promise.all([
