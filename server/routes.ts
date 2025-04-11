@@ -1890,6 +1890,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Dedicated endpoint for publishing workout plans
+  app.post("/api/workout-plans/:id/publish", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid workout plan ID is required" });
+      }
+      
+      // Get the current plan to make sure it exists
+      const plan = await storage.getWorkoutPlan(id);
+      
+      if (!plan) {
+        return res.status(404).json({ message: "Workout plan not found" });
+      }
+      
+      console.log(`Publishing workout plan ${id}: "${plan.title}"`);
+      
+      // Update only the isPublished field to true
+      const updatedPlan = await storage.updateWorkoutPlan(id, {
+        isPublished: true,
+        // Including updatedAt ensures we get a new timestamp
+        updatedAt: new Date()
+      });
+      
+      if (!updatedPlan) {
+        return res.status(500).json({ message: "Failed to publish workout plan" });
+      }
+      
+      // Return the full updated plan
+      res.status(200).json(updatedPlan);
+    } catch (error) {
+      console.error("Publish workout plan error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Plan Template routes
   app.get("/api/workout-plans/:planId/templates", async (req, res) => {
     try {

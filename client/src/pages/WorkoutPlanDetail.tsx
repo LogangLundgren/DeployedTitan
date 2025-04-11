@@ -275,68 +275,21 @@ export default function WorkoutPlanDetail() {
     try {
       setIsPublishing(true);
       
-      // Collect the template IDs first to make sure they're included in the update
-      const templateIds = plan.templates 
-        ? plan.templates.map(template => template.templateId) 
-        : [];
-      
-      console.log('Current templates for plan:', templateIds);
-      
-      // First check if the plan exists to avoid 404 errors
-      const checkResponse = await fetch(`/api/workout-plans/${plan.id}/check`);
-      if (!checkResponse.ok) {
-        throw new Error('Failed to verify workout plan');
-      }
-      
-      const checkData = await checkResponse.json();
-      console.log('Plan exists check:', checkData);
-      
-      if (!checkData.exists) {
-        throw new Error('This workout plan no longer exists');
-      }
-      
-      // TROUBLESHOOTING: Log plan data to debug issues
-      console.log('TROUBLESHOOTING - Plan data for publishing:', {
-        id: plan.id,
-        title: plan.title,
-        goals: plan.goals,
-        equipment: plan.equipment,
-        isPublished: plan.isPublished,
-        hasTemplates: templateIds.length > 0
-      });
-      
-      // Create a comprehensive update object with all required fields to prevent errors
-      const reqData = { 
-        // Main change - set to published
-        isPublished: true,
-        
-        // Include all the existing plan data to ensure nothing is lost
-        title: plan.title || "Untitled Plan",
-        description: plan.description || "No description",
-        price: typeof plan.price === 'number' ? plan.price : 0,
-        durationWeeks: typeof plan.durationWeeks === 'number' ? plan.durationWeeks : 1,
-        difficultyLevel: plan.difficultyLevel || "Beginner",
-        category: plan.category || "Other",
-        isFeatured: Boolean(plan.isFeatured),
-        isSoldOut: Boolean(plan.isSoldOut),
-        
-        // Handle arrays properly
-        goals: Array.isArray(plan.goals) ? plan.goals : [],
-        equipment: Array.isArray(plan.equipment) ? plan.equipment : [],
-        
-        // Include template data
-        planTemplates: templateIds
+      // CRITICAL FIX: Create a minimal data payload with ONLY 'isPublished' set to true.
+      // This ensures that we're only updating the publishing status directly.
+      const publishData = {
+        isPublished: true
       };
       
-      console.log('TROUBLESHOOTING - Final request data:', JSON.stringify(reqData, null, 2));
+      console.log('FIX ATTEMPT - Sending minimal publish request:', publishData);
       
-      // Now try to publish it
-      const response = await fetch(`/api/workout-plans/${plan.id}`, {
-        method: 'PUT',
+      // Direct API call to publish the plan
+      const response = await fetch(`/api/workout-plans/${plan.id}/publish`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(reqData)
+        body: JSON.stringify(publishData)
       });
       
       console.log('Publish request complete, status:', response.status);
