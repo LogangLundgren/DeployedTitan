@@ -148,6 +148,7 @@ interface WorkoutPlan {
   ratingsCount: number | null;
   isFeatured: boolean | null;
   isSoldOut: boolean | null;
+  isPublished: boolean | null;
   createdAt: Date;
   updatedAt: Date;
   coach?: CoachProfile;
@@ -160,6 +161,8 @@ export default function WorkoutPlanDetail() {
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [addTemplateDialogOpen, setAddTemplateDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const planId = parseInt(params.id);
@@ -258,6 +261,42 @@ export default function WorkoutPlanDetail() {
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
+    }
+  };
+
+  const handlePublishPlan = async () => {
+    if (!plan || !plan.id) return;
+    
+    try {
+      setIsPublishing(true);
+      
+      const response = await apiRequest('PUT', `/api/workout-plans/${plan.id}`, {
+        ...plan,
+        isPublished: true
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to publish workout plan');
+      }
+      
+      toast({
+        title: "Success",
+        description: `"${plan.title}" has been published and is now available in the marketplace.`,
+      });
+      
+      // Invalidate any queries for workout plans
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/my-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', planId] });
+    } catch (error) {
+      console.error('Error publishing workout plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to publish workout plan. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsPublishing(false);
     }
   };
 
