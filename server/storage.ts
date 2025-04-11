@@ -1831,6 +1831,21 @@ export class DbStorage implements IStorage {
     }
   }
   
+  async checkWorkoutPlanExists(id: number): Promise<boolean> {
+    try {
+      const count = await db
+        .select({ count: count() })
+        .from(workoutPlans)
+        .where(eq(workoutPlans.id, id));
+      
+      console.log(`Checking if workout plan with ID ${id} exists:`, count[0]?.count > 0);
+      return count[0]?.count > 0;
+    } catch (error) {
+      console.error("Error checking if workout plan exists:", error);
+      return false;
+    }
+  }
+  
   async createWorkoutPlan(plan: InsertWorkoutPlan): Promise<WorkoutPlan> {
     try {
       const result = await db.insert(workoutPlans).values(plan).returning();
