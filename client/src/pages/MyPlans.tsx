@@ -397,7 +397,7 @@ export default function MyPlans() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              onClick={() => setLocation(`/edit-plan/${plan.id}`)}
+                              onClick={() => setLocation(`/create-plan?edit=${plan.id}`)}
                             >
                               <Edit className="h-4 w-4 mr-1" />
                               Edit

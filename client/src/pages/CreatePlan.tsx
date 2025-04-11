@@ -110,9 +110,16 @@ export default function CreatePlan() {
   const [newGoal, setNewGoal] = useState("");
   const [newEquipment, setNewEquipment] = useState("");
   const [selectedTab, setSelectedTab] = useState("details");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editPlanId, setEditPlanId] = useState<number | null>(null);
+  
+  // Parse URL query parameters to check for edit mode
+  const params = new URLSearchParams(window.location.search);
+  const editIdParam = params.get('edit');
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
   // Fetch the current user
   const { 
     data: user, 
@@ -140,6 +147,31 @@ export default function CreatePlan() {
     enabled: !!userId, // Only run query when userId exists
   });
 
+  // Determine if we're in edit mode and get the plan ID
+  useEffect(() => {
+    if (editIdParam) {
+      const planId = parseInt(editIdParam);
+      if (!isNaN(planId)) {
+        setIsEditMode(true);
+        setEditPlanId(planId);
+      }
+    }
+  }, [editIdParam]);
+
+  // Fetch plan data if in edit mode
+  const { 
+    data: planToEdit,
+    isLoading: planLoading,
+    error: planError
+  } = useQuery({
+    queryKey: ['/api/workout-plans', editPlanId],
+    queryFn: () => {
+      if (!editPlanId) return Promise.resolve(null);
+      return fetch(`/api/workout-plans/${editPlanId}`).then(res => res.json());
+    },
+    enabled: !!editPlanId,
+  });
+
   // Fetch templates
   const { 
     data: templates = [], 
@@ -152,6 +184,23 @@ export default function CreatePlan() {
     },
     enabled: !!userId, // Only run query when userId exists
   });
+
+  // Set form values from plan data when in edit mode
+  useEffect(() => {
+    if (isEditMode && planToEdit) {
+      form.reset({
+        title: planToEdit.title || "",
+        description: planToEdit.description || "",
+        price: planToEdit.price || 0,
+        durationWeeks: planToEdit.durationWeeks || 4,
+        difficultyLevel: planToEdit.difficultyLevel || "",
+        category: planToEdit.category || "",
+        featuredImageUrl: planToEdit.featuredImageUrl || "",
+        goals: Array.isArray(planToEdit.goals) ? planToEdit.goals : [],
+        equipment: Array.isArray(planToEdit.equipment) ? planToEdit.equipment : []
+      });
+    }
+  }, [isEditMode, planToEdit, form]);
 
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
