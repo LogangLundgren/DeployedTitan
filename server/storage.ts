@@ -22,7 +22,7 @@ import {
   userSuggestions, type UserSuggestion, type InsertUserSuggestion,
   type WorkoutWithDetails, type TemplateWithExercises
 } from "@shared/schema";
-import { eq, desc, and, asc, sql, or, isNull, isNotNull, inArray, like } from 'drizzle-orm';
+import { eq, desc, and, asc, sql, or, isNull, isNotNull, inArray, like, count } from 'drizzle-orm';
 import { db } from './db';
 
 export interface IStorage {
@@ -124,6 +124,7 @@ export interface IStorage {
   
   // Workout Plan operations
   getWorkoutPlan(id: number): Promise<WorkoutPlan | undefined>;
+  checkWorkoutPlanExists(id: number): Promise<boolean>;
   getWorkoutPlans(coachId?: number, publishedOnly?: boolean): Promise<WorkoutPlan[]>;
   createWorkoutPlan(plan: InsertWorkoutPlan): Promise<WorkoutPlan>;
   updateWorkoutPlan(id: number, plan: Partial<WorkoutPlan>): Promise<WorkoutPlan | undefined>;

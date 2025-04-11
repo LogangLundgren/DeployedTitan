@@ -275,6 +275,20 @@ export default function WorkoutPlanDetail() {
     try {
       setIsPublishing(true);
       
+      // First check if the plan exists to avoid 404 errors
+      const checkResponse = await fetch(`/api/workout-plans/${plan.id}/check`);
+      if (!checkResponse.ok) {
+        throw new Error('Failed to verify workout plan');
+      }
+      
+      const checkData = await checkResponse.json();
+      console.log('Plan exists check:', checkData);
+      
+      if (!checkData.exists) {
+        throw new Error('This workout plan no longer exists');
+      }
+      
+      // Now try to publish it
       const response = await fetch(`/api/workout-plans/${plan.id}`, {
         method: 'PUT',
         headers: {
@@ -286,7 +300,9 @@ export default function WorkoutPlanDetail() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to publish workout plan');
+        const errorText = await response.text();
+        console.error('Publishing error response:', errorText);
+        throw new Error(`Failed to publish workout plan: ${response.status} ${errorText}`);
       }
       
       toast({
