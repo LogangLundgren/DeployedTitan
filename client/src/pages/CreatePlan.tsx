@@ -220,20 +220,34 @@ export default function CreatePlan() {
               const weekNumber = Math.floor(i / 7) + 1;
               const dayNumber = (i % 7) + 1;
               
-              const planTemplateResponse = await apiRequest('POST', '/api/plan-templates', {
-                planId: planData.id,
-                templateId,
-                weekNumber,
-                dayNumber,
-                order: i + 1,
-                notes: null
+              // Use fetch directly to get more details on errors
+              const response = await fetch(`/api/plan-templates`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  planId: planData.id,
+                  templateId,
+                  weekNumber,
+                  dayNumber,
+                  order: i + 1,
+                  notes: null
+                })
               });
               
-              if (!planTemplateResponse.ok) {
-                const errorData = await planTemplateResponse.json();
-                templateErrors.push(`Template ${templateId}: ${errorData.message || 'Unknown error'}`);
+              if (!response.ok) {
+                const errorText = await response.text(); // Get raw response
+                console.error(`Error adding template ${templateId}:`, errorText);
+                try {
+                  const errorData = JSON.parse(errorText);
+                  templateErrors.push(`Template ${templateId}: ${errorData.message || 'Unknown error'}`);
+                } catch (e) {
+                  templateErrors.push(`Template ${templateId}: Server error - ${response.status} ${response.statusText}`);
+                }
               }
             } catch (error) {
+              console.error(`Error adding template at index ${i}:`, error);
               templateErrors.push(`Error adding template at index ${i}: ${error instanceof Error ? error.message : String(error)}`);
             }
           }
