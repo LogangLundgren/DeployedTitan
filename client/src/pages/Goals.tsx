@@ -237,17 +237,23 @@ export default function Goals() {
   
   // Mutation for deleting a goal
   const deleteGoalMutation = useMutation({
-    mutationFn: (goalId: number) => 
-      fetch(`/api/goals/${goalId}`, {
+    mutationFn: async (goalId: number) => {
+      const res = await fetch(`/api/goals/${goalId}`, {
         method: 'DELETE',
-      }).then(res => {
-        if (!res.ok) {
-          return res.json().then(err => {
-            throw new Error(err.message || "Failed to delete goal");
-          });
+      });
+      
+      if (!res.ok) {
+        // Only try to parse JSON if there's content
+        if (res.status !== 204) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Failed to delete goal");
         }
-        return res.json();
-      }),
+        throw new Error("Failed to delete goal");
+      }
+      
+      // Return a simple success object for 204 No Content responses
+      return { success: true };
+    },
     onSuccess: () => {
       toast({
         title: "Goal deleted",
@@ -258,6 +264,7 @@ export default function Goals() {
       queryClient.invalidateQueries({ queryKey: ['/api/goals/public'] });
     },
     onError: (error: any) => {
+      console.error("Delete goal error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to delete goal. Please try again.",
