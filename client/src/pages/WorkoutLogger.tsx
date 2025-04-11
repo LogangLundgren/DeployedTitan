@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, FileText, DollarSign, Plus } from "lucide-react";
+import { Clock, FileText, DollarSign, Plus, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,8 +42,11 @@ import { useLocation, Link } from "wouter";
 type TabType = 'new' | 'history' | 'analytics';
 
 export default function WorkoutLogger() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('new');
   const [location, setLocation] = useLocation();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
   // Check URL parameters for tab selection
   useEffect(() => {
