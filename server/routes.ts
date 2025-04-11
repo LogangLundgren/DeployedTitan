@@ -30,6 +30,7 @@ import {
   insertReviewSchema,
   insertPurchaseSchema,
   insertWorkoutPlanDaySchema,
+  insertUserSuggestionSchema,
   Workout,
   TemplateExercise,
   WorkoutWithDetails,
@@ -42,7 +43,8 @@ import {
   CoachingService,
   PlanTemplate,
   Purchase,
-  Review
+  Review,
+  UserSuggestion
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -2931,6 +2933,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json({
       publishableKey: process.env.VITE_STRIPE_PUBLIC_KEY
     });
+  });
+  
+  // User Suggestions routes
+  app.get("/api/user-suggestions", async (req, res) => {
+    try {
+      const suggestions = await storage.getUserSuggestions();
+      res.status(200).json(suggestions);
+    } catch (error) {
+      console.error("Error fetching user suggestions:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/user-suggestions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid suggestion ID is required" });
+      }
+      
+      const suggestion = await storage.getUserSuggestion(id);
+      
+      if (!suggestion) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      
+      res.status(200).json(suggestion);
+    } catch (error) {
+      console.error("Error fetching user suggestion:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/user-suggestions", async (req, res) => {
+    try {
+      const suggestionData = insertUserSuggestionSchema.safeParse(req.body);
+      
+      if (!suggestionData.success) {
+        return res.status(400).json({ 
+          message: "Invalid suggestion data", 
+          errors: suggestionData.error.errors 
+        });
+      }
+      
+      const suggestion = await storage.createUserSuggestion(suggestionData.data);
+      res.status(201).json(suggestion);
+    } catch (error) {
+      console.error("Error creating user suggestion:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.patch("/api/user-suggestions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid suggestion ID is required" });
+      }
+      
+      const updateSchema = z.object({
+        status: z.string(),
+        adminNotes: z.string().optional()
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ 
+          message: "Invalid update data", 
+          errors: updateData.error.errors 
+        });
+      }
+      
+      const updatedSuggestion = await storage.updateUserSuggestionStatus(
+        id, 
+        updateData.data.status, 
+        updateData.data.adminNotes
+      );
+      
+      if (!updatedSuggestion) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      
+      res.status(200).json(updatedSuggestion);
+    } catch (error) {
+      console.error("Error updating user suggestion:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.delete("/api/user-suggestions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid suggestion ID is required" });
+      }
+      
+      const deleted = await storage.deleteUserSuggestion(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting user suggestion:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
   
   const httpServer = createServer(app);

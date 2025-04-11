@@ -198,6 +198,7 @@ export class MemStorage implements IStorage {
   private coachingServices: Map<number, CoachingService>;
   private purchases: Map<number, Purchase>;
   private reviews: Map<number, Review>;
+  private userSuggestions: Map<number, UserSuggestion>;
   
   private userCurrentId: number;
   private exerciseCurrentId: number;
@@ -219,6 +220,7 @@ export class MemStorage implements IStorage {
   private coachingServiceCurrentId: number;
   private purchaseCurrentId: number;
   private reviewCurrentId: number;
+  private userSuggestionCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -241,6 +243,7 @@ export class MemStorage implements IStorage {
     this.coachingServices = new Map();
     this.purchases = new Map();
     this.reviews = new Map();
+    this.userSuggestions = new Map();
     
     this.userCurrentId = 1;
     this.exerciseCurrentId = 1;
@@ -262,6 +265,7 @@ export class MemStorage implements IStorage {
     this.coachingServiceCurrentId = 1;
     this.purchaseCurrentId = 1;
     this.reviewCurrentId = 1;
+    this.userSuggestionCurrentId = 1;
     
     // Add some default exercises
     this.seedDefaultExercises();
