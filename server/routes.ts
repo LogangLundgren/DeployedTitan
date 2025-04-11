@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import Stripe from "stripe";
+import { hashPassword, verifyPassword, requireAuth } from "./auth";
 
 // Initialize Stripe with the secret key
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -49,7 +50,69 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // User routes
+  // Authentication routes
+  // User authentication routes
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { username, email, password, name } = req.body;
+      
+      if (!username || !password || !email) {
+        return res.status(400).json({ 
+          message: "Username, email, and password are required" 
+        });
+      }
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(409).json({ message: "Username already exists" });
+      }
+      
+      // Check if email already exists
+      const users = await storage.getAllUsers();
+      const emailExists = users.some(user => user.email === email);
+      if (emailExists) {
+        return res.status(409).json({ message: "Email already in use" });
+      }
+      
+      // Hash the password
+      const hashedPassword = await hashPassword(password);
+      
+      // Create the user
+      const user = await storage.createUser({
+        username,
+        password: hashedPassword,
+        email,
+        name: name || null,
+        bio: null,
+        location: null,
+        fitnessLevel: null,
+        experienceYears: null,
+        goals: null,
+        certifications: null,
+        socialMedia: null,
+        isCoach: false,
+        coachRegistrationDate: null,
+        stripeCustomerId: null,
+        stripeSubscriptionId: null
+      });
+      
+      // Set session
+      req.session.userId = user.id;
+      
+      // Return the user without password
+      const { password: _, ...userWithoutPassword } = user;
+      
+      res.status(201).json({
+        message: "User registered successfully",
+        user: userWithoutPassword
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+  
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -60,48 +123,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const user = await storage.getUserByUsername(username);
       
-      if (!user || user.password !== password) {
+      if (!user) {
         return res.status(401).json({ message: "Invalid username or password" });
       }
       
-      // Create a simple authentication cookie
-      res.cookie('userId', user.id.toString(), {
-        httpOnly: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/',
-        sameSite: 'lax'
-      });
+      // Verify password
+      const isPasswordValid = await verifyPassword(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      
+      // Set session
+      req.session.userId = user.id;
       
       // Return the user data without password
       const { password: _, ...userWithoutPassword } = user;
       
-      res.status(200).json(userWithoutPassword);
+      res.status(200).json({
+        message: "Login successful",
+        user: userWithoutPassword
+      });
     } catch (error) {
       console.error("Login error:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-  
-  app.post("/api/users", async (req, res) => {
-    try {
-      const userData = insertUserSchema.safeParse(req.body);
-      
-      if (!userData.success) {
-        return res.status(400).json({ message: "Invalid user data", errors: userData.error.errors });
-      }
-      
-      const existingUser = await storage.getUserByUsername(userData.data.username);
-      if (existingUser) {
-        return res.status(409).json({ message: "Username already exists" });
-      }
-      
-      const user = await storage.createUser(userData.data);
-      const { password: _, ...userWithoutPassword } = user;
-      
-      res.status(201).json(userWithoutPassword);
-    } catch (error) {
-      console.error("Create user error:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Login failed" });
     }
   });
   

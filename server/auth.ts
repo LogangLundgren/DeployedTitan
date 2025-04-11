@@ -83,13 +83,13 @@ export function configureSession(app: any) {
   // If using PostgreSQL database, configure session store
   if (process.env.DATABASE_URL) {
     try {
-      const pgSession = require('connect-pg-simple')(session);
-      sessionConfig.store = new pgSession({
-        conString: process.env.DATABASE_URL,
-        createTableIfMissing: true,
-      });
+      // We'll use a simpler in-memory store for now
+      // Later, we can set up proper database storage for sessions if needed
+      const MemoryStore = session.MemoryStore;
+      sessionConfig.store = new MemoryStore();
+      console.log("Using memory store for sessions");
     } catch (error) {
-      console.error('Failed to initialize pg session store:', error);
+      console.error('Failed to initialize session store:', error);
     }
   }
   
