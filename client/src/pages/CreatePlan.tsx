@@ -857,7 +857,7 @@ export default function CreatePlan() {
                     <Button 
                       type="button" 
                       variant="outline" 
-                      onClick={() => setLocation('/marketplace')}
+                      onClick={() => isEditMode ? setLocation('/my-plans') : setLocation('/marketplace')}
                     >
                       Cancel
                     </Button>
