@@ -1,6 +1,6 @@
 import { useState, useEffect, ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { 
   Card, 
   CardContent, 
@@ -40,14 +40,14 @@ export default function OnboardingLayout({
 }: OnboardingLayoutProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     // If user already completed onboarding, redirect to dashboard
     if (user?.onboardingCompleted) {
-      navigate("/");
+      setLocation("/");
     }
-  }, [user, navigate]);
+  }, [user, setLocation]);
 
   const handleNext = async () => {
     setIsSubmitting(true);
@@ -58,7 +58,7 @@ export default function OnboardingLayout({
       // If this is the last step, mark onboarding as completed
       if (isLastStep) {
         await apiRequest("POST", "/api/user/complete-onboarding", {});
-        navigate("/");
+        setLocation("/");
       } else {
         // Move to the next step
         onNext();

@@ -1,180 +1,131 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2, Dumbbell, Users, Search, ShoppingCart } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-interface WorkoutPlan {
-  id: number;
-  title: string;
-  description: string;
-  price: number;
-  difficultyLevel: string;
-  category: string;
-  featuredImageUrl: string | null;
-  coachId: number;
-  coachName?: string;
-}
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { 
+  ShoppingCart, 
+  Dumbbell, 
+  Star, 
+  Clock, 
+  BookOpen,
+  Calendar,
+  Users,
+  Award
+} from "lucide-react";
 
 interface MarketplaceIntroProps {
   onComplete: () => void;
 }
 
 export default function MarketplaceIntro({ onComplete }: MarketplaceIntroProps) {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [featuredPlans, setFeaturedPlans] = useState<WorkoutPlan[]>([]);
-
-  useEffect(() => {
-    const fetchFeaturedPlans = async () => {
-      try {
-        const response = await fetch('/api/workout-plans?featured=true&limit=3');
-        const data = await response.json();
-        setFeaturedPlans(data);
-      } catch (error) {
-        console.error('Error fetching workout plans:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchFeaturedPlans();
-  }, []);
-
-  const handleContinue = async () => {
-    try {
-      // Update the onboarding step
-      await apiRequest('POST', '/api/user/update-onboarding-step', { 
-        step: 'social_connection' 
-      });
-      
-      // Invalidate user data
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      
-      onComplete();
-    } catch (error) {
-      console.error('Error updating onboarding step:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update your progress. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const features = [
-    {
-      icon: <Dumbbell className="h-10 w-10 text-primary" />,
-      title: 'Pro Workout Plans',
-      description: 'Access workout plans created by certified fitness professionals'
-    },
-    {
-      icon: <Users className="h-10 w-10 text-primary" />,
-      title: 'Find Coaches',
-      description: 'Connect with coaches who can help you reach your fitness goals'
-    },
-    {
-      icon: <Search className="h-10 w-10 text-primary" />,
-      title: 'Discover Content',
-      description: 'Find content tailored to your specific fitness level and goals'
-    },
-    {
-      icon: <ShoppingCart className="h-10 w-10 text-primary" />,
-      title: 'Purchase Programs',
-      description: 'Get premium workout plans and coaching services'
-    }
-  ];
-
   return (
-    <div className="space-y-8">
-      <Card className="w-full overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-primary/50 to-primary/10">
-          <CardTitle className="text-2xl">Discover the Marketplace</CardTitle>
-          <CardDescription className="text-foreground/80">
-            Find workout plans, connect with coaches, and take your fitness to the next level
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-lg font-medium mb-4">What You'll Find</h3>
-              <div className="space-y-4">
-                {features.map((feature, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-start space-x-3"
-                  >
-                    <div className="mt-0.5 p-2 bg-primary/10 rounded-lg">
-                      {feature.icon}
-                    </div>
-                    <div>
-                      <h4 className="font-medium">{feature.title}</h4>
-                      <p className="text-sm text-muted-foreground">{feature.description}</p>
-                    </div>
-                  </motion.div>
-                ))}
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium">Discover Workout Plans and Coaches</h3>
+        <p className="text-sm text-muted-foreground">
+          Browse our marketplace to find professionally designed workout plans or
+          connect with expert coaches to reach your fitness goals.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="overflow-hidden border-2 border-primary/20 shadow-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between mb-1">
+              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 px-2 py-0 text-xs">
+                Featured
+              </Badge>
+              <div className="flex items-center text-amber-500">
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <Star className="h-3.5 w-3.5 fill-current stroke-amber-500/50" />
+                <span className="ml-1 text-xs text-muted-foreground">(42)</span>
               </div>
             </div>
-            
-            <div>
-              <h3 className="text-lg font-medium mb-4">Featured Plans</h3>
-              {isLoading ? (
-                <div className="flex justify-center items-center h-40">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : featuredPlans.length > 0 ? (
-                <div className="space-y-4">
-                  {featuredPlans.map((plan) => (
-                    <motion.div
-                      key={plan.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="border rounded-lg p-4 hover:border-primary/50 transition-colors"
-                    >
-                      <div className="flex justify-between">
-                        <div>
-                          <h4 className="font-medium">{plan.title}</h4>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {plan.description}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-bold text-lg">${plan.price.toFixed(2)}</span>
-                          <p className="text-xs text-muted-foreground">{plan.difficultyLevel}</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="border border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center">
-                  <ShoppingCart className="h-12 w-12 text-muted-foreground mb-2" />
-                  <h4 className="font-medium">No featured plans yet</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Check back soon for featured workout plans
-                  </p>
-                </div>
-              )}
+            <CardTitle className="text-base">12-Week Strength Fundamentals</CardTitle>
+            <CardDescription className="flex items-center text-xs">
+              <Users className="h-3.5 w-3.5 mr-1" />
+              <span>412 users</span>
+              <span className="mx-1">•</span>
+              <Clock className="h-3.5 w-3.5 mr-1" />
+              <span>12 weeks</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              <div className="flex items-center text-sm gap-2">
+                <Dumbbell className="h-4 w-4 text-primary" />
+                <span className="truncate">Full body strength progression</span>
+              </div>
+              <div className="flex items-center text-sm gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                <span className="truncate">4 workouts per week</span>
+              </div>
+              <div className="flex items-center text-sm gap-2">
+                <ShoppingCart className="h-4 w-4 text-primary" />
+                <span className="truncate">$39.99</span>
+              </div>
             </div>
-          </div>
-          
-          <div className="mt-8 pt-4 border-t">
-            <Button 
-              onClick={handleContinue}
-              className="w-full"
-            >
-              Explore More in the Marketplace
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden border-2 border-primary/20 shadow-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between mb-1">
+              <Badge variant="outline" className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-200 px-2 py-0 text-xs">
+                Coach
+              </Badge>
+              <div className="flex items-center text-amber-500">
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <span className="ml-1 text-xs text-muted-foreground">(87)</span>
+              </div>
+            </div>
+            <CardTitle className="text-base">Sarah Thompson</CardTitle>
+            <CardDescription className="flex items-center text-xs">
+              <Award className="h-3.5 w-3.5 mr-1" />
+              <span>Certified Personal Trainer</span>
+              <span className="mx-1">•</span>
+              <Users className="h-3.5 w-3.5 mr-1" />
+              <span>500+ clients</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              <div className="flex items-center text-sm gap-2">
+                <BookOpen className="h-4 w-4 text-orange-500" />
+                <span className="truncate">Specializes in weight loss & strength</span>
+              </div>
+              <div className="flex items-center text-sm gap-2">
+                <Calendar className="h-4 w-4 text-orange-500" />
+                <span className="truncate">Personalized 1:1 coaching</span>
+              </div>
+              <div className="flex items-center text-sm gap-2">
+                <ShoppingCart className="h-4 w-4 text-orange-500" />
+                <span className="truncate">$79.99/month</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="space-y-2 mt-6">
+        <h4 className="text-sm font-medium">Get started with the marketplace</h4>
+        <p className="text-sm text-muted-foreground">
+          Browse plans that match your goals, or find a coach who can help you achieve them.
+          You'll be able to explore all of these options after completing the onboarding process.
+        </p>
+      </div>
     </div>
   );
 }

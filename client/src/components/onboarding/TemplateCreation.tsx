@@ -1,461 +1,209 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { useState } from "react";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-
-const templateSchema = z.object({
-  name: z.string().min(2, 'Template name must be at least 2 characters'),
-  description: z.string().optional(),
-  category: z.string().optional(),
-});
-
-type TemplateFormValues = z.infer<typeof templateSchema>;
-
-interface Exercise {
-  id: number;
-  name: string;
-  category: string;
-  subcategory: string | null;
-  userId: number | null;
-  isCustom: boolean;
-}
-
-interface TemplateExercise {
-  exerciseId: number;
-  exercise: Exercise;
-  order: number;
-  defaultSets: number;
-  defaultReps: number;
-  defaultWeight: number | null;
-  notes: string | null;
-}
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, Trash2, Dumbbell, Clock } from "lucide-react";
 
 interface TemplateCreationProps {
   onComplete: () => void;
 }
 
+interface Exercise {
+  id: string;
+  name: string;
+  sets: number;
+  reps: number;
+  weight?: number;
+  restTime?: number;
+}
+
 export default function TemplateCreation({ onComplete }: TemplateCreationProps) {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [selectedExercises, setSelectedExercises] = useState<TemplateExercise[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [templateName, setTemplateName] = useState("");
+  const [exercises, setExercises] = useState<Exercise[]>([
+    { id: "1", name: "", sets: 3, reps: 10, weight: 0, restTime: 60 },
+  ]);
 
-  // Load all exercises
-  useEffect(() => {
-    const fetchExercises = async () => {
-      try {
-        const response = await fetch('/api/exercises');
-        const data = await response.json();
-        setExercises(data);
-      } catch (error) {
-        console.error('Error fetching exercises:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load exercises. Please try again.',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchExercises();
-  }, [toast]);
-
-  const form = useForm<TemplateFormValues>({
-    resolver: zodResolver(templateSchema),
-    defaultValues: {
-      name: 'My First Workout',
-      description: '',
-      category: 'strength',
-    },
-  });
-
-  const handleAddExercise = (exerciseId: number) => {
-    const exercise = exercises.find(ex => ex.id === exerciseId);
-    if (!exercise) return;
-
-    const newOrder = selectedExercises.length;
-    
-    setSelectedExercises([
-      ...selectedExercises,
-      {
-        exerciseId,
-        exercise,
-        order: newOrder,
-        defaultSets: 3,
-        defaultReps: 10,
-        defaultWeight: null,
-        notes: null,
-      }
+  const addExercise = () => {
+    const newId = String(Date.now());
+    setExercises([
+      ...exercises,
+      { id: newId, name: "", sets: 3, reps: 10, weight: 0, restTime: 60 },
     ]);
   };
 
-  const handleRemoveExercise = (index: number) => {
-    const updated = [...selectedExercises];
-    updated.splice(index, 1);
-    
-    // Update order for remaining exercises
-    const reordered = updated.map((ex, idx) => ({
-      ...ex,
-      order: idx,
-    }));
-    
-    setSelectedExercises(reordered);
+  const removeExercise = (id: string) => {
+    setExercises(exercises.filter((ex) => ex.id !== id));
   };
 
-  const handleExerciseChange = (index: number, field: string, value: any) => {
-    const updated = [...selectedExercises];
-    updated[index] = {
-      ...updated[index],
-      [field]: value,
-    };
-    setSelectedExercises(updated);
-  };
-
-  const handleMoveExercise = (index: number, direction: 'up' | 'down') => {
-    if (
-      (direction === 'up' && index === 0) || 
-      (direction === 'down' && index === selectedExercises.length - 1)
-    ) {
-      return; // Can't move further up/down
-    }
-    
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    const items = Array.from(selectedExercises);
-    const [movedItem] = items.splice(index, 1);
-    items.splice(newIndex, 0, movedItem);
-    
-    // Update order values
-    const reordered = items.map((item, idx) => ({
-      ...item,
-      order: idx,
-    }));
-    
-    setSelectedExercises(reordered);
-  };
-
-  const onSubmit = async (data: TemplateFormValues) => {
-    if (selectedExercises.length === 0) {
-      toast({
-        title: 'No exercises added',
-        description: 'Please add at least one exercise to your template',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      
-      // Create the template
-      const templateResponse = await apiRequest('POST', '/api/templates', {
-        ...data,
-        userId: user?.id,
-      });
-      
-      const templateData = await templateResponse.json();
-      const templateId = templateData.id;
-      
-      // Add exercises to the template
-      const exercisesData = selectedExercises.map(ex => ({
-        templateId,
-        exerciseId: ex.exerciseId,
-        order: ex.order,
-        defaultSets: ex.defaultSets,
-        defaultReps: ex.defaultReps,
-        defaultWeight: ex.defaultWeight,
-        notes: ex.notes,
-      }));
-      
-      await apiRequest('POST', `/api/templates/${templateId}/exercises`, exercisesData);
-      
-      // Update the onboarding step
-      await apiRequest('POST', '/api/user/update-onboarding-step', { 
-        step: 'marketplace_intro' 
-      });
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
-      
-      toast({
-        title: 'Template created!',
-        description: 'Your workout template has been saved successfully.',
-        variant: 'default',
-      });
-      
-      onComplete();
-    } catch (error: any) {
-      console.error('Error creating template:', error);
-      toast({
-        title: 'Error creating template',
-        description: error.message || 'Something went wrong. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const categories = [
-    { value: 'strength', label: 'Strength' },
-    { value: 'hypertrophy', label: 'Hypertrophy' },
-    { value: 'cardio', label: 'Cardio' },
-    { value: 'endurance', label: 'Endurance' },
-    { value: 'full_body', label: 'Full Body' },
-    { value: 'upper_body', label: 'Upper Body' },
-    { value: 'lower_body', label: 'Lower Body' },
-    { value: 'push', label: 'Push' },
-    { value: 'pull', label: 'Pull' },
-    { value: 'legs', label: 'Legs' },
-  ];
-
-  // Group exercises by category for easier selection
-  const exercisesByCategory = exercises.reduce((acc, exercise) => {
-    if (!acc[exercise.category]) {
-      acc[exercise.category] = [];
-    }
-    acc[exercise.category].push(exercise);
-    return acc;
-  }, {} as Record<string, Exercise[]>);
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-80">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+  const updateExercise = (id: string, field: keyof Exercise, value: any) => {
+    setExercises(
+      exercises.map((ex) =>
+        ex.id === id ? { ...ex, [field]: value } : ex
+      )
     );
-  }
+  };
+
+  const isValid = 
+    templateName.trim() !== "" && 
+    exercises.length > 0 && 
+    exercises.every(ex => ex.name.trim() !== "");
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-2xl">Create Your First Workout Template</CardTitle>
-        <CardDescription>
-          Design a workout template that you can use to track your progress
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Template Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Push Day Workout" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.value} value={category.value}>
-                            {category.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Categorize your workout for easier organization
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium">Create Your First Workout Template</h3>
+        <p className="text-sm text-muted-foreground">
+          Start by creating a simple workout template. You can add more exercises
+          and customize it later.
+        </p>
+      </div>
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Describe your workout template"
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      <div className="grid gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor="template-name">Template Name</Label>
+          <Input
+            id="template-name"
+            placeholder="e.g., Full Body Workout, Upper Body, Leg Day, etc."
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+          />
+        </div>
 
-            {/* Exercise Selection */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Add Exercises</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Select exercises to add to your template. You'll be able to adjust sets, reps, and weights.
-                </p>
-
-                <div className="border rounded-md p-4 space-y-4">
-                  <Select 
-                    onValueChange={(value) => handleAddExercise(parseInt(value))}
-                    value=""
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an exercise to add" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-80">
-                      {Object.entries(exercisesByCategory).map(([category, exs]) => (
-                        <div key={category} className="mb-2">
-                          <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-                            {category.charAt(0).toUpperCase() + category.slice(1)}
-                          </div>
-                          {exs.map((exercise) => (
-                            <SelectItem key={exercise.id} value={exercise.id.toString()}>
-                              {exercise.name}
-                            </SelectItem>
-                          ))}
-                        </div>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* Selected Exercises List */}
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-2">Selected Exercises:</h4>
-                    
-                    <div className="space-y-2">
-                      {selectedExercises.length === 0 ? (
-                        <div className="text-center py-4 border border-dashed rounded-md">
-                          <p className="text-muted-foreground">No exercises added yet</p>
-                        </div>
-                      ) : (
-                        selectedExercises.map((ex, index) => (
-                          <div
-                            key={index}
-                            className="border rounded-md p-3 bg-card"
-                          >
-                            <div className="flex justify-between items-center mb-2">
-                              <div className="flex items-center">
-                                <div className="flex flex-col mr-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={() => handleMoveExercise(index, 'up')}
-                                    disabled={index === 0}
-                                  >
-                                    <ChevronUp className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={() => handleMoveExercise(index, 'down')}
-                                    disabled={index === selectedExercises.length - 1}
-                                  >
-                                    <ChevronDown className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                <div className="font-medium">{ex.exercise.name}</div>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveExercise(index)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                            
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <label className="text-xs">Sets</label>
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  value={ex.defaultSets}
-                                  onChange={(e) => handleExerciseChange(index, 'defaultSets', parseInt(e.target.value))}
-                                  className="h-8"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs">Reps</label>
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  value={ex.defaultReps}
-                                  onChange={(e) => handleExerciseChange(index, 'defaultReps', parseInt(e.target.value))}
-                                  className="h-8"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs">Weight</label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step={2.5}
-                                  value={ex.defaultWeight || ''}
-                                  onChange={(e) => handleExerciseChange(index, 'defaultWeight', e.target.value ? parseFloat(e.target.value) : null)}
-                                  placeholder="Optional"
-                                  className="h-8"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating Template...
-                </>
-              ) : (
-                'Create Template'
-              )}
+        <div className="space-y-4 mt-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium">Exercises</h4>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={addExercise}
+              className="h-8 gap-1"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Exercise
             </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+          </div>
+
+          <div className="space-y-3">
+            {exercises.map((exercise) => (
+              <Card key={exercise.id} className="overflow-hidden">
+                <CardHeader className="p-3 bg-muted/50">
+                  <div className="flex items-center justify-between">
+                    <Input
+                      className="text-sm font-medium border-0 bg-transparent px-0 h-auto"
+                      placeholder="Exercise Name (e.g., Bench Press, Squat)"
+                      value={exercise.name}
+                      onChange={(e) =>
+                        updateExercise(exercise.id, "name", e.target.value)
+                      }
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeExercise(exercise.id)}
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      disabled={exercises.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor={`sets-${exercise.id}`} className="text-xs flex items-center gap-1">
+                      <span className="hidden md:inline">Sets</span>
+                      <span className="md:hidden">S</span>
+                    </Label>
+                    <Input
+                      id={`sets-${exercise.id}`}
+                      type="number"
+                      min="1"
+                      value={exercise.sets}
+                      onChange={(e) =>
+                        updateExercise(
+                          exercise.id,
+                          "sets",
+                          parseInt(e.target.value) || 1
+                        )
+                      }
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`reps-${exercise.id}`} className="text-xs flex items-center gap-1">
+                      <span className="hidden md:inline">Reps</span>
+                      <span className="md:hidden">R</span>
+                    </Label>
+                    <Input
+                      id={`reps-${exercise.id}`}
+                      type="number"
+                      min="1"
+                      value={exercise.reps}
+                      onChange={(e) =>
+                        updateExercise(
+                          exercise.id,
+                          "reps",
+                          parseInt(e.target.value) || 1
+                        )
+                      }
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`weight-${exercise.id}`} className="text-xs flex items-center gap-1">
+                      <span className="hidden md:inline">Weight</span>
+                      <span className="md:hidden">W</span>
+                      <Dumbbell className="h-3 w-3" />
+                    </Label>
+                    <Input
+                      id={`weight-${exercise.id}`}
+                      type="number"
+                      min="0"
+                      value={exercise.weight}
+                      onChange={(e) =>
+                        updateExercise(
+                          exercise.id,
+                          "weight",
+                          parseInt(e.target.value) || 0
+                        )
+                      }
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`rest-${exercise.id}`} className="text-xs flex items-center gap-1">
+                      <span className="hidden md:inline">Rest</span>
+                      <span className="md:hidden">Rst</span>
+                      <Clock className="h-3 w-3" />
+                    </Label>
+                    <Input
+                      id={`rest-${exercise.id}`}
+                      type="number"
+                      min="0"
+                      value={exercise.restTime}
+                      onChange={(e) =>
+                        updateExercise(
+                          exercise.id,
+                          "restTime",
+                          parseInt(e.target.value) || 0
+                        )
+                      }
+                      className="h-8"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

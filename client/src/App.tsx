@@ -23,6 +23,7 @@ import Checkout from "@/pages/Checkout";
 import PlanCheckout from "@/pages/PlanCheckout";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import AuthPage from "@/pages/auth-page";
+import Onboarding from "@/pages/Onboarding";
 import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";

@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2, UserPlus, Users, Search } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle2, UserPlus, User } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface User {
   id: number;
@@ -26,267 +33,196 @@ interface SocialConnectionProps {
 export default function SocialConnection({ onComplete }: SocialConnectionProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [users, setUsers] = useState<User[]>([]);
   const [suggestedUsers, setSuggestedUsers] = useState<User[]>([]);
-  const [ownerId, setOwnerId] = useState<number | null>(null);
-  const [following, setFollowing] = useState<number[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set());
 
-  // Load suggested users and following status
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchSuggestedUsers = async () => {
       try {
-        // Get suggested users (including the owner)
-        const usersResponse = await fetch('/api/users/suggested');
-        const usersData = await usersResponse.json();
-        setUsers(usersData);
-        
-        // Find the owner (user with ID 1)
-        const owner = usersData.find((u: User) => u.id === 1);
-        if (owner) {
-          setOwnerId(owner.id);
+        setIsLoading(true);
+        // Fetch suggested users (including the owner user and some coaches)
+        const response = await fetch("/api/user-suggestions");
+        if (!response.ok) {
+          throw new Error("Failed to fetch suggested users");
         }
         
-        // Get curated suggestions (excluding the owner and current user)
-        const suggestions = usersData.filter((u: User) => 
-          u.id !== user?.id && u.id !== 1 && u.isCoach
-        ).slice(0, 3);
-        setSuggestedUsers(suggestions);
+        const data = await response.json();
         
-        // Get current following list
-        const followingResponse = await fetch(`/api/users/${user?.id}/following`);
-        const followingData = await followingResponse.json();
-        setFollowing(followingData.map((f: any) => f.followingId));
+        // Add the owner first in the list
+        const owner = data.find((u: User) => u.id === 1);
+        
+        // Get remaining users but limit to 4 more suggestions
+        const suggestions = data
+          .filter((u: User) => u.id !== 1 && u.id !== user?.id)
+          .slice(0, 4);
+        
+        // Combine the owner with other suggestions
+        const combinedSuggestions = owner ? [owner, ...suggestions] : suggestions;
+        
+        setSuggestedUsers(combinedSuggestions);
       } catch (error) {
-        console.error('Error fetching social data:', error);
+        console.error("Error fetching suggested users:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load suggested users. Please try again.",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (user?.id) {
-      fetchData();
-    }
-  }, [user?.id]);
-
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    
-    setIsSearching(true);
-    try {
-      const response = await fetch(`/api/users/search?query=${encodeURIComponent(searchQuery)}`);
-      const data = await response.json();
-      setSuggestedUsers(data.filter((u: User) => u.id !== user?.id).slice(0, 5));
-    } catch (error) {
-      console.error('Error searching users:', error);
-      toast({
-        title: 'Search failed',
-        description: 'Unable to search for users. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSearching(false);
-    }
-  };
+    fetchSuggestedUsers();
+  }, [user?.id, toast]);
 
   const handleFollow = async (userId: number) => {
     try {
-      await apiRequest('POST', `/api/users/${user?.id}/follow`, { followingId: userId });
+      // Optimistically update UI
+      setFollowedUsers(prev => new Set(prev).add(userId));
       
-      setFollowing(prev => [...prev, userId]);
+      // Make API call to follow the user
+      const response = await apiRequest("POST", "/api/follows", { followingId: userId });
+      
+      if (!response.ok) {
+        // If request fails, revert the UI change
+        setFollowedUsers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
+        throw new Error("Failed to follow user");
+      }
       
       toast({
-        title: 'Success!',
-        description: 'You are now following this user.',
+        title: "Success",
+        description: "You are now following this user!",
       });
     } catch (error) {
-      console.error('Error following user:', error);
+      console.error("Error following user:", error);
       toast({
-        title: 'Action failed',
-        description: 'Unable to follow this user. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to follow user. Please try again.",
+        variant: "destructive",
       });
     }
   };
-
-  const handleUnfollow = async (userId: number) => {
-    try {
-      await apiRequest('DELETE', `/api/users/${user?.id}/unfollow/${userId}`);
-      
-      setFollowing(prev => prev.filter(id => id !== userId));
-      
-      toast({
-        title: 'Unfollowed',
-        description: 'You are no longer following this user.',
-      });
-    } catch (error) {
-      console.error('Error unfollowing user:', error);
-      toast({
-        title: 'Action failed',
-        description: 'Unable to unfollow this user. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleContinue = async () => {
-    try {
-      // Update the onboarding step
-      await apiRequest('POST', '/api/user/update-onboarding-step', { 
-        step: 'completed' 
-      });
-      
-      // Mark onboarding as completed
-      await apiRequest('POST', '/api/user/complete-onboarding');
-      
-      // Invalidate user data
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      
-      onComplete();
-    } catch (error) {
-      console.error('Error completing onboarding:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to complete onboarding. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Check if the user is following the owner
-  const isFollowingOwner = ownerId ? following.includes(ownerId) : false;
 
   const renderUserCard = (user: User, showInteractionHint = false) => (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex items-center justify-between p-4 border rounded-lg mb-3 bg-card"
-    >
-      <div className="flex items-center space-x-3">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={`https://avatar.vercel.sh/${user.username || user.id}`} />
-          <AvatarFallback>
-            {user.name ? user.name.substring(0, 2).toUpperCase() : user.username.substring(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <div className="font-medium">
-            {user.name || user.username}
-            {user.isCoach && <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Coach</span>}
+    <Card key={user.id} className="overflow-hidden">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Avatar>
+              <AvatarImage src={`https://avatar.vercel.sh/${user.username}`} />
+              <AvatarFallback>
+                <User className="h-5 w-5" />
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <CardTitle className="text-base">
+                {user.name || user.username}
+                {user.id === 1 && (
+                  <Badge className="ml-2 bg-primary/20 text-primary hover:bg-primary/30">
+                    Owner
+                  </Badge>
+                )}
+                {user.isCoach && (
+                  <Badge className="ml-2 bg-orange-500/20 text-orange-700 hover:bg-orange-500/30 border-orange-200">
+                    Coach
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription className="text-xs">@{user.username}</CardDescription>
+            </div>
           </div>
-          {user.location && <p className="text-xs text-muted-foreground">{user.location}</p>}
-        </div>
-      </div>
-      
-      <div>
-        {following.includes(user.id) ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleUnfollow(user.id)}
-          >
-            Following
-          </Button>
-        ) : (
-          <Button
-            variant={user.id === ownerId ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleFollow(user.id)}
-            className={user.id === ownerId ? "animate-pulse" : ""}
-          >
-            <UserPlus className="h-4 w-4 mr-1" />
-            Follow
-          </Button>
-        )}
-      </div>
-      
-      {showInteractionHint && user.id === ownerId && !isFollowingOwner && (
-        <div className="absolute -top-8 right-8 bg-primary text-primary-foreground px-3 py-1 rounded-md text-xs">
-          👋 Follow the creator of Titan Fitness!
-          <div className="absolute -bottom-2 right-10 w-3 h-3 bg-primary rotate-45"></div>
-        </div>
-      )}
-    </motion.div>
-  );
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-80">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-2xl">Connect with the Community</CardTitle>
-        <CardDescription>
-          Follow other fitness enthusiasts to see their workouts and progress
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Owner spotlight if available */}
-        {ownerId && users.find(u => u.id === ownerId) && (
-          <div className="mb-8 relative">
-            <h3 className="text-lg font-medium mb-3">Creator Spotlight</h3>
-            {renderUserCard(users.find(u => u.id === ownerId)!, true)}
-          </div>
-        )}
-        
-        {/* Search */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium mb-3">Find People</h3>
-          <div className="flex space-x-2">
-            <Input
-              placeholder="Search by name or username"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1"
-            />
-            <Button onClick={handleSearch} disabled={isSearching}>
-              {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          {!followedUsers.has(user.id) ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 h-8"
+              onClick={() => handleFollow(user.id)}
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              <span>Follow</span>
             </Button>
-          </div>
-        </div>
-        
-        {/* Suggested users */}
-        <div>
-          <h3 className="text-lg font-medium mb-3">
-            {searchQuery ? 'Search Results' : 'Suggested Users'} 
-            <span className="text-sm font-normal text-muted-foreground ml-2">
-              ({suggestedUsers.length})
-            </span>
-          </h3>
-          
-          {suggestedUsers.length === 0 ? (
-            <div className="text-center py-8 border border-dashed rounded-md">
-              <Users className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-muted-foreground">
-                {searchQuery ? 'No users found matching your search' : 'No suggested users at the moment'}
-              </p>
-            </div>
           ) : (
-            <div className="space-y-3">
-              {suggestedUsers.map(user => renderUserCard(user))}
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 h-8 text-green-600 pointer-events-none"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Following</span>
+            </Button>
           )}
         </div>
-        
-        <div className="mt-8 pt-4 border-t">
-          <Button 
-            onClick={handleContinue}
-            className="w-full"
-          >
-            Complete Onboarding
-          </Button>
-          <p className="text-center text-sm text-muted-foreground mt-2">
-            You can always find and follow more people later
+      </CardHeader>
+      <CardContent className="pt-0 pb-3">
+        {user.bio ? (
+          <p className="text-sm text-muted-foreground line-clamp-2">{user.bio}</p>
+        ) : (
+          <p className="text-sm text-muted-foreground italic">No bio provided</p>
+        )}
+        {showInteractionHint && (
+          <p className="text-xs text-primary mt-2">
+            <strong>Tip:</strong> Follow the owner to stay updated with platform news and tips!
           </p>
-        </div>
+        )}
       </CardContent>
     </Card>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium">Connect with Other Users</h3>
+        <p className="text-sm text-muted-foreground">
+          Follow other users to see their workout progress, templates, and achievements.
+          Building a network will help you stay motivated and discover new workout ideas.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {isLoading ? (
+          <>
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="space-y-1.5">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-9 w-20" />
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 pb-3">
+                  <Skeleton className="h-4 w-full mb-1" />
+                  <Skeleton className="h-4 w-3/4" />
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        ) : (
+          <>
+            {suggestedUsers.length > 0 ? (
+              <div className="space-y-3">
+                {suggestedUsers.map((user, index) => 
+                  renderUserCard(user, user.id === 1)
+                )}
+              </div>
+            ) : (
+              <p className="text-center py-6 text-muted-foreground">
+                No suggested users available at the moment.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
