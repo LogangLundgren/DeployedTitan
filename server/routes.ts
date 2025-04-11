@@ -1441,21 +1441,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Coach profile not found" });
       }
       
-      const updatedProfileData = {
-        id,
-        userId: req.body.userId || coachProfile.userId,
-        title: req.body.title !== undefined ? req.body.title : coachProfile.title,
-        biography: req.body.biography !== undefined ? req.body.biography : coachProfile.biography,
-        experience: req.body.experience !== undefined ? req.body.experience : coachProfile.experience,
-        specialties: req.body.specialties !== undefined ? req.body.specialties : coachProfile.specialties,
-        hourlyRate: req.body.hourlyRate !== undefined ? req.body.hourlyRate : coachProfile.hourlyRate,
-        isAvailableForHire: req.body.isAvailableForHire !== undefined ? req.body.isAvailableForHire : coachProfile.isAvailableForHire,
-        rating: coachProfile.rating,
-        ratingsCount: coachProfile.ratingsCount,
-        isVerified: coachProfile.isVerified
-      };
+      // Create update object with only the fields that are being updated
+      const updatedProfileData: Partial<any> = {};
       
-      const updatedProfile = await storage.updateCoachProfile(updatedProfileData);
+      if (req.body.userId !== undefined) updatedProfileData.userId = req.body.userId;
+      if (req.body.title !== undefined) updatedProfileData.title = req.body.title;
+      if (req.body.biography !== undefined) updatedProfileData.biography = req.body.biography;
+      if (req.body.experience !== undefined) updatedProfileData.experience = req.body.experience;
+      if (req.body.specialties !== undefined) updatedProfileData.specialties = req.body.specialties;
+      if (req.body.hourlyRate !== undefined) updatedProfileData.hourlyRate = req.body.hourlyRate;
+      if (req.body.isAvailableForHire !== undefined) updatedProfileData.isAvailableForHire = req.body.isAvailableForHire;
+      
+      const updatedProfile = await storage.updateCoachProfile(id, updatedProfileData);
       res.status(200).json(updatedProfile);
     } catch (error) {
       console.error("Update coach profile error:", error);
