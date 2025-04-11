@@ -113,7 +113,12 @@ export default function Marketplace() {
     error: plansError
   } = useQuery({
     queryKey: ['/api/workout-plans', { publishedOnly: true }],
-    queryFn: () => fetch(`/api/workout-plans?publishedOnly=true`).then(res => res.json()),
+    queryFn: () => fetch(`/api/workout-plans?publishedOnly=true`).then(res => {
+      if (!res.ok) {
+        throw new Error("Failed to fetch plans");
+      }
+      return res.json();
+    }),
     enabled: activeTab === "plans"
   });
 

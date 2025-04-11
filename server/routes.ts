@@ -1606,7 +1606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const featured = req.query.featured === 'true';
       const query = req.query.query as string;
       const category = req.query.category as string;
-      const publishedOnly = req.query.publishedOnly !== 'false'; // Default to true unless explicitly set to false
+      const publishedOnly = req.query.publishedOnly === 'true'; // Only true when explicitly set to true
       
       let plans;
       
