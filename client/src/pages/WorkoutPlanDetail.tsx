@@ -12,7 +12,8 @@ import {
   CheckCircle, 
   Award, 
   ShoppingCart,
-  Trash
+  Trash,
+  Plus
 } from 'lucide-react';
 import { 
   Accordion,
@@ -270,9 +271,15 @@ export default function WorkoutPlanDetail() {
     try {
       setIsPublishing(true);
       
-      const response = await apiRequest('PUT', `/api/workout-plans/${plan.id}`, {
-        ...plan,
-        isPublished: true
+      const response = await fetch(`/api/workout-plans/${plan.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...plan,
+          isPublished: true
+        })
       });
       
       if (!response.ok) {
@@ -587,24 +594,73 @@ export default function WorkoutPlanDetail() {
                 ) : null}
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button 
-                  className="w-full text-base py-6" 
-                  size="lg"
-                  disabled={plan.isSoldOut}
-                  onClick={() => setPurchaseDialogOpen(true)}
-                >
-                  <ShoppingCart className="mr-2 h-5 w-5" />
-                  Purchase Plan
-                </Button>
+                {/* Plan status */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-medium">Status:</div>
+                  {plan.isPublished ? (
+                    <Badge className="bg-green-500 text-white">Published</Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-amber-100 text-amber-800">Draft</Badge>
+                  )}
+                </div>
                 
-                <Button 
-                  className="w-full" 
-                  variant="destructive"
-                  onClick={() => setDeleteDialogOpen(true)}
-                >
-                  <Trash className="mr-2 h-5 w-5" />
-                  Delete Plan
-                </Button>
+                {/* Coach actions */}
+                {plan.coach && (
+                  <>
+                    {!plan.isPublished ? (
+                      <Button 
+                        className="w-full" 
+                        variant="default"
+                        onClick={handlePublishPlan}
+                        disabled={isPublishing}
+                      >
+                        <CheckCircle className="mr-2 h-5 w-5" />
+                        {isPublishing ? 'Publishing...' : 'Publish Plan'}
+                      </Button>
+                    ) : (
+                      <Button 
+                        className="w-full text-base py-6" 
+                        size="lg"
+                        disabled={plan.isSoldOut}
+                        onClick={() => setPurchaseDialogOpen(true)}
+                      >
+                        <ShoppingCart className="mr-2 h-5 w-5" />
+                        Purchase Plan
+                      </Button>
+                    )}
+                    
+                    <Button 
+                      className="w-full" 
+                      variant="outline"
+                      onClick={() => setAddTemplateDialogOpen(true)}
+                    >
+                      <Plus className="mr-2 h-5 w-5" />
+                      Add Workout Template
+                    </Button>
+                    
+                    <Button 
+                      className="w-full" 
+                      variant="destructive"
+                      onClick={() => setDeleteDialogOpen(true)}
+                    >
+                      <Trash className="mr-2 h-5 w-5" />
+                      Delete Plan
+                    </Button>
+                  </>
+                )}
+
+                {/* Customer actions */}
+                {!plan.coach && (
+                  <Button 
+                    className="w-full text-base py-6" 
+                    size="lg"
+                    disabled={plan.isSoldOut}
+                    onClick={() => setPurchaseDialogOpen(true)}
+                  >
+                    <ShoppingCart className="mr-2 h-5 w-5" />
+                    Purchase Plan
+                  </Button>
+                )}
 
                 <div className="text-sm text-gray-500 text-center">
                   One-time purchase, lifetime access
@@ -743,6 +799,34 @@ export default function WorkoutPlanDetail() {
                   Deleting...
                 </>
               ) : "Delete Plan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Template Dialog */}
+      <Dialog open={addTemplateDialogOpen} onOpenChange={setAddTemplateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Workout Template</DialogTitle>
+            <DialogDescription>
+              Select a workout template to add to this program.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm text-gray-500 mb-4">
+              Coming soon: You'll be able to add your workout templates to this plan.
+              For now, please manage templates from the Templates page.
+            </p>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddTemplateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setLocation('/templates')}>
+              Go to Templates
             </Button>
           </DialogFooter>
         </DialogContent>
