@@ -119,7 +119,7 @@ export default function MyPlans() {
     isLoading: isCoachPlansLoading 
   } = useQuery({
     queryKey: ['/api/workout-plans', 'coach', userId],
-    queryFn: () => fetch(`/api/workout-plans?coachId=${userId}`).then(res => res.json()),
+    queryFn: () => fetch(`/api/workout-plans?coachId=${userId}&publishedOnly=false`).then(res => res.json()),
     enabled: !!user?.isCoach
   });
   
