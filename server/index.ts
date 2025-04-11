@@ -5,10 +5,14 @@ import { storage } from "./storage";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import ws from 'ws';
+import { configureSession } from "./auth";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Configure authentication session
+configureSession(app);
 
 app.use((req, res, next) => {
   const start = Date.now();
