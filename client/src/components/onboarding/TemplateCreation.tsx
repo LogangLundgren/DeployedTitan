@@ -133,17 +133,23 @@ export default function TemplateCreation({ onComplete }: TemplateCreationProps) 
     setSelectedExercises(updated);
   };
 
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
+  const handleMoveExercise = (index: number, direction: 'up' | 'down') => {
+    if (
+      (direction === 'up' && index === 0) || 
+      (direction === 'down' && index === selectedExercises.length - 1)
+    ) {
+      return; // Can't move further up/down
+    }
     
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
     const items = Array.from(selectedExercises);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+    const [movedItem] = items.splice(index, 1);
+    items.splice(newIndex, 0, movedItem);
     
     // Update order values
-    const reordered = items.map((item, index) => ({
+    const reordered = items.map((item, idx) => ({
       ...item,
-      order: index,
+      order: idx,
     }));
     
     setSelectedExercises(reordered);
@@ -351,83 +357,88 @@ export default function TemplateCreation({ onComplete }: TemplateCreationProps) 
                   <div className="mt-4">
                     <h4 className="text-sm font-medium mb-2">Selected Exercises:</h4>
                     
-                    <DragDropContext onDragEnd={handleDragEnd}>
-                      <Droppable droppableId="exercises">
-                        {(provided) => (
+                    <div className="space-y-2">
+                      {selectedExercises.length === 0 ? (
+                        <div className="text-center py-4 border border-dashed rounded-md">
+                          <p className="text-muted-foreground">No exercises added yet</p>
+                        </div>
+                      ) : (
+                        selectedExercises.map((ex, index) => (
                           <div
-                            {...provided.droppableProps}
-                            ref={provided.innerRef}
-                            className="space-y-2"
+                            key={index}
+                            className="border rounded-md p-3 bg-card"
                           >
-                            {selectedExercises.length === 0 ? (
-                              <div className="text-center py-4 border border-dashed rounded-md">
-                                <p className="text-muted-foreground">No exercises added yet</p>
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="flex items-center">
+                                <div className="flex flex-col mr-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => handleMoveExercise(index, 'up')}
+                                    disabled={index === 0}
+                                  >
+                                    <ChevronUp className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => handleMoveExercise(index, 'down')}
+                                    disabled={index === selectedExercises.length - 1}
+                                  >
+                                    <ChevronDown className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <div className="font-medium">{ex.exercise.name}</div>
                               </div>
-                            ) : (
-                              selectedExercises.map((ex, index) => (
-                                <Draggable key={index} draggableId={`exercise-${index}`} index={index}>
-                                  {(provided) => (
-                                    <div
-                                      ref={provided.innerRef}
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
-                                      className="border rounded-md p-3 bg-card"
-                                    >
-                                      <div className="flex justify-between items-center mb-2">
-                                        <div className="font-medium">{ex.exercise.name}</div>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => handleRemoveExercise(index)}
-                                        >
-                                          <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                      </div>
-                                      
-                                      <div className="grid grid-cols-3 gap-2">
-                                        <div>
-                                          <label className="text-xs">Sets</label>
-                                          <Input
-                                            type="number"
-                                            min={1}
-                                            value={ex.defaultSets}
-                                            onChange={(e) => handleExerciseChange(index, 'defaultSets', parseInt(e.target.value))}
-                                            className="h-8"
-                                          />
-                                        </div>
-                                        <div>
-                                          <label className="text-xs">Reps</label>
-                                          <Input
-                                            type="number"
-                                            min={1}
-                                            value={ex.defaultReps}
-                                            onChange={(e) => handleExerciseChange(index, 'defaultReps', parseInt(e.target.value))}
-                                            className="h-8"
-                                          />
-                                        </div>
-                                        <div>
-                                          <label className="text-xs">Weight</label>
-                                          <Input
-                                            type="number"
-                                            min={0}
-                                            step={2.5}
-                                            value={ex.defaultWeight || ''}
-                                            onChange={(e) => handleExerciseChange(index, 'defaultWeight', e.target.value ? parseFloat(e.target.value) : null)}
-                                            placeholder="Optional"
-                                            className="h-8"
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </Draggable>
-                              ))
-                            )}
-                            {provided.placeholder}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveExercise(index)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <label className="text-xs">Sets</label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={ex.defaultSets}
+                                  onChange={(e) => handleExerciseChange(index, 'defaultSets', parseInt(e.target.value))}
+                                  className="h-8"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs">Reps</label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={ex.defaultReps}
+                                  onChange={(e) => handleExerciseChange(index, 'defaultReps', parseInt(e.target.value))}
+                                  className="h-8"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs">Weight</label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step={2.5}
+                                  value={ex.defaultWeight || ''}
+                                  onChange={(e) => handleExerciseChange(index, 'defaultWeight', e.target.value ? parseFloat(e.target.value) : null)}
+                                  placeholder="Optional"
+                                  className="h-8"
+                                />
+                              </div>
+                            </div>
                           </div>
-                        )}
-                      </Droppable>
-                    </DragDropContext>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
