@@ -19,6 +19,7 @@ import {
   coachingServices, type CoachingService, type InsertCoachingService,
   purchases, type Purchase, type InsertPurchase,
   reviews, type Review, type InsertReview,
+  userSuggestions, type UserSuggestion, type InsertUserSuggestion,
   type WorkoutWithDetails, type TemplateWithExercises
 } from "@shared/schema";
 import { eq, desc, and, asc, sql, or, isNull, isNotNull, inArray, like } from 'drizzle-orm';
@@ -164,6 +165,13 @@ export interface IStorage {
   updateReview(id: number, reviewContent: string, rating: number): Promise<Review | undefined>;
   deleteReview(id: number): Promise<boolean>;
   getAverageRating(coachId?: number, planId?: number): Promise<number>;
+  
+  // User Suggestions operations
+  getUserSuggestions(): Promise<UserSuggestion[]>;
+  getUserSuggestion(id: number): Promise<UserSuggestion | undefined>;
+  createUserSuggestion(suggestion: InsertUserSuggestion): Promise<UserSuggestion>;
+  updateUserSuggestionStatus(id: number, status: string, adminNotes?: string): Promise<UserSuggestion | undefined>;
+  deleteUserSuggestion(id: number): Promise<boolean>;
   
   // DB-specific method
   initialize?(): Promise<void>;
@@ -3369,6 +3377,89 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error(`Error calculating average rating: ${error}`);
       return 0;
+    }
+  }
+  
+  // User Suggestions operations
+  async getUserSuggestions(): Promise<UserSuggestion[]> {
+    try {
+      return await db
+        .select()
+        .from(userSuggestions)
+        .orderBy(desc(userSuggestions.createdAt));
+    } catch (error) {
+      console.error("Error getting user suggestions:", error);
+      return [];
+    }
+  }
+
+  async getUserSuggestion(id: number): Promise<UserSuggestion | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(userSuggestions)
+        .where(eq(userSuggestions.id, id));
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error getting user suggestion:", error);
+      return undefined;
+    }
+  }
+
+  async createUserSuggestion(suggestion: InsertUserSuggestion): Promise<UserSuggestion> {
+    try {
+      const result = await db
+        .insert(userSuggestions)
+        .values({
+          ...suggestion,
+          status: suggestion.status || "new",
+          adminNotes: suggestion.adminNotes || null,
+        })
+        .returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error creating user suggestion:", error);
+      throw error;
+    }
+  }
+
+  async updateUserSuggestionStatus(id: number, status: string, adminNotes?: string): Promise<UserSuggestion | undefined> {
+    try {
+      const updateData: { status: string; adminNotes?: string; updatedAt: Date } = {
+        status,
+        updatedAt: new Date()
+      };
+      
+      if (adminNotes !== undefined) {
+        updateData.adminNotes = adminNotes;
+      }
+      
+      const result = await db
+        .update(userSuggestions)
+        .set(updateData)
+        .where(eq(userSuggestions.id, id))
+        .returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error updating user suggestion status:", error);
+      return undefined;
+    }
+  }
+
+  async deleteUserSuggestion(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(userSuggestions)
+        .where(eq(userSuggestions.id, id))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting user suggestion:", error);
+      return false;
     }
   }
 }

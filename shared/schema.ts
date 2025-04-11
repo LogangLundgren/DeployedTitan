@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, real, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, real, varchar, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -510,3 +510,28 @@ export const insertReviewSchema = createInsertSchema(reviews).pick({
 
 export type Review = typeof reviews.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
+
+// User suggestions schema (feedback from users)
+export const userSuggestions = pgTable("user_suggestions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  subject: text("subject").notNull(),
+  content: text("content").notNull(),
+  category: text("category").default("Feature Request"),
+  status: text("status").default("new").notNull(), // "new", "reviewing", "implemented", "declined"
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertUserSuggestionSchema = createInsertSchema(userSuggestions).pick({
+  userId: true,
+  subject: true,
+  content: true,
+  category: true,
+  status: true,
+  adminNotes: true,
+});
+
+export type UserSuggestion = typeof userSuggestions.$inferSelect;
+export type InsertUserSuggestion = z.infer<typeof insertUserSuggestionSchema>;
