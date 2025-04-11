@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
 import { Link } from "wouter";
 import { 
@@ -80,7 +80,7 @@ interface UserProfile {
   workoutsCount?: number;
   followersCount?: number;
   followingCount?: number;
-  isFollowing?: boolean;
+  isFollowing: boolean; // Required for follow feature
 }
 
 // No need to redefine WorkoutComment here
@@ -853,13 +853,34 @@ function ActivityFeed() {
 function PeopleDiscover() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   
+  // Local state for users to enable real-time UI updates
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  
   // Query users 
-  const { data: users = [], isLoading: usersLoading } = useQuery({
+  const { isLoading: usersLoading } = useQuery({
     queryKey: ['/api/users/discover'],
-    queryFn: () => 
+    queryFn: () => {
       // In a real app, this would be a real endpoint
-      Promise.resolve(demoUsers),
+      // Add isFollowing flag to some users for demonstration
+      const enhancedUsers = demoUsers.map((user, index) => ({
+        ...user,
+        // Make Jessica (id:2) and Alex (id:5) already followed
+        isFollowing: user.id === 2 || user.id === 5
+      }));
+      return Promise.resolve(enhancedUsers);
+    }
   });
+  
+  // Initialize the users state when data is fetched
+  useEffect(() => {
+    if (usersLoading === false) {
+      // Use the imported queryClient instead of useQueryClient hook
+      const data = queryClient.getQueryData<UserProfile[]>(['/api/users/discover']);
+      if (data) {
+        setUsers(data);
+      }
+    }
+  }, [usersLoading]);
 
   // Follow user mutation
   // Track followed users locally since we're using mock data
