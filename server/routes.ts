@@ -3120,27 +3120,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint to initialize a checkout for a workout plan
   app.post("/api/init-plan-checkout", async (req: Request, res: Response) => {
     try {
+      console.log("CHECKOUT DEBUG - Request body:", req.body);
+      
+      // Type assertions for express-session with passport
+      const authReq = req as any;
+      console.log("CHECKOUT DEBUG - User authenticated:", authReq.isAuthenticated?.());
+      console.log("CHECKOUT DEBUG - User details:", authReq.user);
+      
       const { planId } = req.body;
       
       if (!planId) {
+        console.log("CHECKOUT DEBUG - Missing plan ID");
         return res.status(400).json({ message: "Plan ID is required" });
       }
       
+      console.log(`CHECKOUT DEBUG - Fetching plan with ID: ${planId}`);
       const plan = await storage.getWorkoutPlan(parseInt(planId));
       
       if (!plan) {
+        console.log("CHECKOUT DEBUG - Plan not found");
         return res.status(404).json({ message: "Workout plan not found" });
       }
       
-      // Check if the user is authenticated
-      // @ts-ignore - Express types don't include the passport authentication properties
-      const userId = req.user?.id;
+      console.log(`CHECKOUT DEBUG - Found plan: ${plan.title}, price: ${plan.price}`);
+      
+      // Get the user from the session
+      const userId = authReq.user?.id;
       
       if (!userId) {
+        console.log("CHECKOUT DEBUG - User not authenticated");
         return res.status(401).json({ message: "User must be logged in to purchase plans" });
       }
       
+      console.log(`CHECKOUT DEBUG - Authenticated user ID: ${userId}`);
+      
       // Create a payment intent
+      console.log("CHECKOUT DEBUG - Creating Stripe payment intent");
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(plan.price * 100), // Convert to cents
         currency: "usd",
@@ -3150,6 +3165,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           planTitle: plan.title
         }
       });
+      
+      console.log(`CHECKOUT DEBUG - Payment intent created: ${paymentIntent.id}`);
+      console.log(`CHECKOUT DEBUG - Client secret: ${paymentIntent.client_secret?.substring(0, 10)}...`);
       
       res.status(200).json({ 
         clientSecret: paymentIntent.client_secret,

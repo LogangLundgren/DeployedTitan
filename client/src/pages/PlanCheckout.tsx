@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
-import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
@@ -36,8 +35,7 @@ export default function PlanCheckout() {
         description: "Please log in to purchase a workout plan",
         variant: "destructive",
       });
-      // For now, just redirect back to the marketplace
-      // In a real app, we would redirect to an auth page
+      // Redirect back to the marketplace
       setLocation('/marketplace');
       return;
     }
@@ -53,25 +51,33 @@ export default function PlanCheckout() {
       try {
         console.log("Initializing checkout with planId:", planId);
         
-        // Use apiRequest from queryClient to ensure cookies are sent for authentication
-        const response = await apiRequest("POST", "/api/init-plan-checkout", { planId: Number(planId) });
+        // Make the request directly with fetch to ensure cookies are sent
+        const response = await fetch("/api/init-plan-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planId: Number(planId) }),
+          credentials: "include"
+        });
+        
+        console.log("Checkout API response status:", response.status);
+        const data = await response.json();
+        console.log("Checkout API response:", data);
         
         if (!response.ok) {
-          const data = await response.json();
           throw new Error(data.message || 'Failed to initialize checkout');
         }
         
-        const data = await response.json();
         console.log("Checkout initialized, redirecting with client secret");
         
         // Redirect to the checkout page with the client secret
         setLocation(`/checkout?planId=${planId}&clientSecret=${data.clientSecret}`);
-      } catch (err: any) {
-        console.error('Error initializing checkout:', err);
-        setError(err.message || 'An unexpected error occurred');
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'An unexpected error occurred';
+        console.error('Error initializing checkout:', errorMsg);
+        setError(errorMsg);
         toast({
           title: 'Checkout Failed',
-          description: err.message || 'An unexpected error occurred',
+          description: errorMsg,
           variant: 'destructive',
         });
       } finally {
