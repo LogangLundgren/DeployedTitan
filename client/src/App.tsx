@@ -25,6 +25,7 @@ import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
 import { NotificationsProvider } from "./context/NotificationsContext";
+import { FollowProvider } from "./context/follow-context";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { User } from "@shared/schema";
 
@@ -71,8 +72,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router />
-        <Toaster />
+        <FollowProvider>
+          <Router />
+          <Toaster />
+        </FollowProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

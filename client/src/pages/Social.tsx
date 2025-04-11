@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
 import { Link } from "wouter";
+import { useFollow } from "@/context/follow-context";
 import { 
   Card,
   CardContent,
