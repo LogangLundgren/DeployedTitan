@@ -862,16 +862,57 @@ function PeopleDiscover() {
   });
 
   // Follow user mutation
+  // Track followed users locally since we're using mock data
+  const [followedUsers, setFollowedUsers] = useState<number[]>([]);
+  
+  // Initialize with some users already followed 
+  useEffect(() => {
+    if (users.length > 0 && followedUsers.length === 0) {
+      // Mark some users as already followed for demonstration
+      const initialFollowed = users
+        .filter(user => user.isFollowing)
+        .map(user => user.id);
+      
+      setFollowedUsers(initialFollowed);
+    }
+  }, [users]);
+  
   const followUserMutation = useMutation({
-    mutationFn: (userId: number) => 
+    mutationFn: (userId: number) => {
       // In a real app, this would be a real endpoint
-      Promise.resolve({ success: true }),
-    onSuccess: () => {
-      toast({
-        title: "User followed",
-        description: "You are now following this user.",
+      const isCurrentlyFollowing = followedUsers.includes(userId);
+      return Promise.resolve({ 
+        success: true, 
+        userId, 
+        isFollowing: !isCurrentlyFollowing // Toggle the following state
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/users/discover'] });
+    },
+    onSuccess: (response) => {
+      // Update local state based on the action
+      if (followedUsers.includes(response.userId)) {
+        // Unfollow
+        setFollowedUsers(prev => prev.filter(id => id !== response.userId));
+        toast({
+          title: "User unfollowed",
+          description: "You are no longer following this user.",
+        });
+      } else {
+        // Follow
+        setFollowedUsers(prev => [...prev, response.userId]);
+        toast({
+          title: "User followed",
+          description: "You are now following this user.",
+        });
+      }
+      
+      // Update the UI by updating the users array with the new isFollowing state
+      setUsers(prev => 
+        prev.map(user => 
+          user.id === response.userId 
+            ? { ...user, isFollowing: !user.isFollowing }
+            : user
+        )
+      );
     },
   });
 
