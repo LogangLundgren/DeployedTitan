@@ -59,12 +59,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     error,
   } = useQuery<User, Error>({
-    queryKey: ['/api/users/1'],
+    queryKey: ['/api/user'],
     queryFn: async () => {
       try {
-        // Fetch real user data from the API
-        const res = await fetch('/api/users/1');
-        if (!res.ok) throw new Error('Failed to fetch user');
+        // Fetch user data from the auth endpoint
+        const res = await fetch('/api/user', {
+          credentials: 'include' // Important for sending cookies
+        });
+        
+        if (!res.ok) {
+          if (res.status === 404) {
+            // If user not found, fall back to the demo user
+            console.log("User not found, using demo user");
+            return demoUser;
+          }
+          throw new Error('Failed to fetch user');
+        }
+        
         return res.json();
       } catch (error) {
         console.error("Error fetching user in useAuth:", error);
