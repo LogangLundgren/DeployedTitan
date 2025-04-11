@@ -38,6 +38,16 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface User {
   id: number;
@@ -131,7 +141,7 @@ export default function MyPlans() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', 'coach', userId] });
       toast({
         title: "Plan deleted",
         description: "The workout plan has been deleted successfully."
@@ -554,6 +564,56 @@ export default function MyPlans() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Confirmation Dialog for Deleting Plans */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Workout Plan</AlertDialogTitle>
+            <AlertDialogDescription>
+              <div className="space-y-2">
+                <p>
+                  Are you sure you want to delete&nbsp;
+                  <span className="font-medium">{planToDelete?.title}</span>?
+                </p>
+                <div className="flex items-center text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded-md p-3">
+                  <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0" />
+                  <p className="text-sm">
+                    This action cannot be undone. This will permanently delete the workout plan
+                    and all associated data.
+                  </p>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deletePlanMutation.isPending}
+              onClick={() => setPlanToDelete(null)}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (planToDelete) {
+                  deletePlanMutation.mutate(planToDelete.id);
+                }
+              }}
+              disabled={deletePlanMutation.isPending}
+              className="bg-red-500 hover:bg-red-600 focus:ring-red-500"
+            >
+              {deletePlanMutation.isPending ? (
+                <>
+                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-t-transparent border-white" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Plan"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
