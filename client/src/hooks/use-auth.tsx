@@ -28,30 +28,11 @@ type AuthContextType = {
 // Create the auth context
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// For demo purposes, we'll continue using the hardcoded user
-// In a real app, this would fetch from the API
+// Provides authentication functionality using cookies and the backend API
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   
-  // Demo user data for development until we implement backend auth
-  const demoUser: User = {
-    id: 1,
-    username: 'demo',
-    name: 'John Smith',
-    email: 'demo@example.com',
-    password: '',
-    bio: null,
-    location: null,
-    fitnessLevel: null,
-    experienceYears: null,
-    goals: null,
-    certifications: null,
-    socialMedia: null,
-    isCoach: false,
-    coachRegistrationDate: null,
-    stripeCustomerId: null,
-    stripeSubscriptionId: null
-  };
+  // Authentication is now fully implemented with the backend
 
   // Use query for getting the current user from the API
   const {
@@ -68,10 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         
         if (!res.ok) {
-          if (res.status === 404) {
-            // If user not found, fall back to the demo user
-            console.log("User not found, using demo user");
-            return demoUser;
+          if (res.status === 401) {
+            // User is not authenticated
+            console.log("User not authenticated");
+            return null;
           }
           throw new Error('Failed to fetch user');
         }
@@ -79,26 +60,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return res.json();
       } catch (error) {
         console.error("Error fetching user in useAuth:", error);
-        // Fallback to demo user if API fails
-        return demoUser;
+        throw error;
       }
     },
     refetchOnWindowFocus: true, // Ensure we get fresh data when the window gets focus
     staleTime: 30000, // Consider data stale after 30 seconds
   });
 
-  // Mock login mutation
+  // Login mutation using the real backend API
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      // In a real app, this would authenticate with the backend
-      // const res = await apiRequest('POST', '/api/login', credentials);
-      // return await res.json();
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Important for cookies
+        body: JSON.stringify(credentials),
+      });
       
-      // For demo, return the hardcoded user
-      return demoUser;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
+      }
+      
+      return response.json();
     },
     onSuccess: (userData: User) => {
+      // Update the user data in the cache
       queryClient.setQueryData(['/api/user'], userData);
+      // Refetch user data to ensure we have the latest
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
       toast({
         title: 'Login successful',
         description: `Welcome back, ${userData.name || userData.username}!`,
@@ -113,18 +106,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // Mock register mutation
+  // Register mutation using the real backend API
   const registerMutation = useMutation({
     mutationFn: async (userData: RegisterData) => {
-      // In a real app, this would register with the backend
-      // const res = await apiRequest('POST', '/api/register', userData);
-      // return await res.json();
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Important for cookies
+        body: JSON.stringify(userData),
+      });
       
-      // For demo, return the hardcoded user
-      return demoUser;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Registration failed');
+      }
+      
+      // Get the new user data
+      const newUser = await response.json();
+      
+      // After registration, log in the user
+      await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          username: userData.username,
+          password: userData.password
+        }),
+      });
+      
+      return newUser;
     },
     onSuccess: (userData: User) => {
+      // Update the user data in the cache
       queryClient.setQueryData(['/api/user'], userData);
+      // Refetch user data to ensure we have the latest
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
       toast({
         title: 'Registration successful',
         description: `Welcome, ${userData.name || userData.username}!`,
@@ -139,15 +161,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // Mock logout mutation
+  // Logout mutation using the real backend API
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      // In a real app, this would log out from the backend
-      // await apiRequest('POST', '/api/logout');
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include', // Important for cookies
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Logout failed');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
-      // Don't clear user data in demo mode
-      // queryClient.setQueryData(['/api/user'], null);
+      // Clear user data from the cache
+      queryClient.setQueryData(['/api/user'], null);
+      
       toast({
         title: 'Logged out',
         description: 'You have been logged out successfully.',
