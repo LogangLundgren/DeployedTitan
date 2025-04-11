@@ -224,7 +224,7 @@ export default function Marketplace() {
       <Separator />
       <CardFooter className="pt-4 pb-4 flex justify-between items-center">
         <div className="font-bold text-lg">${plan.price.toFixed(2)}</div>
-        <Button size="sm">
+        <Button size="sm" onClick={() => setLocation(`/workout-plans/${plan.id}`)}>
           View Details
           <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
@@ -263,7 +263,7 @@ export default function Marketplace() {
         <div className="font-medium">
           {coach.hourlyRate ? `$${coach.hourlyRate.toFixed(2)}/hr` : "Contact for rates"}
         </div>
-        <Button size="sm">
+        <Button size="sm" onClick={() => setLocation(`/coach-profile/${coach.id}`)}>
           View Profile
           <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
@@ -478,7 +478,7 @@ export default function Marketplace() {
         <p className="mb-6 max-w-xl mx-auto">
           Join our marketplace to offer your coaching services and workout plans to thousands of fitness enthusiasts!
         </p>
-        <Button variant="secondary" size="lg">
+        <Button variant="secondary" size="lg" onClick={() => setLocation("/become-coach")}>
           Become a Coach
         </Button>
       </div>
