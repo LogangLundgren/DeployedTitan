@@ -1738,6 +1738,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Debug endpoint to check if a plan exists
+  app.get("/api/workout-plans/:id/check", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid workout plan ID is required" });
+      }
+      
+      // Check if plan exists directly in the database
+      const planExists = await storage.checkWorkoutPlanExists(id);
+      
+      return res.status(200).json({ 
+        exists: planExists,
+        id: id
+      });
+    } catch (error) {
+      console.error("Check plan error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.put("/api/workout-plans/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

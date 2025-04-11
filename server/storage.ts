@@ -1184,6 +1184,10 @@ export class MemStorage implements IStorage {
     return this.workoutPlans.get(id);
   }
   
+  async checkWorkoutPlanExists(id: number): Promise<boolean> {
+    return this.workoutPlans.has(id);
+  }
+  
   async createWorkoutPlan(insertWorkoutPlan: InsertWorkoutPlan): Promise<WorkoutPlan> {
     const id = this.workoutPlanCurrentId++;
     const now = new Date();
