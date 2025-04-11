@@ -3201,14 +3201,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Logout endpoint to clear the authentication cookie
   app.post("/api/logout", (req: Request, res: Response) => {
     try {
-      // Clear the authentication cookie
-      res.clearCookie('userId', {
-        path: '/',
-        httpOnly: true,
-        sameSite: 'lax'
+      // Destroy the session
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session:", err);
+          return res.status(500).json({ message: "Internal server error" });
+        }
+        
+        res.status(200).json({ message: "Logged out successfully" });
       });
-      
-      res.status(200).json({ message: "Logged out successfully" });
     } catch (error) {
       console.error("Logout error:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -3218,14 +3219,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // /api/user endpoint gets the full user data for the authenticated user
   app.get("/api/user", async (req: Request, res: Response) => {
     try {
-      // Get userId from cookie
-      const userId = req.cookies?.userId;
+      // Get userId from session
+      const userId = req.session.userId;
       
       if (!userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
       
-      const user = await storage.getUser(parseInt(userId));
+      const user = await storage.getUser(userId);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -3252,15 +3253,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("CHECKOUT DEBUG - Request body:", req.body);
       
-      // Get userId from cookie
-      const userIdCookie = req.cookies?.userId;
+      // Get userId from session
+      const userId = req.session.userId;
       
-      if (!userIdCookie) {
+      if (!userId) {
         console.log("CHECKOUT DEBUG - User not authenticated");
         return res.status(401).json({ message: "Authentication required" });
       }
       
-      const userId = parseInt(userIdCookie);
       console.log("CHECKOUT DEBUG - Using authenticated user ID:", userId);
       
       const { planId } = req.body;
