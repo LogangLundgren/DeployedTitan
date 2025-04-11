@@ -289,20 +289,37 @@ export default function WorkoutPlanDetail() {
       }
       
       // Now try to publish it
+      console.log(`Attempting to publish plan with ID: ${plan.id}`);
+      const reqData = { isPublished: true };
+      console.log('Request data:', reqData);
+      
       const response = await fetch(`/api/workout-plans/${plan.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          isPublished: true
-        })
+        body: JSON.stringify(reqData)
       });
       
+      console.log('Publish request complete, status:', response.status);
+      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Publishing error response:', errorText);
+        let errorText = '';
+        try {
+          errorText = await response.text();
+          console.error('Publishing error response:', errorText);
+        } catch (e) {
+          console.error('Failed to get error text:', e);
+        }
         throw new Error(`Failed to publish workout plan: ${response.status} ${errorText}`);
+      }
+      
+      // Check the response from a successful request
+      try {
+        const responseData = await response.json();
+        console.log('Publish success response:', responseData);
+      } catch (e) {
+        console.error('Failed to parse success response:', e);
       }
       
       toast({
