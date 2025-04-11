@@ -185,23 +185,6 @@ export default function CreatePlan() {
     enabled: !!userId, // Only run query when userId exists
   });
 
-  // Set form values from plan data when in edit mode
-  useEffect(() => {
-    if (isEditMode && planToEdit) {
-      form.reset({
-        title: planToEdit.title || "",
-        description: planToEdit.description || "",
-        price: planToEdit.price || 0,
-        durationWeeks: planToEdit.durationWeeks || 4,
-        difficultyLevel: planToEdit.difficultyLevel || "",
-        category: planToEdit.category || "",
-        featuredImageUrl: planToEdit.featuredImageUrl || "",
-        goals: Array.isArray(planToEdit.goals) ? planToEdit.goals : [],
-        equipment: Array.isArray(planToEdit.equipment) ? planToEdit.equipment : []
-      });
-    }
-  }, [isEditMode, planToEdit, form]);
-
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -217,6 +200,29 @@ export default function CreatePlan() {
       equipment: []
     },
   });
+  
+  // Set form values from plan data when in edit mode
+  useEffect(() => {
+    if (isEditMode && planToEdit) {
+      form.reset({
+        title: planToEdit.title || "",
+        description: planToEdit.description || "",
+        price: planToEdit.price || 0,
+        durationWeeks: planToEdit.durationWeeks || 4,
+        difficultyLevel: planToEdit.difficultyLevel || "",
+        category: planToEdit.category || "",
+        featuredImageUrl: planToEdit.featuredImageUrl || "",
+        goals: Array.isArray(planToEdit.goals) ? planToEdit.goals : [],
+        equipment: Array.isArray(planToEdit.equipment) ? planToEdit.equipment : []
+      });
+      
+      // If we have templates in the plan, select them
+      if (planToEdit.templates && Array.isArray(planToEdit.templates)) {
+        const templateIds = planToEdit.templates.map(template => template.id);
+        setSelectedTemplates(templateIds);
+      }
+    }
+  }, [isEditMode, planToEdit, form]);
 
   const goals = form.watch("goals");
   const equipment = form.watch("equipment");
@@ -388,6 +394,87 @@ export default function CreatePlan() {
     }
   });
 
+  // Update plan mutation
+  const updatePlanMutation = useMutation({
+    mutationFn: async (data: any) => {
+      try {
+        if (!editPlanId) {
+          throw new Error('No plan ID specified for update');
+        }
+
+        // Update the workout plan using fetch directly for better error handling
+        const planResponse = await fetch(`/api/workout-plans/${editPlanId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data.plan)
+        });
+        
+        if (!planResponse.ok) {
+          let errorMessage = `Failed to update workout plan (${planResponse.status})`;
+          try {
+            const errorData = await planResponse.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            console.error('Could not parse error response:', e);
+          }
+          throw new Error(errorMessage);
+        }
+        
+        let planData;
+        try {
+          planData = await planResponse.json();
+        } catch (e) {
+          console.error('Error parsing plan response:', e);
+          throw new Error('Invalid response from server when updating plan');
+        }
+        
+        if (!planData || !planData.id) {
+          throw new Error('Server returned invalid plan data');
+        }
+        
+        return planData;
+      } catch (error) {
+        console.error('Error in plan update:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      // Invalidate general workout plans query
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] });
+      
+      // Also invalidate specific plan query
+      if (editPlanId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', editPlanId] });
+      }
+      
+      // Also invalidate coach-specific workout plans query if we have a coach profile
+      if (coachProfile?.id) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['/api/coach-profiles', coachProfile.id, 'workout-plans'] 
+        });
+      }
+      
+      toast({
+        title: "Workout Plan Updated!",
+        description: "Your workout plan has been successfully updated.",
+        variant: "default",
+      });
+      
+      // Redirect to MyPlans page to see the updated plan
+      setLocation('/my-plans');
+    },
+    onError: (error) => {
+      console.error('Error updating workout plan:', error);
+      toast({
+        title: "Error Updating Plan",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
+  });
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (selectedTemplates.length === 0) {
       toast({
@@ -423,15 +510,24 @@ export default function CreatePlan() {
       featuredImageUrl: values.featuredImageUrl || null,
       goals: values.goals,
       equipment: values.equipment,
-      isFeatured: false,
-      isSoldOut: false,
-      isPublished: false // Start as draft
+      // Preserve existing values for these fields in edit mode
+      isFeatured: isEditMode && planToEdit?.isFeatured ? planToEdit.isFeatured : false,
+      isSoldOut: isEditMode && planToEdit?.isSoldOut ? planToEdit.isSoldOut : false,
+      isPublished: isEditMode && planToEdit?.isPublished ? planToEdit.isPublished : false
     };
 
-    createPlanMutation.mutate({
-      plan: planData,
-      templateIds: selectedTemplates
-    });
+    if (isEditMode && editPlanId) {
+      // Update existing plan
+      updatePlanMutation.mutate({
+        plan: planData
+      });
+    } else {
+      // Create new plan
+      createPlanMutation.mutate({
+        plan: planData,
+        templateIds: selectedTemplates
+      });
+    }
   };
 
   // Redirect if not a coach
@@ -460,9 +556,14 @@ export default function CreatePlan() {
     <div className="container mx-auto py-6 px-4 md:px-6">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Create Workout Plan</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            {isEditMode ? 'Edit Workout Plan' : 'Create Workout Plan'}
+          </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Design and publish a workout plan to the marketplace
+            {isEditMode 
+              ? 'Update your workout plan details and settings' 
+              : 'Design and publish a workout plan to the marketplace'
+            }
           </p>
         </div>
 
@@ -877,17 +978,21 @@ export default function CreatePlan() {
                     </Button>
                     <Button 
                       type="submit" 
-                      disabled={isSubmitting || createPlanMutation.isPending || templates.length === 0 || selectedTemplates.length === 0}
+                      disabled={isSubmitting || 
+                        createPlanMutation.isPending || 
+                        updatePlanMutation.isPending || 
+                        templates.length === 0 || 
+                        selectedTemplates.length === 0}
                       className="gap-2"
                     >
-                      {isSubmitting || createPlanMutation.isPending ? (
+                      {isSubmitting || createPlanMutation.isPending || updatePlanMutation.isPending ? (
                         <>
                           <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                          Creating Plan...
+                          {isEditMode ? 'Updating Plan...' : 'Creating Plan...'}
                         </>
                       ) : (
                         <>
-                          Create Workout Plan
+                          {isEditMode ? 'Update Workout Plan' : 'Create Workout Plan'}
                         </>
                       )}
                     </Button>
