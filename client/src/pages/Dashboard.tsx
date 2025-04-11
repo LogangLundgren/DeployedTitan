@@ -292,7 +292,7 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState<WorkoutData[]>([]);
 
   // Fetch recent workouts
-  const { data: recentWorkouts, isLoading: workoutsLoading } = useQuery<WorkoutWithDetails[]>({
+  const { data: recentWorkouts, isLoading: workoutsLoading, refetch: refetchWorkouts } = useQuery<WorkoutWithDetails[]>({
     queryKey: ['/api/workouts/recent', userId],
     queryFn: async () => {
       try {
@@ -305,6 +305,29 @@ export default function Dashboard() {
       }
     }
   });
+  
+  // Set up a handler to refresh when workouts are deleted
+  useEffect(() => {
+    // Subscribe to workout deletion events
+    const handleWorkoutDeleted = () => {
+      refetchWorkouts();
+    };
+    
+    // Add event listener
+    queryClient.getQueryCache().subscribe(event => {
+      if (event.type === 'invalidated' && 
+          (Array.isArray(event.query.queryKey) && 
+           (event.query.queryKey[0] === '/api/workouts' || 
+            event.query.queryKey[0] === '/api/workouts/recent'))) {
+        handleWorkoutDeleted();
+      }
+    });
+    
+    // Cleanup subscription on unmount
+    return () => {
+      queryClient.getQueryCache().clear();
+    };
+  }, [refetchWorkouts]);
 
   // Fetch all exercises
   const { data: exercises, isLoading: exercisesLoading } = useQuery<Exercise[]>({
