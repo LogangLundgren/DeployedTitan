@@ -47,7 +47,7 @@ export default function AdminDashboard() {
 
   // Fetch user suggestions
   const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery<UserSuggestion[]>({
-    queryKey: ['/api/admin/suggestions'],
+    queryKey: ['/api/user-suggestions'],
     enabled: isFounder,
     retry: false
   });
@@ -55,16 +55,19 @@ export default function AdminDashboard() {
   // Mutation to update suggestion status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: number, status: string, notes?: string }) => {
-      const response = await apiRequest("PATCH", `/api/admin/suggestions/${id}`, {
+      return await apiRequest(`/api/user-suggestions/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ 
           status, 
           adminNotes: notes 
         })
       });
-      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user-suggestions'] });
       toast({
         title: "Status updated",
         description: "The suggestion status has been updated successfully.",
