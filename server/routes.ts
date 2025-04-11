@@ -3249,6 +3249,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Update the user's onboarding step
+  app.post("/api/user/update-onboarding-step", async (req: Request, res: Response) => {
+    try {
+      // Get userId from session
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const { step } = req.body;
+      
+      if (!step) {
+        return res.status(400).json({ message: "Step is required" });
+      }
+      
+      // Validate the step is a valid onboarding step
+      const validSteps = ['not_started', 'profile_setup', 'template_creation', 'marketplace_intro', 'social_connection', 'completed'];
+      if (!validSteps.includes(step)) {
+        return res.status(400).json({ message: "Invalid step" });
+      }
+      
+      // Update the user's onboarding step
+      const updatedUser = await storage.updateUser(userId, { onboardingStep: step });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Return the updated user without password
+      const { password, ...userWithoutPassword } = updatedUser;
+      const userResponse = {
+        ...userWithoutPassword,
+        socialMedia: userWithoutPassword.socialMedia ? JSON.parse(userWithoutPassword.socialMedia) : null
+      };
+      
+      return res.status(200).json(userResponse);
+    } catch (error) {
+      console.error("Error updating onboarding step:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Mark onboarding as complete
+  app.post("/api/user/complete-onboarding", async (req: Request, res: Response) => {
+    try {
+      // Get userId from session
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      // Update the user's onboarding status
+      const updatedUser = await storage.updateUser(userId, { 
+        onboardingStep: 'completed',
+        onboardingCompleted: true 
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Return the updated user without password
+      const { password, ...userWithoutPassword } = updatedUser;
+      const userResponse = {
+        ...userWithoutPassword,
+        socialMedia: userWithoutPassword.socialMedia ? JSON.parse(userWithoutPassword.socialMedia) : null
+      };
+      
+      return res.status(200).json(userResponse);
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   app.post("/api/init-plan-checkout", async (req: Request, res: Response) => {
     try {
       console.log("CHECKOUT DEBUG - Request body:", req.body);

@@ -1,132 +1,123 @@
-import React, { ReactNode } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/use-auth';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useState, useEffect, ReactNode } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useNavigate } from "wouter";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  CheckCircle2
+} from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 interface OnboardingLayoutProps {
   children: ReactNode;
-  currentStep: 'profile_setup' | 'template_creation' | 'marketplace_intro' | 'social_connection' | 'completed';
-  onNext?: () => void;
-  onPrevious?: () => void;
-  onSkip?: () => void;
-  isNextDisabled?: boolean;
-  isPreviousDisabled?: boolean;
+  title: string;
+  description: string;
+  currentStep: string;
+  onNext: () => void;
+  onBack?: () => void;
+  canProgress: boolean;
   isLastStep?: boolean;
 }
 
 export default function OnboardingLayout({
   children,
+  title,
+  description,
   currentStep,
   onNext,
-  onPrevious,
-  onSkip,
-  isNextDisabled = false,
-  isPreviousDisabled = false,
+  onBack,
+  canProgress,
   isLastStep = false,
 }: OnboardingLayoutProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
-  
-  // Configure the steps
-  const steps = [
-    { id: 'profile_setup', title: 'Profile Setup' },
-    { id: 'template_creation', title: 'Create Workout Template' },
-    { id: 'marketplace_intro', title: 'Explore Marketplace' },
-    { id: 'social_connection', title: 'Connect with Others' },
-    { id: 'completed', title: 'Complete' }
-  ];
-  
-  // Find the current step index
-  const currentStepIndex = steps.findIndex(step => step.id === currentStep);
-  
-  // Handle completing all onboarding steps
-  const handleCompleteOnboarding = async () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // If user already completed onboarding, redirect to dashboard
+    if (user?.onboardingCompleted) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+
+  const handleNext = async () => {
+    setIsSubmitting(true);
     try {
-      await apiRequest('POST', '/api/user/complete-onboarding');
-      // Invalidate user data to refresh the onboarding status
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      if (onNext) onNext();
+      // Update the onboarding step in the backend
+      await apiRequest("POST", "/api/user/update-onboarding-step", { step: currentStep });
+      
+      // If this is the last step, mark onboarding as completed
+      if (isLastStep) {
+        await apiRequest("POST", "/api/user/complete-onboarding", {});
+        navigate("/");
+      } else {
+        // Move to the next step
+        onNext();
+      }
     } catch (error) {
-      console.error('Failed to complete onboarding:', error);
+      console.error("Error updating onboarding step:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header with progress indicator */}
-      <header className="bg-background border-b px-4 py-3">
-        <div className="container mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold">Welcome to Titan Fitness</h1>
-            {onSkip && (
-              <Button variant="ghost" onClick={onSkip}>
-                Skip Onboarding
-              </Button>
-            )}
-          </div>
-          
-          {/* Progress steps */}
-          <div className="flex justify-between mb-4 relative">
-            {/* Progress bar background */}
-            <div className="absolute top-1/2 left-0 right-0 h-1 bg-muted -translate-y-1/2 z-0" />
-            
-            {/* Progress bar fill */}
-            <div 
-              className="absolute top-1/2 left-0 h-1 bg-primary -translate-y-1/2 z-0 transition-all" 
-              style={{ width: `${(currentStepIndex / (steps.length - 1)) * 100}%` }}
-            />
-            
-            {/* Step indicators */}
-            {steps.map((step, index) => (
-              <div 
-                key={step.id} 
-                className={`relative flex flex-col items-center z-10 ${index < currentStepIndex ? 'text-primary' : index === currentStepIndex ? 'text-primary' : 'text-muted-foreground'}`}
-              >
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 
-                    ${index < currentStepIndex 
-                      ? 'bg-primary text-primary-foreground' 
-                      : index === currentStepIndex 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'bg-muted text-muted-foreground border border-muted'}`}
-                >
-                  {index < currentStepIndex ? '✓' : index + 1}
-                </div>
-                <span className="text-xs text-center font-medium">{step.title}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </header>
-      
-      {/* Main content */}
-      <main className="flex-1 p-6 container mx-auto">
-        <div className="max-w-4xl mx-auto">
+    <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4">
+      <Card className="w-full max-w-4xl">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardContent>
           {children}
-        </div>
-      </main>
-      
-      {/* Footer with navigation buttons */}
-      <footer className="bg-background border-t px-4 py-3">
-        <div className="container mx-auto flex justify-between">
-          <Button 
-            variant="outline" 
-            onClick={onPrevious} 
-            disabled={isPreviousDisabled || currentStepIndex === 0}
+        </CardContent>
+        <CardFooter className="flex justify-between border-t p-4">
+          {onBack ? (
+            <Button
+              variant="outline"
+              onClick={onBack}
+              disabled={isSubmitting}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          ) : (
+            <div></div>
+          )}
+          <Button
+            onClick={handleNext}
+            disabled={!canProgress || isSubmitting}
+            className="ml-auto"
           >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Previous
+            {isSubmitting ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+              </span>
+            ) : isLastStep ? (
+              <span className="flex items-center">
+                Complete <CheckCircle2 className="ml-2 h-4 w-4" />
+              </span>
+            ) : (
+              <span className="flex items-center">
+                Next <ArrowRight className="ml-2 h-4 w-4" />
+              </span>
+            )}
           </Button>
-          
-          <Button 
-            onClick={isLastStep ? handleCompleteOnboarding : onNext} 
-            disabled={isNextDisabled}
-          >
-            {isLastStep ? 'Complete Setup' : 'Next'}
-            {!isLastStep && <ChevronRight className="ml-2 h-4 w-4" />}
-          </Button>
-        </div>
-      </footer>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
