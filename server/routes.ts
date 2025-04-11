@@ -294,12 +294,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Workout routes
-  app.get("/api/workouts", async (req, res) => {
+  app.get("/api/workouts", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = parseInt(req.query.userId as string);
+      // Get logged in user's ID from session
+      const userId = req.session.userId;
       
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       // We should return full workout details when getting all workouts
@@ -320,13 +321,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/workouts/recent", async (req, res) => {
+  app.get("/api/workouts/recent", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = parseInt(req.query.userId as string);
+      // Get user ID from session instead of query parameter
+      const userId = req.session.userId;
       const limit = parseInt(req.query.limit as string) || 3;
       
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       const recentWorkouts = await storage.getRecentWorkouts(userId, limit);
@@ -552,12 +554,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Template routes
-  app.get("/api/templates", async (req, res) => {
+  app.get("/api/templates", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = parseInt(req.query.userId as string);
+      // Get user ID from session
+      const userId = req.session.userId;
       
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       const templates = await storage.getTemplates(userId);
@@ -942,12 +945,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Goal routes
-  app.get("/api/goals", async (req, res) => {
+  app.get("/api/goals", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = parseInt(req.query.userId as string);
+      // Get user ID from session instead of query parameter
+      const userId = req.session.userId;
       
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       const goals = await storage.getGoals(userId);
