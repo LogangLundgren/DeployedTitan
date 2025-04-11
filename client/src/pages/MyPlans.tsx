@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { 
   Calendar, 
@@ -14,8 +14,11 @@ import {
   Dumbbell,
   LayoutGrid,
   Edit,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Tabs,
   TabsContent,
@@ -89,6 +92,9 @@ export default function MyPlans() {
   const [location, setLocation] = useLocation();
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [planToDelete, setPlanToDelete] = useState<WorkoutPlan | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const { toast } = useToast();
   const userId = 1; // Assume user 1 is logged in - in a real app, would come from auth context
   
   // Fetch user info to check if they're a coach
@@ -115,6 +121,31 @@ export default function MyPlans() {
   } = useQuery({
     queryKey: ['/api/purchases', userId],
     queryFn: () => fetch(`/api/purchases?userId=${userId}`).then(res => res.json())
+  });
+  
+  // Delete workout plan mutation
+  const deletePlanMutation = useMutation({
+    mutationFn: async (planId: number) => {
+      return await apiRequest(`/api/workout-plans/${planId}`, {
+        method: "DELETE"
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] });
+      toast({
+        title: "Plan deleted",
+        description: "The workout plan has been deleted successfully."
+      });
+      setConfirmDialogOpen(false);
+      setPlanToDelete(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete plan: ${error instanceof Error ? error.message : String(error)}`,
+        variant: "destructive"
+      });
+    }
   });
 
   // Star rating display component
@@ -315,12 +346,34 @@ export default function MyPlans() {
                         <StarRating rating={plan.rating} />
                       </CardContent>
                       <Separator />
-                      <CardFooter className="pt-4 pb-4 justify-between">
-                        <Button variant="ghost" size="sm" onClick={() => setLocation(`/edit-plan/${plan.id}`)}>
-                          <Edit className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button variant="default" size="sm" onClick={() => setLocation(`/workout-plan/${plan.id}`)}>
+                      <CardFooter className="pt-4 pb-4 flex justify-between items-center">
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setLocation(`/edit-plan/${plan.id}`)}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button 
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                            onClick={() => {
+                              setPlanToDelete(plan);
+                              setConfirmDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                        <Button 
+                          variant="default" 
+                          size="sm" 
+                          onClick={() => setLocation(`/workout-plan/${plan.id}`)}
+                        >
                           View Details
                           <ChevronRight className="ml-1 h-4 w-4" />
                         </Button>
