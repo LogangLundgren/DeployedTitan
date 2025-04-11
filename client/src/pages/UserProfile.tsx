@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { format } from "date-fns";
+import { useFollow } from "@/context/follow-context";
 import { 
   Card,
   CardContent,
@@ -138,31 +139,33 @@ export default function UserProfile() {
     }
   });
   
-  // Local state to track follow status for immediate UI updates
-  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  // Using the follow context to maintain consistent follow state
+  const { isFollowing, followUser, unfollowUser } = useFollow();
   
-  // Initialize isFollowing state when userProfile data is loaded
+  // Track if this particular user is being followed
+  const [userIsFollowed, setUserIsFollowed] = useState<boolean>(false);
+  
+  // Initialize follow state when userProfile data is loaded
   useEffect(() => {
     if (userProfile) {
-      setIsFollowing(!!userProfile.isFollowing);
+      const isCurrentlyFollowed = isFollowing(parsedUserId);
+      setUserIsFollowed(isCurrentlyFollowed);
     }
-  }, [userProfile]);
+  }, [userProfile, parsedUserId, isFollowing]);
   
   const handleFollowUser = () => {
     if (!userProfile) return;
     
-    // Toggle the follow state
-    const newFollowState = !isFollowing;
-    setIsFollowing(newFollowState);
+    // Toggle the follow state using the context
+    if (userIsFollowed) {
+      unfollowUser(parsedUserId, userProfile.name);
+      setUserIsFollowed(false);
+    } else {
+      followUser(parsedUserId, userProfile.name);
+      setUserIsFollowed(true);
+    }
     
-    // In a real app, this would call an API endpoint
-    // For now we'll just show a toast notification
-    toast({
-      title: `${newFollowState ? "Followed" : "Unfollowed"} ${userProfile.name}`,
-      description: newFollowState 
-        ? `You are now following ${userProfile.name}. You'll see their workouts in your feed.`
-        : `You are no longer following ${userProfile.name}.`,
-    });
+    // Toast notifications now handled by the follow context
   };
   
   if (profileLoading) {
@@ -244,11 +247,11 @@ export default function UserProfile() {
             </CardContent>
             <CardFooter>
               <Button 
-                className={`w-full ${isFollowing ? "bg-green-100 hover:bg-red-50 hover:text-red-500 hover:border-red-200 group" : ""}`}
-                variant={isFollowing ? "outline" : "default"}
+                className={`w-full ${userIsFollowed ? "bg-green-100 hover:bg-red-50 hover:text-red-500 hover:border-red-200 group" : ""}`}
+                variant={userIsFollowed ? "outline" : "default"}
                 onClick={handleFollowUser}
               >
-                {isFollowing ? (
+                {userIsFollowed ? (
                   <>
                     <span className="group-hover:hidden flex items-center">
                       <svg className="mr-1 h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

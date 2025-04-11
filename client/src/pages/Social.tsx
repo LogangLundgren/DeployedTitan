@@ -1100,6 +1100,11 @@ function PeopleDiscover() {
   );
 }
 
+// Utility function for calculating progress percentages
+function calculateProgress(current: number, target: number) {
+  return Math.min(Math.round((current / target) * 100), 100);
+}
+
 // Public Profile View component
 function PublicProfileView() {
   const userId = 1; // Hardcoded for demo, would be the current user's ID
