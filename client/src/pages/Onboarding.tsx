@@ -33,7 +33,21 @@ export default function Onboarding() {
     
     // Set the current step based on the user's onboarding progress
     if (user?.onboardingStep) {
-      setCurrentStep(user.onboardingStep);
+      // Map the onboarding step from DB to the frontend steps
+      switch(user.onboardingStep) {
+        case 'profile_setup':
+          setCurrentStep(STEPS.PROFILE);
+          break;
+        case 'template_creation':
+          setCurrentStep(STEPS.TEMPLATE);
+          break;
+        case 'marketplace_intro':
+          setCurrentStep(STEPS.MARKETPLACE);
+          break;
+        case 'social_connection':
+          setCurrentStep(STEPS.SOCIAL);
+          break;
+      }
     }
   }, [user, setLocation]);
 
@@ -69,11 +83,29 @@ export default function Onboarding() {
     }
   };
 
+  // Map frontend step names to backend step values
+  const mapStepToBackend = (step: string): string => {
+    switch (step) {
+      case STEPS.PROFILE:
+        return 'profile_setup';
+      case STEPS.TEMPLATE:
+        return 'template_creation';
+      case STEPS.MARKETPLACE:
+        return 'marketplace_intro';
+      case STEPS.SOCIAL:
+        return 'social_connection';
+      default:
+        return 'not_started';
+    }
+  };
+
   const skipStep = async () => {
     // Handle skipping the current step
     try {
+      const backendStep = mapStepToBackend(currentStep);
+      
       // Still mark the step as completed in the backend
-      await apiRequest("POST", "/api/user/update-onboarding-step", { step: currentStep });
+      await apiRequest("POST", "/api/user/update-onboarding-step", { step: backendStep });
       nextStep();
     } catch (error) {
       console.error("Error skipping step:", error);

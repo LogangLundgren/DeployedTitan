@@ -185,6 +185,22 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
               </FormItem>
             )}
           />
+
+          <button
+            type="submit"
+            onClick={form.handleSubmit(handleSubmit)}
+            className="mt-6 w-full bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md font-medium"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <span className="flex items-center justify-center">
+                <span className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"></span>
+                Saving...
+              </span>
+            ) : (
+              "Save Profile"
+            )}
+          </button>
         </form>
       </Form>
     </div>

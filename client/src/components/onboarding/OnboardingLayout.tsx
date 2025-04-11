@@ -49,11 +49,29 @@ export default function OnboardingLayout({
     }
   }, [user, setLocation]);
 
+  // Map frontend step names to backend step values
+  const mapStepToBackend = (step: string): string => {
+    switch (step) {
+      case 'profile':
+        return 'profile_setup';
+      case 'template':
+        return 'template_creation';
+      case 'marketplace':
+        return 'marketplace_intro';
+      case 'social':
+        return 'social_connection';
+      default:
+        return 'not_started';
+    }
+  };
+
   const handleNext = async () => {
     setIsSubmitting(true);
     try {
+      const backendStep = mapStepToBackend(currentStep);
+      
       // Update the onboarding step in the backend
-      await apiRequest("POST", "/api/user/update-onboarding-step", { step: currentStep });
+      await apiRequest("POST", "/api/user/update-onboarding-step", { step: backendStep });
       
       // If this is the last step, mark onboarding as completed
       if (isLastStep) {
