@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Card,
   CardContent,
@@ -13,6 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
+import { Label } from "@/components/ui/label";
 
 // Type for user suggestions
 interface UserSuggestion {
@@ -23,72 +29,83 @@ interface UserSuggestion {
   content: string;
   category: string;
   status: "new" | "reviewing" | "implemented" | "declined";
+  adminNotes: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<string>("suggestions");
+  const [adminNotes, setAdminNotes] = useState<string>("");
+  const [selectedSuggestion, setSelectedSuggestion] = useState<UserSuggestion | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Only allow founders access
+  const isFounder = user?.id === 1; // Assuming user with ID 1 is founder
 
   // Fetch user suggestions
   const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery<UserSuggestion[]>({
     queryKey: ['/api/admin/suggestions'],
-    queryFn: async () => {
-      // This would be a real API call in production
-      // For now, return mock data
-      return [
-        {
-          id: 1,
-          userId: 3,
-          username: "JohnDoe",
-          email: "john@example.com",
-          content: "Add the ability to tag exercises with custom tags for better organization",
-          category: "Feature Request",
-          status: "new",
-          createdAt: "2025-03-25T14:30:00.000Z"
-        },
-        {
-          id: 2,
-          userId: 5,
-          username: "SarahFit",
-          email: "sarah@example.com",
-          content: "Create a way to compare progress between different time periods with charts",
-          category: "Feature Request",
-          status: "reviewing",
-          createdAt: "2025-03-24T09:15:00.000Z"
-        },
-        {
-          id: 3,
-          userId: 2,
-          username: "MikeStrong",
-          email: "mike@example.com",
-          content: "The workout timer sometimes freezes when switching between exercises",
-          category: "Bug Report",
-          status: "new",
-          createdAt: "2025-03-23T11:45:00.000Z"
-        },
-        {
-          id: 4,
-          userId: 8,
-          username: "FitnessFan42",
-          email: "fitness@example.com",
-          content: "Please add a dark mode to the app to reduce eye strain during evening workouts",
-          category: "Feature Request",
-          status: "implemented",
-          createdAt: "2025-03-22T16:20:00.000Z"
-        },
-        {
-          id: 5,
-          userId: 12,
-          username: "GymRat99",
-          email: "gymrat@example.com",
-          content: "Would love to see integration with Apple Health and Google Fit",
-          category: "Feature Request",
-          status: "new",
-          createdAt: "2025-03-21T10:05:00.000Z"
-        }
-      ];
+    enabled: isFounder,
+    retry: false
+  });
+
+  // Mutation to update suggestion status
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status, notes }: { id: number, status: string, notes?: string }) => {
+      const response = await apiRequest("PATCH", `/api/admin/suggestions/${id}`, {
+        body: JSON.stringify({ 
+          status, 
+          adminNotes: notes 
+        })
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/suggestions'] });
+      toast({
+        title: "Status updated",
+        description: "The suggestion status has been updated successfully.",
+      });
+      setIsDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update status: ${error.message}`,
+        variant: "destructive",
+      });
     }
   });
+
+  // Handle status update
+  const handleStatusUpdate = (suggestion: UserSuggestion, newStatus: string) => {
+    if (newStatus === "implemented" || newStatus === "declined") {
+      // Show dialog for notes when implementing or declining
+      setSelectedSuggestion(suggestion);
+      setAdminNotes(suggestion.adminNotes || "");
+      setIsDialogOpen(true);
+    } else {
+      // Directly update for other statuses
+      updateStatusMutation.mutate({ 
+        id: suggestion.id, 
+        status: newStatus
+      });
+    }
+  };
+
+  // Handle notes submission
+  const handleNotesSubmit = () => {
+    if (selectedSuggestion) {
+      updateStatusMutation.mutate({
+        id: selectedSuggestion.id,
+        status: isDialogOpen ? (selectedSuggestion.status === "implemented" ? "implemented" : "declined") : selectedSuggestion.status,
+        notes: adminNotes
+      });
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -193,23 +210,55 @@ export default function AdminDashboard() {
                       <CardFooter className="flex justify-end pt-0">
                         <div className="flex space-x-2">
                           {suggestion.status === "new" && (
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleStatusUpdate(suggestion, "reviewing")}
+                              disabled={updateStatusMutation.isPending}
+                            >
                               Mark as Reviewing
                             </Button>
                           )}
                           {(suggestion.status === "new" || suggestion.status === "reviewing") && (
                             <>
-                              <Button variant="default" size="sm">
+                              <Button 
+                                variant="default" 
+                                size="sm"
+                                onClick={() => handleStatusUpdate(suggestion, "implemented")}
+                                disabled={updateStatusMutation.isPending}
+                              >
                                 Mark as Implemented
                               </Button>
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleStatusUpdate(suggestion, "declined")}
+                                disabled={updateStatusMutation.isPending}
+                              >
                                 Decline
                               </Button>
                             </>
                           )}
                           {suggestion.status === "implemented" && (
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open(`mailto:${suggestion.email}`, '_blank')}
+                            >
                               Contact User
+                            </Button>
+                          )}
+                          {suggestion.adminNotes && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedSuggestion(suggestion);
+                                setAdminNotes(suggestion.adminNotes || "");
+                                setIsDialogOpen(true);
+                              }}
+                            >
+                              View Notes
                             </Button>
                           )}
                         </div>
@@ -309,6 +358,53 @@ export default function AdminDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog for admin notes */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedSuggestion?.status === "implemented" 
+                ? "Implementation Notes" 
+                : "Decline Reason"}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedSuggestion?.status === "implemented"
+                ? "Add notes about how this suggestion was implemented."
+                : "Please provide a reason for declining this suggestion."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="suggestion">Suggestion</Label>
+              <p className="text-sm text-muted-foreground border rounded p-2 bg-muted/30">
+                {selectedSuggestion?.content}
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="notes">Admin Notes</Label>
+              <Textarea
+                id="notes"
+                placeholder="Enter your notes here..."
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleNotesSubmit} 
+              disabled={updateStatusMutation.isPending}
+            >
+              {updateStatusMutation.isPending ? "Saving..." : "Save Notes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
