@@ -419,7 +419,7 @@ export default function Goals() {
   }
 
   return (
-    <main className="container py-6">
+    <main className="container py-6 px-8">
       <h1 className="text-3xl font-bold mb-8">Goals & Progress Tracking</h1>
       
       <div className="mb-6">
@@ -768,9 +768,24 @@ export default function Goals() {
               <DialogHeader>
                 <div className="flex items-center justify-between">
                   <DialogTitle className="text-xl">{selectedGoal.title}</DialogTitle>
-                  <Badge variant={selectedGoal.isPublic ? "default" : "outline"}>
-                    {selectedGoal.isPublic ? "Public" : "Private"}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={selectedGoal.isPublic ? "default" : "outline"}>
+                      {selectedGoal.isPublic ? "Public" : "Private"}
+                    </Badge>
+                    {selectedGoal.userId === userId && (
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => {
+                          if (confirm("Are you sure you want to delete this goal? This action cannot be undone.")) {
+                            deleteGoalMutation.mutate(selectedGoal.id);
+                          }
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <DialogDescription>
                   {selectedGoal.description || "No description provided"}
@@ -810,7 +825,17 @@ export default function Goals() {
                 <div>
                   <h3 className="text-lg font-medium mb-3">Update Progress</h3>
                   <form 
-                    onSubmit={progressForm.handleSubmit(onProgressSubmit)}
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      const currentValue = Number(formData.get('currentValue'));
+                      if (!isNaN(currentValue) && selectedGoal) {
+                        updateGoalProgressMutation.mutate({
+                          goalId: selectedGoal.id,
+                          currentValue: currentValue
+                        });
+                      }
+                    }}
                     className="flex items-end gap-4"
                   >
                     <div className="flex-1">
@@ -819,7 +844,7 @@ export default function Goals() {
                       </label>
                       <Input
                         type="number"
-                        {...progressForm.register("currentValue")}
+                        name="currentValue"
                         defaultValue={selectedGoal.currentValue}
                       />
                     </div>
