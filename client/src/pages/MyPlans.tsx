@@ -157,6 +157,31 @@ export default function MyPlans() {
       });
     }
   });
+  
+  // Publish/unpublish workout plan mutation
+  const publishPlanMutation = useMutation({
+    mutationFn: async ({ planId, isPublished }: { planId: number, isPublished: boolean }) => {
+      return await apiRequest("PUT", `/api/workout-plans/${planId}`, {
+        isPublished
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', 'coach', userId] });
+      toast({
+        title: data.isPublished ? "Plan published" : "Plan unpublished",
+        description: data.isPublished 
+          ? "Your workout plan is now live in the marketplace!" 
+          : "Your workout plan has been removed from the marketplace.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update publication status. Please try again later.",
+        variant: "destructive",
+      });
+    }
+  });
 
   // Star rating display component
   const StarRating = ({ rating }: { rating: number | null }) => {
