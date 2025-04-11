@@ -14,6 +14,7 @@ import Marketplace from "@/pages/Marketplace";
 import WorkoutPlanDetail from "@/pages/WorkoutPlanDetail";
 import PurchasedPlanDetail from "@/pages/PurchasedPlanDetail";
 import CoachProfile from "@/pages/CoachProfile";
+import UserProfile from "@/pages/UserProfile";
 import MyPlans from "@/pages/MyPlans";
 import BecomeCoach from "@/pages/BecomeCoach";
 import CreatePlan from "@/pages/CreatePlan";
@@ -49,6 +50,7 @@ function Router() {
           <Route path="/workout-plans/:id" component={WorkoutPlanDetail} />
           <Route path="/purchased-plans/:id" component={PurchasedPlanDetail} />
           <Route path="/coaches/:id" component={CoachProfile} />
+          <Route path="/users/:userId" component={UserProfile} />
           <Route path="/my-plans" component={MyPlans} />
           <Route path="/become-coach" component={BecomeCoach} />
           <Route path="/create-plan" component={CreatePlan} />

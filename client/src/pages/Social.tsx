@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
+import { Link } from "wouter";
 import { 
   Card,
   CardContent,
@@ -848,6 +849,7 @@ function ActivityFeed() {
 }
 
 // Component for people discovery
+// Component for discovering people to follow
 function PeopleDiscover() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   
@@ -1007,13 +1009,20 @@ function PeopleDiscover() {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="pt-0">
+              <CardFooter className="pt-0 flex flex-col gap-2">
                 <Button 
                   variant={user.isFollowing ? "outline" : "default"} 
                   className="w-full"
                   onClick={() => handleFollowUser(user.id)}
                 >
                   {user.isFollowing ? "Following" : "Follow"}
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  className="w-full"
+                  asChild
+                >
+                  <Link href={`/users/${user.id}`}>View Profile</Link>
                 </Button>
               </CardFooter>
             </Card>
