@@ -351,7 +351,17 @@ export default function Marketplace() {
               <Award className="mr-2 h-6 w-6 text-amber-500" />
               Featured Workout Plans
             </h2>
-            <Button variant="link">View all</Button>
+            <Button 
+              variant="link" 
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory(null);
+                setActiveTab("plans");
+                refetchSearchPlans();
+              }}
+            >
+              View all
+            </Button>
           </div>
 
           {plansLoading ? (
@@ -419,7 +429,17 @@ export default function Marketplace() {
               <Award className="mr-2 h-6 w-6 text-amber-500" />
               Featured Coaches
             </h2>
-            <Button variant="link">View all</Button>
+            <Button 
+              variant="link" 
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory(null);
+                setActiveTab("coaches");
+                refetchSearchCoaches();
+              }}
+            >
+              View all
+            </Button>
           </div>
 
           {coachesLoading ? (
