@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -11,7 +11,8 @@ import {
   Star, 
   CheckCircle, 
   Award, 
-  ShoppingCart 
+  ShoppingCart,
+  Trash
 } from 'lucide-react';
 import { 
   Accordion,
@@ -157,7 +158,10 @@ export default function WorkoutPlanDetail() {
   const params = useParams<{ id: string }>();
   const [location, setLocation] = useLocation();
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const planId = parseInt(params.id);
 
   const { 
@@ -216,6 +220,44 @@ export default function WorkoutPlanDetail() {
         description: "There was an issue processing your payment. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+  
+  const handleDeletePlan = async () => {
+    if (!plan || !plan.id) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      const response = await apiRequest(`/api/workout-plans/${plan.id}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete workout plan');
+      }
+      
+      toast({
+        title: "Success",
+        description: `"${plan.title}" has been deleted.`,
+      });
+      
+      // Invalidate any queries for workout plans
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/my-plans'] });
+      
+      // Redirect to marketplace
+      setLocation('/marketplace');
+    } catch (error) {
+      console.error('Error deleting workout plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete workout plan. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
     }
   };
 
