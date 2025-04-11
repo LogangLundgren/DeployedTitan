@@ -218,7 +218,24 @@ export default function CreatePlan() {
       
       // If we have templates in the plan, select them
       if (planToEdit.templates && Array.isArray(planToEdit.templates)) {
-        const templateIds = planToEdit.templates.map(template => template.id);
+        console.log('Loading plan templates:', planToEdit.templates);
+        
+        // Templates can have different structures depending on where they came from
+        // We need to handle both direct template IDs and template objects with templateId
+        const templateIds = planToEdit.templates.map(template => {
+          // If the template has an ID property directly
+          if (template.id && !template.templateId) {
+            return template.id;
+          }
+          // If it's a PlanTemplate object with a templateId
+          if (template.templateId) {
+            return template.templateId; 
+          }
+          // Fallback
+          return typeof template === 'number' ? template : null;
+        }).filter(id => id !== null);
+        
+        console.log('Selected template IDs:', templateIds);
         setSelectedTemplates(templateIds);
       }
     }
@@ -517,9 +534,15 @@ export default function CreatePlan() {
     };
 
     if (isEditMode && editPlanId) {
-      // Update existing plan
+      // Update existing plan - include selected templates
+      const fullUpdateData = {
+        ...planData,
+        planTemplates: selectedTemplates
+      };
+      console.log('Updating plan with data:', fullUpdateData);
+      
       updatePlanMutation.mutate({
-        plan: planData
+        plan: fullUpdateData
       });
     } else {
       // Create new plan

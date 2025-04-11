@@ -275,6 +275,13 @@ export default function WorkoutPlanDetail() {
     try {
       setIsPublishing(true);
       
+      // Collect the template IDs first to make sure they're included in the update
+      const templateIds = plan.templates 
+        ? plan.templates.map(template => template.templateId) 
+        : [];
+      
+      console.log('Current templates for plan:', templateIds);
+      
       // First check if the plan exists to avoid 404 errors
       const checkResponse = await fetch(`/api/workout-plans/${plan.id}/check`);
       if (!checkResponse.ok) {
@@ -288,11 +295,14 @@ export default function WorkoutPlanDetail() {
         throw new Error('This workout plan no longer exists');
       }
       
-      // Now try to publish it
-      console.log(`Attempting to publish plan with ID: ${plan.id}`);
-      const reqData = { isPublished: true };
-      console.log('Request data:', reqData);
+      // Prepare the update data with both isPublished flag and planTemplates
+      const reqData = { 
+        isPublished: true,
+        planTemplates: templateIds
+      };
+      console.log('Publish request data:', reqData);
       
+      // Now try to publish it
       const response = await fetch(`/api/workout-plans/${plan.id}`, {
         method: 'PUT',
         headers: {
@@ -365,16 +375,28 @@ export default function WorkoutPlanDetail() {
     );
   }
 
-  // Group templates by week
+  // Debugging plan template data structure
+  console.log('Plan templates:', plan.templates);
+  
+  // Group templates by week with improved template handling
   const templatesByWeek: Record<number, PlanTemplate[]> = {};
-  if (plan.templates) {
+  if (plan.templates && Array.isArray(plan.templates)) {
     plan.templates.forEach((template) => {
-      if (!templatesByWeek[template.weekNumber]) {
-        templatesByWeek[template.weekNumber] = [];
+      // Ensure we have the weekNumber
+      const weekNumber = template.weekNumber || 1;
+      
+      if (!templatesByWeek[weekNumber]) {
+        templatesByWeek[weekNumber] = [];
       }
-      templatesByWeek[template.weekNumber].push(template);
+      
+      // Track each template even if its structure isn't exactly what we expect
+      // This lets us debug what data we're actually receiving
+      templatesByWeek[weekNumber].push(template);
     });
   }
+  
+  // Debug the grouped templates
+  console.log('Templates by week:', templatesByWeek);
 
   // Star rating display component
   const StarRating = ({ rating }: { rating: number | null }) => {
@@ -532,30 +554,36 @@ export default function WorkoutPlanDetail() {
                                 <Card key={planTemplate.id}>
                                   <CardHeader className="pb-2">
                                     <CardTitle className="text-lg">
-                                      Day {planTemplate.dayNumber}: {planTemplate.template.name}
+                                      Day {planTemplate.dayNumber}: {planTemplate.template?.name || 'Workout'}
                                     </CardTitle>
                                     <CardDescription>
-                                      {planTemplate.template.category}
+                                      {planTemplate.template?.category || 'General'}
                                     </CardDescription>
                                   </CardHeader>
                                   <CardContent>
-                                    <div className="space-y-3">
-                                      {planTemplate.template.exercises.map((exercise) => (
-                                        <div key={exercise.id} className="flex items-start">
-                                          <div className="font-medium min-w-[240px]">
-                                            {exercise.exerciseDetails.name}
+                                    {planTemplate.template?.exercises && Array.isArray(planTemplate.template.exercises) ? (
+                                      <div className="space-y-3">
+                                        {planTemplate.template.exercises.map((exercise) => (
+                                          <div key={exercise.id} className="flex items-start">
+                                            <div className="font-medium min-w-[240px]">
+                                              {exercise.exerciseDetails?.name || 'Exercise'}
+                                            </div>
+                                            <div className="text-gray-600">
+                                              {exercise.sets} sets × {exercise.reps}
+                                              {exercise.notes && (
+                                                <div className="text-sm text-gray-500 mt-1">
+                                                  {exercise.notes}
+                                                </div>
+                                              )}
+                                            </div>
                                           </div>
-                                          <div className="text-gray-600">
-                                            {exercise.sets} sets × {exercise.reps}
-                                            {exercise.notes && (
-                                              <div className="text-sm text-gray-500 mt-1">
-                                                {exercise.notes}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="py-2 text-sm text-gray-500">
+                                        No detailed exercise information available for this template.
+                                      </div>
+                                    )}
                                     {planTemplate.notes && (
                                       <>
                                         <Separator className="my-4" />
