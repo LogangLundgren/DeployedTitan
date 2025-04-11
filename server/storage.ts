@@ -1863,6 +1863,11 @@ export class DbStorage implements IStorage {
     // The db is imported from server/db.ts
   }
   
+  // User operations
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+  
   // Workout Plan operations
   async getWorkoutPlans(coachId?: number, publishedOnly: boolean = false): Promise<WorkoutPlan[]> {
     try {
@@ -2429,6 +2434,10 @@ export class DbStorage implements IStorage {
   }
   
   // User operations
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+  
   async getUser(id: number): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.id, id));
     return result[0];

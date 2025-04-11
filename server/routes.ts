@@ -70,7 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if email already exists
       const users = await storage.getAllUsers();
-      const emailExists = users.some(user => user.email === email);
+      const emailExists = users.some((user: User) => user.email === email);
       if (emailExists) {
         return res.status(409).json({ message: "Email already in use" });
       }
