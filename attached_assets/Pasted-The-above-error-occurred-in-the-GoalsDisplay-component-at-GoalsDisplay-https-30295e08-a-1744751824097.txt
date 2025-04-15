@@ -1,0 +1,39 @@
+The above error occurred in the <GoalsDisplay> component:
+
+    at GoalsDisplay (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/pages/Dashboard.tsx:58:25)
+    at div
+    at div
+    at main
+    at Dashboard (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/pages/Dashboard.tsx:524:51)
+    at Route (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=7dc10ed9:323:16)
+    at ProtectedRoute (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=7dc10ed9:379:17)
+    at div
+    at NotificationsProvider (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/context/NotificationsContext.tsx:33:3)
+    at div
+    at Router (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/App.tsx?v=qa_-GoEuSY3IeDV34Xfsi:51:20)
+    at FollowProvider (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/context/follow-context.tsx:21:34)
+    at AuthProvider (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/hooks/use-auth.tsx:23:32)
+    at QueryClientProvider (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7dc10ed9:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+goals.slice is not a function
+at GoalsDisplay (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/src/pages/Dashboard.tsx:150:11)
+at renderWithHooks (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7dc10ed9:11548:26)
+at updateFunctionComponent (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7dc10ed9:14582:28)
+at beginWork (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7dc10ed9:15924:22)
+at beginWork$1 (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7dc10ed9:19753:22)
+at performUnitOfWork (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7dc10ed9:19198:20)
+at workLoopSync (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7dc10ed9:19137:13)
+at renderRootSync (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7dc10ed9:19116:15)
+at recoverFromConcurrentError (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7dc10ed9:18736:28)
+at performSyncWorkOnRoot (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7dc10ed9:18879:28)
+Error fetching recent workouts: 
+Error {}
+
+at t.value (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://30295e08-a610-450b-96d3-3b41ae7e7cee-00-1jx4f6v0soubl.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400

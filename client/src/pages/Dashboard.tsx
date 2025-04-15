@@ -48,10 +48,18 @@ interface WorkoutData {
 type MetricType = 'weight' | 'reps' | 'volume';
 
 // GoalsDisplay component to handle fetching and displaying goals
-function GoalsDisplay({ userId }: { userId: number }) {
+function GoalsDisplay() {
+  const { user } = useAuth();
+  
   const { data: goals = [], isLoading: goalsLoading } = useQuery({
-    queryKey: ['/api/goals', userId],
-    queryFn: () => fetch(`/api/goals?userId=${userId}`).then(res => res.json()),
+    queryKey: ['/api/goals'],
+    queryFn: () => fetch(`/api/goals`).then(res => {
+      if (!res.ok) {
+        throw new Error('Failed to fetch goals');
+      }
+      return res.json();
+    }),
+    enabled: !!user // Only run query if user is authenticated
   });
   
   // Helper function to calculate progress percentage

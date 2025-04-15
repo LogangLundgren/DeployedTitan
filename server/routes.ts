@@ -318,13 +318,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/workouts/recent", requireAuth, requireOwnership, async (req, res) => {
+  app.get("/api/workouts/recent", requireAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.query.userId as string);
+      // Use the authenticated user's ID from the session
+      const userId = req.session.userId;
       const limit = parseInt(req.query.limit as string) || 3;
       
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       const recentWorkouts = await storage.getRecentWorkouts(userId, limit);
@@ -964,12 +965,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Goal routes
-  app.get("/api/goals", requireAuth, requireOwnership, async (req, res) => {
+  app.get("/api/goals", requireAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.query.userId as string);
+      // Use the authenticated user's ID from the session
+      const userId = req.session.userId;
       
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       const goals = await storage.getGoals(userId);
