@@ -846,13 +846,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Notification routes
-  app.get("/api/notifications", requireAuth, requireOwnership, async (req, res) => {
+  app.get("/api/notifications", requireAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.query.userId as string);
-      
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
-      }
+      // Use authenticated user's ID from session
+      const userId = req.user.id;
       
       const notifications = await storage.getNotifications(userId);
       
@@ -863,13 +860,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/notifications/unread-count", requireAuth, requireOwnership, async (req, res) => {
+  app.get("/api/notifications/unread-count", requireAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.query.userId as string);
-      
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
-      }
+      // Use authenticated user's ID from session
+      const userId = req.user.id;
       
       const count = await storage.getUnreadNotificationsCount(userId);
       
@@ -918,13 +912,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/notifications/mark-all-read", requireAuth, requireOwnership, async (req, res) => {
+  app.patch("/api/notifications/mark-all-read", requireAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.body.userId as string);
-      
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
-      }
+      // Use authenticated user's ID from session
+      const userId = req.user.id;
       
       const success = await storage.markAllNotificationsAsRead(userId);
       

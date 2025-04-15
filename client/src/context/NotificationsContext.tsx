@@ -55,9 +55,12 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
     queryKey: ['notifications', userId],
     queryFn: async () => {
       try {
-        const response = await apiRequest<Notification[]>("GET", `/api/notifications?userId=${userId}`);
+        const response = await apiRequest<Notification[]>("GET", `/api/notifications`);
         if (!response.ok) {
           console.error("Failed to fetch notifications:", response.statusText);
+          if (response.status === 401) {
+            console.error("Authentication required for notifications");
+          }
           return [];
         }
         return await response.json();
@@ -80,9 +83,12 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
     queryKey: ['notifications-count', userId],
     queryFn: async () => {
       try {
-        const response = await apiRequest<{ count: number }>("GET", `/api/notifications/unread-count?userId=${userId}`);
+        const response = await apiRequest<{ count: number }>("GET", `/api/notifications/unread-count`);
         if (!response.ok) {
           console.error("Failed to fetch unread count:", response.statusText);
+          if (response.status === 401) {
+            console.error("Authentication required for unread count");
+          }
           return { count: 0 };
         }
         return await response.json();
@@ -126,7 +132,7 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      const response = await apiRequest("PATCH", '/api/notifications/mark-all-read', { userId });
+      const response = await apiRequest("PATCH", '/api/notifications/mark-all-read');
       
       if (!response.ok) {
         throw new Error(`Failed with status: ${response.status}`);
