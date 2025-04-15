@@ -1184,7 +1184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/milestones/:id", async (req, res) => {
+  app.delete("/api/milestones/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1205,7 +1205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/milestones/:id/complete", async (req, res) => {
+  app.post("/api/milestones/:id/complete", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1244,7 +1244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/comments", async (req, res) => {
+  app.post("/api/comments", requireAuth, async (req, res) => {
     try {
       const commentData = insertCommentSchema.safeParse(req.body);
       
@@ -1261,7 +1261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.put("/api/comments/:id", async (req, res) => {
+  app.put("/api/comments/:id", requireAuth, requireOwnership, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1288,7 +1288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/comments/:id", async (req, res) => {
+  app.delete("/api/comments/:id", requireAuth, requireOwnership, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1362,7 +1362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/likes/toggle", async (req, res) => {
+  app.post("/api/likes/toggle", requireAuth, async (req, res) => {
     try {
       const { workoutId, userId } = req.body;
       
