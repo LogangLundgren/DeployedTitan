@@ -2435,7 +2435,15 @@ export class DbStorage implements IStorage {
   
   // User operations
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    // Filter out test/demo accounts and only return real registered users
+    return await db.select().from(users).where(
+      and(
+        notLike(users.username, "demo%"),
+        notLike(users.email, "demo@%"),
+        notLike(users.username, "test%"),
+        notLike(users.email, "test@%")
+      )
+    );
   }
   
   async getUser(id: number): Promise<User | undefined> {
@@ -3167,20 +3175,7 @@ export class DbStorage implements IStorage {
     const userCount = await db.select().from(users);
     
     if (userCount.length === 0) {
-      // Create a test user
-      const testUser = await this.createUser({
-        username: 'demo',
-        password: 'password',
-        name: 'John Smith',
-        email: 'demo@example.com',
-        bio: null,
-        location: null,
-        fitnessLevel: null,
-        experienceYears: null, 
-        goals: null,
-        certifications: null,
-        socialMedia: null
-      });
+      console.log('No users found in database. Initializing default exercises only.');
       
       // Add default exercises
       const defaultExercises: InsertExercise[] = [

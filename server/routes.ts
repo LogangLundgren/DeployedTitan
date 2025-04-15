@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import Stripe from "stripe";
-import { hashPassword, verifyPassword, requireAuth } from "./auth";
+import { hashPassword, verifyPassword, requireAuth, requireOwnership } from "./auth";
 
 // Initialize Stripe with the secret key
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -292,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Workout routes
-  app.get("/api/workouts", async (req, res) => {
+  app.get("/api/workouts", requireAuth, requireOwnership, async (req, res) => {
     try {
       const userId = parseInt(req.query.userId as string);
       
@@ -318,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/workouts/recent", async (req, res) => {
+  app.get("/api/workouts/recent", requireAuth, requireOwnership, async (req, res) => {
     try {
       const userId = parseInt(req.query.userId as string);
       const limit = parseInt(req.query.limit as string) || 3;
