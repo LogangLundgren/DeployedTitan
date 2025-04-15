@@ -2461,8 +2461,26 @@ export class DbStorage implements IStorage {
     return result[0];
   }
   
-  async createUser(user: InsertUser): Promise<User> {
-    const result = await db.insert(users).values(user).returning();
+  async createUser(insertUser: InsertUser): Promise<User> {
+    // Ensure all optional fields are explicitly set to null if not provided
+    const userWithDefaults = {
+      ...insertUser,
+      name: insertUser.name ?? null,
+      email: insertUser.email ?? null,
+      bio: insertUser.bio ?? null,
+      location: insertUser.location ?? null,
+      fitnessLevel: insertUser.fitnessLevel ?? null,
+      experienceYears: insertUser.experienceYears ?? null,
+      goals: insertUser.goals ?? null,
+      certifications: insertUser.certifications ?? null,
+      socialMedia: insertUser.socialMedia ?? null,
+      isCoach: insertUser.isCoach ?? false,
+      coachRegistrationDate: insertUser.coachRegistrationDate ?? null,
+      stripeCustomerId: insertUser.stripeCustomerId ?? null,
+      stripeSubscriptionId: insertUser.stripeSubscriptionId ?? null
+    };
+    
+    const result = await db.insert(users).values(userWithDefaults).returning();
     return result[0];
   }
   
