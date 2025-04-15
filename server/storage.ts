@@ -430,6 +430,10 @@ export class MemStorage implements IStorage {
     );
   }
   
+  async getWorkout(id: number): Promise<Workout | undefined> {
+    return this.workouts.get(id);
+  }
+  
   async getWorkoutWithDetails(id: number): Promise<WorkoutWithDetails | undefined> {
     const workout = this.workouts.get(id);
     if (!workout) return undefined;
@@ -2523,6 +2527,11 @@ export class DbStorage implements IStorage {
   // Workout operations
   async getWorkouts(userId: number): Promise<Workout[]> {
     return await db.select().from(workouts).where(eq(workouts.userId, userId));
+  }
+  
+  async getWorkout(id: number): Promise<Workout | undefined> {
+    const result = await db.select().from(workouts).where(eq(workouts.id, id));
+    return result.length > 0 ? result[0] : undefined;
   }
   
   async getWorkoutWithDetails(id: number): Promise<WorkoutWithDetails | undefined> {
