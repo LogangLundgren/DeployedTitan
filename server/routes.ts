@@ -357,7 +357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/workouts", async (req, res) => {
+  app.post("/api/workouts", requireAuth, async (req, res) => {
     try {
       const workoutData = insertWorkoutSchema.safeParse(req.body);
       
@@ -374,7 +374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.put("/api/workouts/:id", async (req, res) => {
+  app.put("/api/workouts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -416,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/workouts/:id", async (req, res) => {
+  app.delete("/api/workouts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -550,7 +550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Template routes
-  app.get("/api/templates", async (req, res) => {
+  app.get("/api/templates", requireAuth, requireOwnership, async (req, res) => {
     try {
       const userId = parseInt(req.query.userId as string);
       
@@ -846,7 +846,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Notification routes
-  app.get("/api/notifications", async (req, res) => {
+  app.get("/api/notifications", requireAuth, requireOwnership, async (req, res) => {
     try {
       const userId = parseInt(req.query.userId as string);
       
@@ -863,7 +863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/notifications/unread-count", async (req, res) => {
+  app.get("/api/notifications/unread-count", requireAuth, requireOwnership, async (req, res) => {
     try {
       const userId = parseInt(req.query.userId as string);
       
@@ -940,7 +940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Goal routes
-  app.get("/api/goals", async (req, res) => {
+  app.get("/api/goals", requireAuth, requireOwnership, async (req, res) => {
     try {
       const userId = parseInt(req.query.userId as string);
       
