@@ -52,9 +52,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-
-// Temporary until we have auth
-const DEMO_USER_ID = 1;
+import { useAuth } from '@/hooks/use-auth';
 
 // Form validation schema
 const templateFormSchema = z.object({
