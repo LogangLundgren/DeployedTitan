@@ -73,7 +73,6 @@ export interface IStorage {
   
   // Notification operations
   getNotifications(userId: number): Promise<Notification[]>;
-  getNotification(id: number): Promise<Notification | undefined>;
   getUnreadNotificationsCount(userId: number): Promise<number>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationAsRead(id: number): Promise<Notification | undefined>;
@@ -711,10 +710,6 @@ export class MemStorage implements IStorage {
     return Array.from(this.notifications.values())
       .filter(notification => notification.userId === userId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-  
-  async getNotification(id: number): Promise<Notification | undefined> {
-    return this.notifications.get(id);
   }
   
   async getUnreadNotificationsCount(userId: number): Promise<number> {
@@ -2853,15 +2848,6 @@ export class DbStorage implements IStorage {
       .from(notifications)
       .where(eq(notifications.userId, userId))
       .orderBy(desc(notifications.createdAt));
-  }
-  
-  async getNotification(id: number): Promise<Notification | undefined> {
-    const [notification] = await db
-      .select()
-      .from(notifications)
-      .where(eq(notifications.id, id));
-    
-    return notification;
   }
   
   async getUnreadNotificationsCount(userId: number): Promise<number> {

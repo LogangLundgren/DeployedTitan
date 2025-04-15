@@ -29,18 +29,5 @@ export function ProtectedRoute({
     );
   }
 
-  // TEMPORARILY DISABLED: Bypass onboarding to showcase the app
-  // If the user is logged in but hasn't completed onboarding,
-  // redirect them to the onboarding page (unless they're already on it)
-  /*
-  if (user.onboardingCompleted === false && path !== "/onboarding") {
-    return (
-      <Route path={path}>
-        <Redirect to="/onboarding" />
-      </Route>
-    );
-  }
-  */
-
   return <Route path={path} component={Component} />;
 }

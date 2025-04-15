@@ -40,16 +40,10 @@ export default function AuthPage() {
     }
   }, []);
 
-  // Redirect to appropriate page based on user status
+  // Redirect to home if already logged in
   useEffect(() => {
     if (user) {
-      // If user has not completed onboarding, redirect there
-      if (user.onboardingCompleted === false) {
-        navigate("/onboarding");
-      } else {
-        // Otherwise redirect to home/dashboard
-        navigate("/");
-      }
+      navigate("/");
     }
   }, [user, navigate]);
 

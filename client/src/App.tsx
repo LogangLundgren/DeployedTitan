@@ -23,7 +23,6 @@ import Checkout from "@/pages/Checkout";
 import PlanCheckout from "@/pages/PlanCheckout";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import AuthPage from "@/pages/auth-page";
-import Onboarding from "@/pages/Onboarding";
 import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
@@ -41,25 +40,21 @@ function Router() {
   const userId = user?.id || 1;
   
   // Determine whether to show the main layout based on current route
-  // Don't show header/nav/footer on auth or onboarding pages
-  const path = window.location.pathname;
-  const isAuthPage = path === '/auth';
-  const isOnboardingPage = path === '/onboarding';
-  const hideLayout = isAuthPage || isOnboardingPage;
+  // Don't show header/nav/footer on auth page
+  const isAuthPage = window.location.pathname === '/auth';
   
   return (
     <div className="min-h-screen flex flex-col">
       <NotificationsProvider userId={userId}>
-        {!hideLayout && <Header />}
-        {!hideLayout && <Navigation />}
-        <div className={!hideLayout ? 'flex-1' : 'min-h-screen'}>
+        {!isAuthPage && <Header />}
+        {!isAuthPage && <Navigation />}
+        <div className={!isAuthPage ? 'flex-1' : 'min-h-screen'}>
           <Switch>
             {/* Public routes */}
             <Route path="/auth" component={AuthPage} />
             <Route path="/marketplace" component={Marketplace} />
             
             {/* Protected routes */}
-            <ProtectedRoute path="/onboarding" component={Onboarding} />
             <ProtectedRoute path="/" component={Dashboard} />
             <ProtectedRoute path="/workouts" component={WorkoutLogger} />
             <ProtectedRoute path="/templates/:id" component={TemplateDetail} />
@@ -82,7 +77,7 @@ function Router() {
             <Route component={NotFound} />
           </Switch>
         </div>
-        {!hideLayout && <Footer />}
+        {!isAuthPage && <Footer />}
       </NotificationsProvider>
     </div>
   );

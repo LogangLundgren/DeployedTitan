@@ -79,7 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash the password
       const hashedPassword = await hashPassword(password);
       
-      // Create the user with onboarding initialized
+      // Create the user
       const user = await storage.createUser({
         username,
         password: hashedPassword,
@@ -95,9 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isCoach: false,
         coachRegistrationDate: null,
         stripeCustomerId: null,
-        stripeSubscriptionId: null,
-        onboardingStep: 'not_started',
-        onboardingCompleted: false
+        stripeSubscriptionId: null
       });
       
       // Set session
@@ -294,13 +292,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Workout routes
-  app.get("/api/workouts", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/workouts", async (req, res) => {
     try {
-      // Get logged in user's ID from session
-      const userId = req.session.userId;
+      const userId = parseInt(req.query.userId as string);
       
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
       }
       
       // We should return full workout details when getting all workouts
@@ -321,14 +318,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/workouts/recent", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/workouts/recent", async (req, res) => {
     try {
-      // Get user ID from session instead of query parameter
-      const userId = req.session.userId;
+      const userId = parseInt(req.query.userId as string);
       const limit = parseInt(req.query.limit as string) || 3;
       
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
       }
       
       const recentWorkouts = await storage.getRecentWorkouts(userId, limit);
@@ -554,13 +550,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Template routes
-  app.get("/api/templates", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/templates", async (req, res) => {
     try {
-      // Get user ID from session
-      const userId = req.session.userId;
+      const userId = parseInt(req.query.userId as string);
       
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
       }
       
       const templates = await storage.getTemplates(userId);
@@ -851,13 +846,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Notification routes
-  app.get("/api/notifications", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/notifications", async (req, res) => {
     try {
-      // Get user ID from session instead of query parameter
-      const userId = req.session.userId;
+      const userId = parseInt(req.query.userId as string);
       
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
       }
       
       const notifications = await storage.getNotifications(userId);
@@ -869,13 +863,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/notifications/unread-count", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/notifications/unread-count", async (req, res) => {
     try {
-      // Get user ID from session instead of query parameter
-      const userId = req.session.userId;
+      const userId = parseInt(req.query.userId as string);
       
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
       }
       
       const count = await storage.getUnreadNotificationsCount(userId);
@@ -904,46 +897,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/notifications/:id/mark-read", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/notifications/:id/mark-read", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.session.userId;
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Valid notification ID is required" });
       }
       
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-      
-      // First, verify the notification belongs to this user
-      const notification = await storage.getNotification(id);
+      const notification = await storage.markNotificationAsRead(id);
       
       if (!notification) {
         return res.status(404).json({ message: "Notification not found" });
       }
       
-      if (notification.userId !== userId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      
-      const updatedNotification = await storage.markNotificationAsRead(id);
-      
-      res.status(200).json(updatedNotification);
+      res.status(200).json(notification);
     } catch (error) {
       console.error("Mark notification as read error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
   
-  app.patch("/api/notifications/mark-all-read", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/notifications/mark-all-read", async (req, res) => {
     try {
-      // Get user ID from session instead of request body
-      const userId = req.session.userId;
+      const userId = parseInt(req.body.userId as string);
       
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
       }
       
       const success = await storage.markAllNotificationsAsRead(userId);
@@ -960,13 +940,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Goal routes
-  app.get("/api/goals", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/goals", async (req, res) => {
     try {
-      // Get user ID from session instead of query parameter
-      const userId = req.session.userId;
+      const userId = parseInt(req.query.userId as string);
       
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Valid user ID is required" });
       }
       
       const goals = await storage.getGoals(userId);
@@ -3266,117 +3245,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(200).json(userResponse);
     } catch (error) {
       console.error("Error fetching user:", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  });
-  
-  // Update the user's onboarding step
-  app.post("/api/user/update-onboarding-step", async (req: Request, res: Response) => {
-    try {
-      // Get userId from session
-      const userId = req.session.userId;
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-      
-      const { step } = req.body;
-      
-      if (!step) {
-        return res.status(400).json({ message: "Step is required" });
-      }
-      
-      // Validate the step is a valid onboarding step
-      const validSteps = ['not_started', 'profile_setup', 'template_creation', 'marketplace_intro', 'social_connection', 'completed'];
-      if (!validSteps.includes(step)) {
-        return res.status(400).json({ message: "Invalid step" });
-      }
-      
-      // Update the user's onboarding step
-      const updatedUser = await storage.updateUser(userId, { onboardingStep: step });
-      
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Return the updated user without password
-      const { password, ...userWithoutPassword } = updatedUser;
-      const userResponse = {
-        ...userWithoutPassword,
-        socialMedia: userWithoutPassword.socialMedia ? JSON.parse(userWithoutPassword.socialMedia) : null
-      };
-      
-      return res.status(200).json(userResponse);
-    } catch (error) {
-      console.error("Error updating onboarding step:", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  });
-  
-  // Mark onboarding as complete
-  app.post("/api/user/complete-onboarding", async (req: Request, res: Response) => {
-    try {
-      // Get userId from session
-      const userId = req.session.userId;
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-      
-      // Update the user's onboarding status
-      const updatedUser = await storage.updateUser(userId, { 
-        onboardingStep: 'completed',
-        onboardingCompleted: true 
-      });
-      
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Return the updated user without password
-      const { password, ...userWithoutPassword } = updatedUser;
-      const userResponse = {
-        ...userWithoutPassword,
-        socialMedia: userWithoutPassword.socialMedia ? JSON.parse(userWithoutPassword.socialMedia) : null
-      };
-      
-      return res.status(200).json(userResponse);
-    } catch (error) {
-      console.error("Error completing onboarding:", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  });
-  
-  // Endpoint to skip onboarding for existing accounts
-  app.post("/api/user/skip-onboarding", async (req: Request, res: Response) => {
-    try {
-      // Get userId from session
-      const userId = req.session.userId;
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-      
-      // Update the user's onboarding status
-      const updatedUser = await storage.updateUser(userId, { 
-        onboardingStep: 'completed',
-        onboardingCompleted: true 
-      });
-      
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Return the updated user without password
-      const { password, ...userWithoutPassword } = updatedUser;
-      const userResponse = {
-        ...userWithoutPassword,
-        socialMedia: userWithoutPassword.socialMedia ? JSON.parse(userWithoutPassword.socialMedia) : null
-      };
-      
-      return res.status(200).json(userResponse);
-    } catch (error) {
-      console.error("Error skipping onboarding:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
   });
