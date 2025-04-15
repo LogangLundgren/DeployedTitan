@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { 
@@ -14,7 +14,15 @@ import ExerciseCard from "./ExerciseCard";
 import AddExerciseModal from "./AddExerciseModal";
 import WorkoutSummary from "./WorkoutSummary";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Save } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+
+// Extend window interface to include our custom property
+declare global {
+  interface Window {
+    saveToLocalStorageTimeout?: number;
+  }
+}
 
 export interface ExerciseWithSets {
   id?: number;
@@ -36,12 +44,26 @@ interface WorkoutFormProps {
   onWorkoutSaved?: () => void;
 }
 
+// Interface for the workout data to be stored in localStorage
+interface StoredWorkoutData {
+  workoutId?: number;
+  workoutName: string;
+  workoutDate: string;
+  workoutNotes: string;
+  exercises: ExerciseWithSets[];
+  duration: number;
+  lastUpdated: number; // timestamp
+}
+
+const STORAGE_KEY = 'titan_fitness_active_workout';
+
 export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved }: WorkoutFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   
-  // In a real app, this would use the authenticated user's ID
-  const userId = 1;
+  // Use authenticated user ID
+  const userId = user?.id;
   
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [workoutName, setWorkoutName] = useState(workout?.name || "Monday Push Day");
@@ -54,6 +76,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
   const [exercises, setExercises] = useState<ExerciseWithSets[]>([]);
   const [duration, setDuration] = useState(workout?.duration || 45);
   const [workoutId, setWorkoutId] = useState<number | undefined>(workout?.id);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   
   // Fetch exercises for the modal
   const { data: availableExercises } = useQuery<Exercise[]>({
@@ -64,6 +87,63 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       return res.json();
     }
   });
+  
+  // Save workout data to localStorage
+  const saveToLocalStorage = () => {
+    if (!userId || !autoSaveEnabled) return;
+    
+    const workoutData: StoredWorkoutData = {
+      workoutId,
+      workoutName,
+      workoutDate,
+      workoutNotes,
+      exercises,
+      duration,
+      lastUpdated: Date.now()
+    };
+    
+    try {
+      localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(workoutData));
+      console.log('Workout data saved to local storage');
+    } catch (error) {
+      console.error('Error saving workout data to local storage:', error);
+    }
+  };
+  
+  // Load workout data from localStorage
+  const loadFromLocalStorage = () => {
+    if (!userId || !autoSaveEnabled) return;
+    
+    try {
+      const savedData = localStorage.getItem(`${STORAGE_KEY}_${userId}`);
+      if (!savedData) return;
+      
+      const parsedData: StoredWorkoutData = JSON.parse(savedData);
+      
+      // If we have a workout from props, don't use localStorage data
+      if (workout) {
+        // Delete the stored workout data as we're now using a fresh workout
+        localStorage.removeItem(`${STORAGE_KEY}_${userId}`);
+        return;
+      }
+      
+      // Use the saved data
+      setWorkoutId(parsedData.workoutId);
+      setWorkoutName(parsedData.workoutName);
+      setWorkoutDate(parsedData.workoutDate);
+      setWorkoutNotes(parsedData.workoutNotes);
+      setExercises(parsedData.exercises);
+      setDuration(parsedData.duration);
+      
+      toast({
+        title: "Workout Recovered",
+        description: "Your previous workout data has been restored.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error('Error loading workout data from local storage:', error);
+    }
+  };
   
   // Initialize exercises from workout if provided
   useEffect(() => {
@@ -84,8 +164,28 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       
       setExercises(formattedExercises);
       setWorkoutId(workout.id);
+    } else {
+      // If no workout provided, try to load from localStorage
+      loadFromLocalStorage();
     }
-  }, [workout]);
+  }, [workout, userId]);
+  
+  // Save to localStorage when workout details change
+  useEffect(() => {
+    if (exercises.length > 0 && autoSaveEnabled) {
+      debouncedSaveToLocalStorage();
+    }
+  }, [workoutName, workoutDate, workoutNotes, duration, exercises]);
+  
+  // Clear localStorage when workout is submitted successfully
+  useEffect(() => {
+    return () => {
+      // On unmount, clean up the timeout
+      if (window.saveToLocalStorageTimeout) {
+        clearTimeout(window.saveToLocalStorageTimeout);
+      }
+    };
+  }, []);
   
   // Handling saving or updating workout
   const saveWorkoutMutation = useMutation({
@@ -225,6 +325,16 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
         variant: "default",
       });
       
+      // Clear local storage after successful save
+      if (userId) {
+        try {
+          localStorage.removeItem(`${STORAGE_KEY}_${userId}`);
+          console.log('Workout data cleared from local storage after successful save');
+        } catch (error) {
+          console.error('Error clearing workout data from local storage:', error);
+        }
+      }
+      
       // If it's a new workout, reset the form
       if (!workoutId) {
         setExercises([]);
@@ -327,6 +437,25 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       updated[exerciseIndex] = { ...updated[exerciseIndex], sets };
       return updated;
     });
+    
+    // Save to local storage after a short delay to avoid excessive saves
+    // when the user is typing rapidly
+    if (autoSaveEnabled) {
+      debouncedSaveToLocalStorage();
+    }
+  };
+  
+  // Setup a debounced version of saveToLocalStorage
+  const debouncedSaveToLocalStorage = () => {
+    // Clear any existing timeout
+    if (window.saveToLocalStorageTimeout) {
+      clearTimeout(window.saveToLocalStorageTimeout);
+    }
+    
+    // Set a new timeout
+    window.saveToLocalStorageTimeout = setTimeout(() => {
+      saveToLocalStorage();
+    }, 500); // 500ms delay
   };
   
   const calculateTotalVolume = () => {
