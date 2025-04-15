@@ -336,7 +336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/workouts/:id", async (req, res) => {
+  app.get("/api/workouts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -348,6 +348,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workout) {
         return res.status(404).json({ message: "Workout not found" });
+      }
+      
+      // Check if the workout belongs to the current user or is public
+      if (workout.userId !== req.session.userId && !workout.isPublic) {
+        return res.status(403).json({ 
+          message: "Access denied. You can only access your own workouts or public workouts." 
+        });
       }
       
       res.status(200).json(workout);
@@ -380,6 +387,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Valid workout ID is required" });
+      }
+      
+      // Check if the workout belongs to the current user
+      const existingWorkout = await storage.getWorkout(id);
+      if (!existingWorkout) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      
+      // Ensure the workout belongs to the authenticated user
+      if (existingWorkout.userId !== req.session.userId) {
+        return res.status(403).json({ 
+          message: "Access denied. You can only modify your own workouts." 
+        });
       }
       
       const updateSchema = z.object({
@@ -422,6 +442,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Valid workout ID is required" });
+      }
+      
+      // Check if the workout belongs to the current user
+      const existingWorkout = await storage.getWorkout(id);
+      if (!existingWorkout) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      
+      // Ensure the workout belongs to the authenticated user
+      if (existingWorkout.userId !== req.session.userId) {
+        return res.status(403).json({ 
+          message: "Access denied. You can only delete your own workouts." 
+        });
       }
       
       const deleted = await storage.deleteWorkout(id);
