@@ -880,7 +880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/notifications", async (req, res) => {
+  app.post("/api/notifications", requireAuth, async (req, res) => {
     try {
       const notificationData = insertNotificationSchema.safeParse(req.body);
       
@@ -897,7 +897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/notifications/:id/mark-read", async (req, res) => {
+  app.patch("/api/notifications/:id/mark-read", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -918,7 +918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/notifications/mark-all-read", async (req, res) => {
+  app.patch("/api/notifications/mark-all-read", requireAuth, requireOwnership, async (req, res) => {
     try {
       const userId = parseInt(req.body.userId as string);
       
@@ -991,7 +991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/goals", async (req, res) => {
+  app.post("/api/goals", requireAuth, async (req, res) => {
     try {
       // Modify the schema on the fly to parse date strings
       const goalSchema = z.object({
@@ -1024,7 +1024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/goals/:id", async (req, res) => {
+  app.put("/api/goals/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1063,7 +1063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/goals/:id", async (req, res) => {
+  app.delete("/api/goals/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1084,7 +1084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/goals/:id/progress", async (req, res) => {
+  app.patch("/api/goals/:id/progress", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1133,7 +1133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/milestones", async (req, res) => {
+  app.post("/api/milestones", requireAuth, async (req, res) => {
     try {
       const milestoneData = insertMilestoneSchema.safeParse(req.body);
       
@@ -1150,7 +1150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/milestones/:id", async (req, res) => {
+  app.put("/api/milestones/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
