@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { WorkoutWithDetails, Exercise } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 import PersonalRecords from "@/components/workout/PersonalRecords";
 import MonthlyComparison from "@/components/workout/MonthlyComparison";
 import WorkoutHeatmap from "@/components/workout/WorkoutHeatmap";
@@ -290,9 +291,8 @@ function UserFeedbackForm() {
 }
 
 export default function Dashboard() {
-  // In a real app, this would use the authenticated user's ID
-  const userId = 1;
-
+  const { user } = useAuth();
+  
   // State for chart controls
   const [selectedExercise, setSelectedExercise] = useState<number | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('weight');
@@ -301,17 +301,18 @@ export default function Dashboard() {
 
   // Fetch recent workouts
   const { data: recentWorkouts, isLoading: workoutsLoading, refetch: refetchWorkouts } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts/recent', userId],
+    queryKey: ['/api/workouts/recent'],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/workouts/recent?userId=${userId}&limit=10`);
+        const res = await fetch(`/api/workouts/recent?limit=10`);
         if (!res.ok) throw new Error('Failed to fetch recent workouts');
         return res.json();
       } catch (error) {
         console.error('Error fetching recent workouts:', error);
         return [];
       }
-    }
+    },
+    enabled: !!user // Only run query if user is authenticated
   });
   
   // Listen for workout deletion events to refresh data
@@ -450,8 +451,8 @@ export default function Dashboard() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {/* Use regular React patterns instead of IIFE to avoid hook rules violations */}
-          <GoalsDisplay userId={userId} />
+          {/* GoalsDisplay component fetches goals using the authenticated user ID */}
+          <GoalsDisplay />
         </div>
       </div>
 
@@ -616,25 +617,25 @@ export default function Dashboard() {
             
             <TabsContent value="records" className="mt-0">
               <div className="py-2">
-                <PersonalRecords userId={userId} />
+                <PersonalRecords userId={user?.id} />
               </div>
             </TabsContent>
             
             <TabsContent value="comparison" className="mt-0">
               <div className="py-2">
-                <MonthlyComparison userId={userId} />
+                <MonthlyComparison userId={user?.id} />
               </div>
             </TabsContent>
             
             <TabsContent value="heatmap" className="mt-0">
               <div className="py-2">
-                <WorkoutHeatmap userId={userId} />
+                <WorkoutHeatmap userId={user?.id} />
               </div>
             </TabsContent>
             
             <TabsContent value="frequency" className="mt-0">
               <div className="py-2">
-                <ExerciseFrequency userId={userId} />
+                <ExerciseFrequency userId={user?.id} />
               </div>
             </TabsContent>
           </CardContent>
