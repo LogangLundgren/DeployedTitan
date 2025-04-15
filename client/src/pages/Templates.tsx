@@ -126,6 +126,7 @@ function formatDate(dateString: string) {
 export default function Templates() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [location] = useLocation();
   const isStandalonePage = location === '/templates';
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -135,13 +136,14 @@ export default function Templates() {
 
   // Query to get templates
   const { data: templates, isLoading: isLoadingTemplates } = useQuery<Template[]>({
-    queryKey: ['/api/templates', DEMO_USER_ID],
+    queryKey: ['/api/templates', user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/templates?userId=${DEMO_USER_ID}`, {
+      const response = await fetch(`/api/templates`, {
         credentials: 'include'
       });
       return await response.json();
-    }
+    },
+    enabled: !!user
   });
 
   // Mutation to create template
@@ -162,7 +164,7 @@ export default function Templates() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', DEMO_USER_ID] });
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', user?.id] });
       setIsCreateDialogOpen(false);
       toast({
         title: 'Template created',
@@ -198,7 +200,7 @@ export default function Templates() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', DEMO_USER_ID] });
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', user?.id] });
       setIsEditDialogOpen(false);
       toast({
         title: 'Template updated',
@@ -227,7 +229,7 @@ export default function Templates() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', DEMO_USER_ID] });
+      queryClient.invalidateQueries({ queryKey: ['/api/templates', user?.id] });
       setIsDeleteDialogOpen(false);
       toast({
         title: 'Template deleted',
@@ -251,7 +253,7 @@ export default function Templates() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ templateId, userId: DEMO_USER_ID }),
+        body: JSON.stringify({ templateId, userId: user?.id }),
         credentials: 'include'
       });
       if (!res.ok) {
@@ -261,7 +263,7 @@ export default function Templates() {
       return await res.json();
     },
     onSuccess: (workout: WorkoutWithDetails) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workouts', DEMO_USER_ID] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workouts', user?.id] });
       toast({
         title: 'Workout started',
         description: 'Your workout has been created from the template.',
@@ -277,9 +279,16 @@ export default function Templates() {
       name: '',
       description: '',
       category: 'Strength',
-      userId: DEMO_USER_ID
+      userId: user?.id || 0
     }
   });
+  
+  // Update userId when user changes
+  useEffect(() => {
+    if (user) {
+      createForm.setValue('userId', user.id);
+    }
+  }, [user, createForm]);
 
   // Form for editing an existing template
   const editForm = useForm<TemplateFormValues>({
@@ -288,7 +297,7 @@ export default function Templates() {
       name: '',
       description: '',
       category: '',
-      userId: DEMO_USER_ID
+      userId: user?.id
     }
   });
 
