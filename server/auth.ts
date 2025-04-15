@@ -49,6 +49,33 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Data ownership middleware - ensures users can only access their own data
+export function requireOwnership(req: Request, res: Response, next: NextFunction) {
+  // First ensure the user is authenticated
+  if (!req.session.userId) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  
+  // Get the userId from the request (query for GET, body for POST/PUT)
+  const requestUserId = req.query.userId || req.body.userId;
+  
+  // If userId is provided in the request, ensure it matches the authenticated user
+  if (requestUserId && parseInt(requestUserId as string) !== req.session.userId) {
+    return res.status(403).json({ 
+      message: 'Access denied. You can only access your own data.' 
+    });
+  }
+  
+  // If no userId provided, set it to the authenticated user's ID
+  if (req.method === 'GET') {
+    req.query.userId = req.session.userId.toString();
+  } else {
+    req.body.userId = req.session.userId;
+  }
+  
+  next();
+}
+
 // Current user middleware that attaches the user to the request object
 export async function currentUser(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {

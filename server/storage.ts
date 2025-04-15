@@ -22,7 +22,7 @@ import {
   userSuggestions, type UserSuggestion, type InsertUserSuggestion,
   type WorkoutWithDetails, type TemplateWithExercises
 } from "@shared/schema";
-import { eq, desc, and, asc, sql, or, isNull, isNotNull, inArray, like, count } from 'drizzle-orm';
+import { eq, desc, and, asc, sql, or, isNull, isNotNull, inArray, like, notLike, count } from 'drizzle-orm';
 import { db } from './db';
 
 export interface IStorage {
