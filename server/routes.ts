@@ -661,7 +661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/templates/:id", async (req, res) => {
+  app.get("/api/templates/:id", requireAuth, requireOwnership, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -675,6 +675,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Template not found" });
       }
       
+      // Verify the template belongs to the authenticated user
+      if (template.userId !== req.user?.id) {
+        return res.status(403).json({ message: "You do not have permission to access this template" });
+      }
+      
       res.status(200).json(template);
     } catch (error) {
       console.error("Get template details error:", error);
@@ -682,9 +687,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/templates", async (req, res) => {
+  app.post("/api/templates", requireAuth, async (req, res) => {
     try {
-      const templateData = insertTemplateSchema.safeParse(req.body);
+      // Clone the request body and add the authenticated user's ID
+      const requestBody = { ...req.body, userId: req.user?.id };
+      
+      const templateData = insertTemplateSchema.safeParse(requestBody);
       
       if (!templateData.success) {
         return res.status(400).json({ message: "Invalid template data", errors: templateData.error.errors });
@@ -699,12 +707,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.put("/api/templates/:id", async (req, res) => {
+  app.put("/api/templates/:id", requireAuth, requireOwnership, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Valid template ID is required" });
+      }
+      
+      // First verify this is the user's template
+      const template = await storage.getTemplate(id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      if (template.userId !== req.user?.id) {
+        return res.status(403).json({ message: "You do not have permission to update this template" });
       }
       
       const updateSchema = z.object({
@@ -732,12 +750,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/templates/:id", async (req, res) => {
+  app.delete("/api/templates/:id", requireAuth, requireOwnership, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Valid template ID is required" });
+      }
+      
+      // First verify this is the user's template
+      const template = await storage.getTemplate(id);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      if (template.userId !== req.user?.id) {
+        return res.status(403).json({ message: "You do not have permission to delete this template" });
       }
       
       try {
