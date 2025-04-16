@@ -2860,42 +2860,114 @@ export class DbStorage implements IStorage {
       
       // Using a transaction to ensure all operations succeed or fail together
       return await db.transaction(async (tx) => {
-        // Delete workouts by this user
+        // Get workouts by this user to delete their exercises later
+        const userWorkouts = await tx.select({ id: workouts.id })
+          .from(workouts)
+          .where(eq(workouts.userId, id));
+        
+        const workoutIds = userWorkouts.map(w => w.id);
+        
+        if (workoutIds.length > 0) {
+          // Delete sets for each workout exercise
+          console.log("Deleting user's workout sets...");
+          await tx.delete(sets)
+            .where(
+              inArray(
+                sets.workoutExerciseId,
+                tx.select({ id: workoutExercises.id })
+                  .from(workoutExercises)
+                  .where(inArray(workoutExercises.workoutId, workoutIds))
+              )
+            );
+          
+          // Delete workout exercises 
+          console.log("Deleting user's workout exercises...");
+          await tx.delete(workoutExercises)
+            .where(inArray(workoutExercises.workoutId, workoutIds));
+            
+          // Delete comments for these workouts
+          console.log("Deleting workout comments...");
+          await tx.delete(comments)
+            .where(inArray(comments.workoutId, workoutIds));
+            
+          // Delete likes for these workouts
+          console.log("Deleting workout likes...");
+          await tx.delete(likes)
+            .where(inArray(likes.workoutId, workoutIds));
+        }
+        
+        // Get templates by this user to delete their exercises later
+        const userTemplates = await tx.select({ id: templates.id })
+          .from(templates)
+          .where(eq(templates.userId, id));
+          
+        const templateIds = userTemplates.map(t => t.id);
+        
+        if (templateIds.length > 0) {
+          // Delete template exercises
+          console.log("Deleting user's template exercises...");
+          await tx.delete(templateExercises)
+            .where(inArray(templateExercises.templateId, templateIds));
+        }
+        
+        // If user is a coach, get and handle their coach profile and plans
+        const user = await tx.select().from(users).where(eq(users.id, id)).first();
+        if (user && user.isCoach) {
+          const coachProfile = await tx.select({ id: coachProfiles.id })
+            .from(coachProfiles)
+            .where(eq(coachProfiles.userId, id));
+            
+          if (coachProfile.length > 0) {
+            const coachId = coachProfile[0].id;
+            
+            // Get coach's workout plans
+            const coachPlans = await tx.select({ id: workoutPlans.id })
+              .from(workoutPlans)
+              .where(eq(workoutPlans.coachId, coachId));
+              
+            const planIds = coachPlans.map(p => p.id);
+            
+            if (planIds.length > 0) {
+              // Delete plan templates
+              console.log("Deleting coach's plan templates...");
+              await tx.delete(planTemplates)
+                .where(inArray(planTemplates.planId, planIds));
+                
+              // Delete plan days
+              console.log("Deleting coach's plan days...");
+              await tx.delete(workoutPlanDays)
+                .where(inArray(workoutPlanDays.planId, planIds));
+                
+              // Delete plan reviews
+              console.log("Deleting coach's plan reviews...");
+              await tx.delete(reviews)
+                .where(inArray(reviews.planId, planIds));
+                
+              // Delete plan purchases/transactions
+              console.log("Deleting plan purchases...");
+              // This depends on your transaction schema
+            }
+              
+            // Delete coach reviews
+            console.log("Deleting coach reviews...");
+            await tx.delete(reviews)
+              .where(eq(reviews.coachId, coachId));
+          }
+            
+          // Delete coach profile
+          console.log("Deleting coach profile...");
+          await tx.delete(coachProfiles)
+            .where(eq(coachProfiles.userId, id));
+        }
+        
+        // Delete user's workouts
         console.log("Deleting user's workouts...");
         await tx.delete(workouts).where(eq(workouts.userId, id));
         
-        // Delete workout exercises from this user's workouts
-        console.log("Deleting user's workout exercises...");
-        await tx.delete(workoutExercises)
-          .where(
-            inArray(
-              workoutExercises.workoutId,
-              tx.select({ id: workouts.id }).from(workouts).where(eq(workouts.userId, id))
-            )
-          );
-        
-        // Delete workout logs by this user
-        console.log("Deleting user's workout logs...");
-        await tx.delete(workoutLogs).where(eq(workoutLogs.userId, id));
-          
-        // Delete workout likes by this user
-        console.log("Deleting user's workout likes...");
-        await tx.delete(workoutLikes).where(eq(workoutLikes.userId, id));
-        
-        // Delete this user's templates
+        // Delete user's templates
         console.log("Deleting user's templates...");
-        await tx.delete(workoutTemplates).where(eq(workoutTemplates.userId, id));
+        await tx.delete(templates).where(eq(templates.userId, id));
         
-        // Delete template exercises from this user's templates
-        console.log("Deleting user's template exercises...");
-        await tx.delete(templateExercises)
-          .where(
-            inArray(
-              templateExercises.templateId,
-              tx.select({ id: workoutTemplates.id }).from(workoutTemplates).where(eq(workoutTemplates.userId, id))
-            )
-          );
-          
         // Delete user's goals
         console.log("Deleting user's goals...");
         await tx.delete(goals).where(eq(goals.userId, id));
@@ -2910,24 +2982,12 @@ export class DbStorage implements IStorage {
         await tx.delete(follows).where(eq(follows.followedId, id));
         
         // Delete user's comments
-        console.log("Deleting user's comments...");
+        console.log("Deleting user's remaining comments...");
         await tx.delete(comments).where(eq(comments.userId, id));
         
-        // Delete user's reviews
-        console.log("Deleting user's reviews...");
+        // Remaining reviews by this user
+        console.log("Deleting user's remaining reviews...");
         await tx.delete(reviews).where(eq(reviews.userId, id));
-        
-        // If user is a coach, delete their coach profile
-        console.log("Deleting user's coach profile if any...");
-        await tx.delete(coachProfiles).where(eq(coachProfiles.userId, id));
-        
-        // Delete workout plans created by this user
-        console.log("Deleting user's workout plans...");
-        await tx.delete(workoutPlans).where(eq(workoutPlans.coachId, id));
-        
-        // Delete transactions for this user
-        console.log("Deleting user's transactions...");
-        await tx.delete(transactions).where(eq(transactions.userId, id));
         
         // Finally delete the user
         console.log("Deleting user account...");

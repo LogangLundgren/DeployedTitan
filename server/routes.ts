@@ -3662,7 +3662,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Admin endpoint to delete a specific user
+  // Admin endpoint to delete all users except Logan Main
+  app.delete("/api/admin/cleanup-users", async (req: Request, res: Response) => {
+    try {
+      // Only allow admin (Logan Main) to perform this operation
+      if (!req.user || req.user.id !== 9) {
+        return res.status(403).json({ message: "Unauthorized. Only admin user can perform this operation." });
+      }
+      
+      console.log("Admin user initiated cleanup of all users except Logan Main (ID: 9)");
+      
+      // Get all users except Logan Main
+      const users = await storage.getAllUsers();
+      const usersToDelete = users.filter(user => user.id !== 9);
+      
+      console.log(`Found ${usersToDelete.length} users to delete`);
+      
+      // Track results
+      const results = {
+        total: usersToDelete.length,
+        success: 0,
+        failed: 0,
+        details: [] as {id: number, username: string, status: 'success' | 'failed'}[]
+      };
+      
+      // Delete each user
+      for (const user of usersToDelete) {
+        try {
+          console.log(`Deleting user ${user.username} (ID: ${user.id})...`);
+          const success = await storage.deleteUser(user.id);
+          
+          if (success) {
+            results.success++;
+            results.details.push({
+              id: user.id,
+              username: user.username,
+              status: 'success'
+            });
+            console.log(`Successfully deleted user ${user.username} (ID: ${user.id})`);
+          } else {
+            results.failed++;
+            results.details.push({
+              id: user.id,
+              username: user.username,
+              status: 'failed'
+            });
+            console.log(`Failed to delete user ${user.username} (ID: ${user.id})`);
+          }
+        } catch (error) {
+          console.error(`Error deleting user ${user.id}:`, error);
+          results.failed++;
+          results.details.push({
+            id: user.id,
+            username: user.username,
+            status: 'failed'
+          });
+        }
+      }
+      
+      console.log(`User cleanup completed. Success: ${results.success}, Failed: ${results.failed}`);
+      
+      return res.status(200).json({
+        message: `User cleanup completed. ${results.success} users deleted, ${results.failed} failed.`,
+        results
+      });
+    } catch (error) {
+      console.error("Error performing user cleanup:", error);
+      return res.status(500).json({ message: "Internal server error during user cleanup" });
+    }
+  });
+  
   app.delete("/api/users/:id", async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
@@ -3671,12 +3740,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       
+      // Only allow this operation for authorized users (protecting Logan Main)
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Protect the Logan Main account (ID 9)
+      if (userId === 9) {
+        return res.status(403).json({ message: "Cannot delete Logan Main account" });
+      }
+      
       const userToDelete = await storage.getUser(userId);
       if (!userToDelete) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Delete the user account
+      console.log(`Admin request to delete user ${userToDelete.username} (ID: ${userId})`);
+      
+      // Delete the user account with robust cascading
       const success = await storage.deleteUser(userId);
       
       if (success) {
