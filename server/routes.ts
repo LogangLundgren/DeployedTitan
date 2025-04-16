@@ -150,6 +150,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get all users for discovery (this needs to come before the :id route to avoid routing conflict)
+  app.get("/api/users/discover", async (req, res) => {
+    try {
+      const currentUserId = req.user?.id;
+      const users = await storage.getAllUsers();
+      
+      // Remove passwords and filter out current user
+      const filteredUsers = users
+        .filter(user => !currentUserId || user.id !== currentUserId)
+        .map(user => {
+          const { password: _, ...userDataWithoutPassword } = user;
+          return {
+            ...userDataWithoutPassword,
+            isFollowing: false, // Initially no following relationship
+          };
+        });
+      
+      res.json(filteredUsers);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching users", error });
+    }
+  });
+
   app.get("/api/users/:id", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
