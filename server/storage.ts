@@ -68,6 +68,7 @@ export interface IStorage {
   deleteTemplate(id: number): Promise<boolean>;
   
   // Template Exercise operations
+  getTemplateExercise(id: number): Promise<TemplateExercise | undefined>;
   createTemplateExercise(templateExercise: InsertTemplateExercise): Promise<TemplateExercise>;
   deleteTemplateExercise(id: number): Promise<boolean>;
   updateTemplateExercise(id: number, templateExercise: Partial<TemplateExercise>): Promise<TemplateExercise | undefined>;

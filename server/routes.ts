@@ -793,7 +793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Template Exercise routes
-  app.post("/api/template-exercises", async (req, res) => {
+  app.post("/api/template-exercises", requireAuth, async (req, res) => {
     try {
       const templateExerciseData = insertTemplateExerciseSchema.safeParse(req.body);
       
@@ -802,6 +802,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid template exercise data", 
           errors: templateExerciseData.error.errors 
         });
+      }
+      
+      // Verify that the user owns the template
+      const templateId = templateExerciseData.data.templateId;
+      const template = await storage.getTemplate(templateId);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      if (template.userId !== req.user?.id) {
+        return res.status(403).json({ message: "You do not have permission to add exercises to this template" });
       }
       
       const templateExercise = await storage.createTemplateExercise(templateExerciseData.data);
@@ -813,7 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.put("/api/template-exercises/:id", async (req, res) => {
+  app.put("/api/template-exercises/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -821,8 +833,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid template exercise ID is required" });
       }
       
-      console.log("Update template exercise request body:", req.body);
-      console.log("Content-Type:", req.headers['content-type']);
+      // Get the template exercise
+      const templateExercise = await storage.getTemplateExercise(id);
+      
+      if (!templateExercise) {
+        return res.status(404).json({ message: "Template exercise not found" });
+      }
+      
+      // Verify that the user owns the template that this exercise belongs to
+      const template = await storage.getTemplate(templateExercise.templateId);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      if (template.userId !== req.user?.id) {
+        return res.status(403).json({ message: "You do not have permission to update this template exercise" });
+      }
       
       const updateSchema = z.object({
         order: z.number().nullable().optional(),
@@ -838,7 +865,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
       }
       
-      console.log("Validated update data:", updateData.data);
       // Ensure at least one field is present to update
       if (Object.keys(updateData.data).length === 0) {
         return res.status(400).json({ message: "At least one field must be provided for update" });
@@ -867,13 +893,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filteredUpdateData.order = updateData.data.order;
       }
       
-      console.log("Filtered update data:", filteredUpdateData);
-      
       const updatedTemplateExercise = await storage.updateTemplateExercise(id, filteredUpdateData);
-      
-      if (!updatedTemplateExercise) {
-        return res.status(404).json({ message: "Template exercise not found" });
-      }
       
       res.status(200).json(updatedTemplateExercise);
     } catch (error) {
