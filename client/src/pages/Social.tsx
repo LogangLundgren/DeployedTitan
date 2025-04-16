@@ -181,8 +181,8 @@ function ActivityFeed() {
     if (communityWorkouts.length > 0) {
       const counts: Record<number, number> = {};
       communityWorkouts.forEach(workout => {
-        // Initialize each workout with 0 or a random number between 5-15 likes for demo
-        counts[workout.id] = Math.floor(Math.random() * 10) + 5;
+        // Initialize each workout with 0 likes
+        counts[workout.id] = 0;
       });
       setLikeCounts(counts);
     }
@@ -1059,15 +1059,15 @@ function PeopleDiscover() {
                 </p>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div>
-                    <div className="font-medium">{user.workoutsCount || 42}</div>
+                    <div className="font-medium">{user.workoutsCount || 0}</div>
                     <div className="text-xs text-muted-foreground">Workouts</div>
                   </div>
                   <div>
-                    <div className="font-medium">{user.followersCount || 158}</div>
+                    <div className="font-medium">{user.followersCount || 0}</div>
                     <div className="text-xs text-muted-foreground">Followers</div>
                   </div>
                   <div>
-                    <div className="font-medium">{user.followingCount || 93}</div>
+                    <div className="font-medium">{user.followingCount || 0}</div>
                     <div className="text-xs text-muted-foreground">Following</div>
                   </div>
                 </div>
@@ -1149,8 +1149,8 @@ function PublicProfileView() {
     totalWorkouts: userWorkouts.length,
     totalGoals: userGoals.length,
     completedGoals: userGoals.filter((g: any) => g.completed).length,
-    followers: 158, // Mock data
-    following: 93,  // Mock data
+    followers: 0, // Start with zero followers 
+    following: 0, // Start with zero following
   };
   
   if (userLoading) {
