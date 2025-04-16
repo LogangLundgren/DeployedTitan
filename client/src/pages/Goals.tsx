@@ -134,11 +134,8 @@ export default function Goals() {
     queryFn: () => fetch('/api/exercises').then(res => res.json()),
   });
 
-  // Query public goals to include in the main list
-  const { data: publicGoals = [], isLoading: publicGoalsLoading } = useQuery({
-    queryKey: ['/api/goals/public'],
-    queryFn: () => fetch('/api/goals/public').then(res => res.json()),
-  });
+  // We no longer need to load public goals as we're only showing the user's own goals
+  const publicGoalsLoading = false; // Keeping this flag to avoid refactoring loading code
 
   // Mutation for creating a goal
   const createGoalMutation = useMutation({
@@ -430,15 +427,8 @@ export default function Goals() {
     return exercise ? exercise.name : null;
   };
 
-  // Combine user goals and public goals, removing duplicates
+  // Only show the current user's goals in their dashboard
   const allGoals = [...goals];
-  if (publicGoals.length > 0) {
-    publicGoals.forEach((publicGoal: any) => {
-      if (!allGoals.some(g => g.id === publicGoal.id)) {
-        allGoals.push(publicGoal);
-      }
-    });
-  }
 
   return (
     <main className="container py-6 px-8">
@@ -656,7 +646,7 @@ export default function Goals() {
           </Dialog>
         </div>
 
-        {goalsLoading || publicGoalsLoading ? (
+        {goalsLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(3)].map((_, i) => (
               <Card key={i} className="animate-pulse">
