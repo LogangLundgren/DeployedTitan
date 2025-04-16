@@ -36,6 +36,13 @@ export interface IStorage {
   updateUserCoachStatus(id: number, isCoach: boolean): Promise<User | undefined>;
   updateUserStripeInfo(id: number, stripeInfo: { customerId?: string, subscriptionId?: string }): Promise<User | undefined>;
   
+  // Follow operations
+  isFollowing(followerId: number, followedId: number): Promise<boolean>;
+  getFollowing(userId: number): Promise<User[]>; 
+  getFollowers(userId: number): Promise<User[]>;
+  followUser(followerId: number, followedId: number): Promise<void>;
+  unfollowUser(followerId: number, followedId: number): Promise<void>;
+  
   // Exercise operations
   getExercises(): Promise<Exercise[]>;
   getExercisesByCategory(category: string): Promise<Exercise[]>;
@@ -119,10 +126,7 @@ export interface IStorage {
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(workoutId: number, userId: number): Promise<boolean>;
   
-  // Follow operations
-  isFollowing(followerId: number, followedId: number): Promise<boolean>;
-  followUser(followerId: number, followedId: number): Promise<void>;
-  unfollowUser(followerId: number, followedId: number): Promise<void>;
+  // Additional operations related to coaches and plans
   
   // Coach Profile operations
   getCoachProfile(userId: number): Promise<CoachProfile | undefined>;
@@ -1140,11 +1144,51 @@ export class MemStorage implements IStorage {
   
   // Follow operations
   async isFollowing(followerId: number, followedId: number): Promise<boolean> {
+    // Ensure we're not trying to check following for the same user
+    if (followerId === followedId) {
+      return false;
+    }
+    
     return Array.from(this.follows.values())
       .some(follow => follow.followerId === followerId && follow.followedId === followedId);
   }
   
+  async getFollowing(userId: number): Promise<User[]> {
+    const followedIds = Array.from(this.follows.values())
+      .filter(follow => follow.followerId === userId)
+      .map(follow => follow.followedId);
+      
+    return Array.from(this.users.values())
+      .filter(user => followedIds.includes(user.id));
+  }
+  
+  async getFollowers(userId: number): Promise<User[]> {
+    const followerIds = Array.from(this.follows.values())
+      .filter(follow => follow.followedId === userId)
+      .map(follow => follow.followerId);
+      
+    return Array.from(this.users.values())
+      .filter(user => followerIds.includes(user.id));
+  }
+  
   async followUser(followerId: number, followedId: number): Promise<void> {
+    // Prevent users from following themselves
+    if (followerId === followedId) {
+      throw new Error("Cannot follow yourself");
+    }
+    
+    // Check if the users exist
+    const followerUser = this.users.get(followerId);
+    const followedUser = this.users.get(followedId);
+    
+    if (!followerUser) {
+      throw new Error("Follower user not found");
+    }
+    
+    if (!followedUser) {
+      throw new Error("User to follow not found");
+    }
+    
     // Check if already following
     const isAlreadyFollowing = await this.isFollowing(followerId, followedId);
     if (isAlreadyFollowing) {
@@ -1162,25 +1206,38 @@ export class MemStorage implements IStorage {
     this.follows.set(id, follow);
     
     // Create a notification for the followed user
-    const follower = this.users.get(followerId);
-    if (follower) {
-      await this.createNotification({
-        userId: followedId,
-        title: "New Follower",
-        message: `${follower.username} started following you`,
-        type: "social",
-        link: `/profile/${followerId}`
-      });
-    }
+    await this.createNotification({
+      userId: followedId,
+      title: "New Follower",
+      message: `${followerUser.username} started following you`,
+      type: "social",
+      link: `/users/${followerId}`
+    });
+    
+    console.log(`User ${followerId} followed user ${followedId} successfully`);
   }
   
   async unfollowUser(followerId: number, followedId: number): Promise<void> {
+    // Prevent unfollowing yourself
+    if (followerId === followedId) {
+      throw new Error("Cannot unfollow yourself");
+    }
+    
+    // Check if currently following
+    const isFollowing = await this.isFollowing(followerId, followedId);
+    if (!isFollowing) {
+      throw new Error("Not currently following this user");
+    }
+    
     const follow = Array.from(this.follows.values())
       .find(follow => follow.followerId === followerId && follow.followedId === followedId);
     
-    if (follow) {
-      this.follows.delete(follow.id);
+    if (!follow) {
+      throw new Error("Not following this user");
     }
+    
+    this.follows.delete(follow.id);
+    console.log(`User ${followerId} unfollowed user ${followedId} successfully`);
   }
   
   // Coach Profile operations
@@ -1956,12 +2013,18 @@ export class DbStorage implements IStorage {
   // Follow operations
   async isFollowing(followerId: number, followedId: number): Promise<boolean> {
     try {
+      // Ensure we're not trying to check following for the same user
+      if (followerId === followedId) {
+        return false;
+      }
+      
       const result = await db.select()
         .from(follows)
         .where(and(
           eq(follows.followerId, followerId),
           eq(follows.followedId, followedId)
         ));
+        
       return result.length > 0;
     } catch (error) {
       console.error("Error checking if following:", error);
@@ -1969,8 +2032,75 @@ export class DbStorage implements IStorage {
     }
   }
   
+  async getFollowing(userId: number): Promise<User[]> {
+    try {
+      const followRows = await db.select({
+        followedId: follows.followedId
+      })
+      .from(follows)
+      .where(eq(follows.followerId, userId));
+      
+      if (followRows.length === 0) {
+        return [];
+      }
+      
+      const followedIds = followRows.map(row => row.followedId);
+      
+      const followedUsers = await db.select()
+        .from(users)
+        .where(inArray(users.id, followedIds));
+        
+      return followedUsers;
+    } catch (error) {
+      console.error("Error getting followed users:", error);
+      return [];
+    }
+  }
+  
+  async getFollowers(userId: number): Promise<User[]> {
+    try {
+      const followRows = await db.select({
+        followerId: follows.followerId
+      })
+      .from(follows)
+      .where(eq(follows.followedId, userId));
+      
+      if (followRows.length === 0) {
+        return [];
+      }
+      
+      const followerIds = followRows.map(row => row.followerId);
+      
+      const followerUsers = await db.select()
+        .from(users)
+        .where(inArray(users.id, followerIds));
+        
+      return followerUsers;
+    } catch (error) {
+      console.error("Error getting followers:", error);
+      return [];
+    }
+  }
+  
   async followUser(followerId: number, followedId: number): Promise<void> {
     try {
+      // Prevent following yourself
+      if (followerId === followedId) {
+        throw new Error("Cannot follow yourself");
+      }
+      
+      // Check if the users exist
+      const followerUser = await this.getUser(followerId);
+      const followedUser = await this.getUser(followedId);
+      
+      if (!followerUser) {
+        throw new Error("Follower user not found");
+      }
+      
+      if (!followedUser) {
+        throw new Error("User to follow not found");
+      }
+      
       // Check if already following
       const isAlreadyFollowing = await this.isFollowing(followerId, followedId);
       if (isAlreadyFollowing) {
@@ -1984,16 +2114,15 @@ export class DbStorage implements IStorage {
       });
       
       // Create notification for followed user
-      const follower = await this.getUser(followerId);
-      if (follower) {
-        await this.createNotification({
-          userId: followedId,
-          title: "New Follower",
-          message: `${follower.username} started following you`,
-          type: "social",
-          link: `/profile/${followerId}`
-        });
-      }
+      await this.createNotification({
+        userId: followedId,
+        title: "New Follower",
+        message: `${followerUser.username} started following you`,
+        type: "social",
+        link: `/users/${followerId}`
+      });
+      
+      console.log(`User ${followerId} followed user ${followedId} successfully`);
     } catch (error) {
       console.error("Error following user:", error);
       throw error;
@@ -2002,11 +2131,24 @@ export class DbStorage implements IStorage {
   
   async unfollowUser(followerId: number, followedId: number): Promise<void> {
     try {
-      await db.delete(follows)
+      // Prevent unfollowing yourself
+      if (followerId === followedId) {
+        throw new Error("Cannot unfollow yourself");
+      }
+      
+      // Check if currently following
+      const isFollowing = await this.isFollowing(followerId, followedId);
+      if (!isFollowing) {
+        throw new Error("Not currently following this user");
+      }
+      
+      const result = await db.delete(follows)
         .where(and(
           eq(follows.followerId, followerId),
           eq(follows.followedId, followedId)
         ));
+        
+      console.log(`User ${followerId} unfollowed user ${followedId} successfully`);
     } catch (error) {
       console.error("Error unfollowing user:", error);
       throw error;
