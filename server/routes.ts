@@ -499,12 +499,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Workout routes
   app.get("/api/workouts", requireAuth, async (req, res) => {
     try {
-      // Use the authenticated user's ID from the session
-      const userId = req.session.userId;
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
+      // Use the authenticated user's ID from req.user
+      const userId = req.user.id;
       
       // We should return full workout details when getting all workouts
       const workoutBasics = await storage.getWorkouts(userId);
@@ -526,13 +522,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/workouts/recent", requireAuth, async (req, res) => {
     try {
-      // Use the authenticated user's ID from the session
-      const userId = req.session.userId;
+      // Use the authenticated user's ID from req.user
+      const userId = req.user.id;
       const limit = parseInt(req.query.limit as string) || 3;
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
       
       const recentWorkouts = await storage.getRecentWorkouts(userId, limit);
       
@@ -574,7 +566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if the workout belongs to the current user or is public
-      if (workout.userId !== req.session.userId && !workout.isPublic) {
+      if (workout.userId !== req.user.id && !workout.isPublic) {
         return res.status(403).json({ 
           message: "Access denied. You can only access your own workouts or public workouts." 
         });
@@ -619,7 +611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure the workout belongs to the authenticated user
-      if (existingWorkout.userId !== req.session.userId) {
+      if (existingWorkout.userId !== req.user.id) {
         return res.status(403).json({ 
           message: "Access denied. You can only modify your own workouts." 
         });
@@ -674,7 +666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure the workout belongs to the authenticated user
-      if (existingWorkout.userId !== req.session.userId) {
+      if (existingWorkout.userId !== req.user.id) {
         return res.status(403).json({ 
           message: "Access denied. You can only delete your own workouts." 
         });
@@ -698,7 +690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { templateId } = req.body;
       
-      if (!req.user || !req.session.userId) {
+      if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
       }
       
@@ -714,7 +706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check template ownership
-      if (template.userId !== req.session.userId) {
+      if (template.userId !== req.user.id) {
         return res.status(403).json({ 
           message: "Access denied. You can only use your own templates." 
         });
@@ -723,7 +715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create a new workout based on the template
       const workout = await storage.createWorkout({
         name: template.name,
-        userId: req.session.userId,
+        userId: req.user.id,
         date: new Date(),
         notes: template.description || null,
         duration: 0,
@@ -1317,12 +1309,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Goal routes
   app.get("/api/goals", requireAuth, async (req, res) => {
     try {
-      // Use the authenticated user's ID from the session
-      const userId = req.session.userId;
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
+      // Use the authenticated user's ID from req.user
+      const userId = req.user.id;
       
       const goals = await storage.getGoals(userId);
       
