@@ -1137,6 +1137,55 @@ export class MemStorage implements IStorage {
     return false;
   }
   
+  // Follow operations
+  async isFollowing(followerId: number, followedId: number): Promise<boolean> {
+    return Array.from(this.follows.values())
+      .some(follow => follow.followerId === followerId && follow.followedId === followedId);
+  }
+  
+  async followUser(followerId: number, followedId: number): Promise<Follow> {
+    // Check if already following
+    const isAlreadyFollowing = await this.isFollowing(followerId, followedId);
+    if (isAlreadyFollowing) {
+      throw new Error("Already following this user");
+    }
+    
+    // Create follow relationship
+    const id = this.followCurrentId++;
+    const follow: Follow = {
+      id,
+      followerId,
+      followedId,
+      createdAt: new Date()
+    };
+    this.follows.set(id, follow);
+    
+    // Create a notification for the followed user
+    const follower = this.users.get(followerId);
+    if (follower) {
+      await this.createNotification({
+        userId: followedId,
+        title: "New Follower",
+        message: `${follower.username} started following you`,
+        type: "social",
+        link: `/profile/${followerId}`
+      });
+    }
+    
+    return follow;
+  }
+  
+  async unfollowUser(followerId: number, followedId: number): Promise<boolean> {
+    const follow = Array.from(this.follows.values())
+      .find(follow => follow.followerId === followerId && follow.followedId === followedId);
+    
+    if (follow) {
+      return this.follows.delete(follow.id);
+    }
+    
+    return false;
+  }
+  
   // Coach Profile operations
   async getCoachProfile(userId: number): Promise<CoachProfile | undefined> {
     return Array.from(this.coachProfiles.values())
