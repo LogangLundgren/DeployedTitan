@@ -46,6 +46,7 @@ export interface IStorage {
   getWorkout(id: number): Promise<Workout | undefined>;
   getWorkoutWithDetails(id: number): Promise<WorkoutWithDetails | undefined>;
   getRecentWorkouts(userId: number, limit: number): Promise<WorkoutWithDetails[]>;
+  getCommunityWorkouts(limit: number): Promise<WorkoutWithDetails[]>;
   createWorkout(workout: InsertWorkout): Promise<Workout>;
   updateWorkout(id: number, workout: Partial<Workout>): Promise<Workout | undefined>;
   deleteWorkout(id: number): Promise<boolean>;
