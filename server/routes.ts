@@ -186,34 +186,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Follow a user
   app.post("/api/users/:id/follow", requireAuth, async (req, res) => {
     try {
+      // Get user ID from the authenticated session
+      const followerId = req.user.id;
       const targetUserId = parseInt(req.params.id);
-      if (!req.user || !req.session.userId) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
       
       if (isNaN(targetUserId)) {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       
-      if (req.session.userId === targetUserId) {
-        return res.status(400).json({ message: "You cannot follow yourself" });
+      // Let the storage layer handle the validation for better encapsulation
+      try {
+        await storage.followUser(followerId, targetUserId);
+        
+        // Return the updated follow status
+        const userProfile = await storage.getUser(targetUserId);
+        const isFollowing = true;
+        const followerCount = (await storage.getFollowers(targetUserId)).length;
+        
+        res.status(200).json({ 
+          success: true, 
+          isFollowing,
+          followerCount,
+          message: "Successfully followed user"
+        });
+      } catch (followError: any) {
+        // Handle specific error cases with appropriate status codes
+        if (followError.message === "Cannot follow yourself") {
+          return res.status(400).json({ message: followError.message });
+        } else if (followError.message === "Already following this user") {
+          return res.status(400).json({ message: followError.message });
+        } else if (followError.message === "User to follow not found") {
+          return res.status(404).json({ message: followError.message });
+        } else {
+          throw followError; // Re-throw for the general error handler
+        }
       }
-      
-      const targetUser = await storage.getUser(targetUserId);
-      if (!targetUser) {
-        return res.status(404).json({ message: "User to follow not found" });
-      }
-      
-      // Check if already following
-      const isAlreadyFollowing = await storage.isFollowing(req.session.userId, targetUserId);
-      if (isAlreadyFollowing) {
-        return res.status(400).json({ message: "Already following this user" });
-      }
-      
-      // Create follow relationship
-      await storage.followUser(req.session.userId, targetUserId);
-      
-      res.status(200).json({ success: true });
     } catch (error) {
       console.error("Follow user error:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -223,30 +230,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Unfollow a user
   app.post("/api/users/:id/unfollow", requireAuth, async (req, res) => {
     try {
+      // Get user ID from the authenticated session
+      const followerId = req.user.id;
       const targetUserId = parseInt(req.params.id);
-      if (!req.user || !req.session.userId) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
       
       if (isNaN(targetUserId)) {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       
-      const targetUser = await storage.getUser(targetUserId);
-      if (!targetUser) {
-        return res.status(404).json({ message: "User to unfollow not found" });
+      // Let the storage layer handle the validation for better encapsulation
+      try {
+        await storage.unfollowUser(followerId, targetUserId);
+        
+        // Return the updated follow status
+        const userProfile = await storage.getUser(targetUserId);
+        const isFollowing = false;
+        const followerCount = (await storage.getFollowers(targetUserId)).length;
+        
+        res.status(200).json({ 
+          success: true, 
+          isFollowing,
+          followerCount,
+          message: "Successfully unfollowed user"
+        });
+      } catch (unfollowError: any) {
+        // Handle specific error cases with appropriate status codes
+        if (unfollowError.message === "Cannot unfollow yourself") {
+          return res.status(400).json({ message: unfollowError.message });
+        } else if (unfollowError.message === "Not currently following this user") {
+          return res.status(400).json({ message: unfollowError.message });
+        } else if (unfollowError.message === "User to unfollow not found") {
+          return res.status(404).json({ message: unfollowError.message });
+        } else {
+          throw unfollowError; // Re-throw for the general error handler
+        }
       }
-      
-      // Check if following
-      const isFollowing = await storage.isFollowing(req.session.userId, targetUserId);
-      if (!isFollowing) {
-        return res.status(400).json({ message: "Not following this user" });
-      }
-      
-      // Remove follow relationship
-      await storage.unfollowUser(req.session.userId, targetUserId);
-      
-      res.status(200).json({ success: true });
     } catch (error) {
       console.error("Unfollow user error:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -276,9 +294,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
         socialMedia: userDataWithoutPassword.socialMedia ? JSON.parse(userDataWithoutPassword.socialMedia) : null
       };
       
-      res.status(200).json(userWithoutPassword);
+      // Check if the current user follows this user
+      let isFollowing = false;
+      let followerCount = 0;
+      
+      // Get follower count regardless of authentication
+      const followers = await storage.getFollowers(userId);
+      followerCount = followers.length;
+      
+      // Check follow status if authenticated
+      if (req.user && req.user.id) {
+        isFollowing = await storage.isFollowing(req.user.id, userId);
+      }
+      
+      // Return extended user info
+      res.status(200).json({
+        ...userWithoutPassword,
+        isFollowing,
+        followerCount
+      });
     } catch (error) {
       console.error("Get user error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Get user followers
+  app.get("/api/users/:id/followers", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const followers = await storage.getFollowers(userId);
+      
+      // Remove passwords from follower data
+      const sanitizedFollowers = followers.map(follower => {
+        const { password: _, ...followerData } = follower;
+        return {
+          ...followerData,
+          socialMedia: followerData.socialMedia ? JSON.parse(followerData.socialMedia) : null
+        };
+      });
+      
+      res.status(200).json(sanitizedFollowers);
+    } catch (error) {
+      console.error("Get followers error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Get users the specified user is following
+  app.get("/api/users/:id/following", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const following = await storage.getFollowing(userId);
+      
+      // Remove passwords from following data
+      const sanitizedFollowing = following.map(followedUser => {
+        const { password: _, ...followedData } = followedUser;
+        return {
+          ...followedData,
+          socialMedia: followedData.socialMedia ? JSON.parse(followedData.socialMedia) : null
+        };
+      });
+      
+      res.status(200).json(sanitizedFollowing);
+    } catch (error) {
+      console.error("Get following error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
