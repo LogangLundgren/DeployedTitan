@@ -136,7 +136,7 @@ export default function Templates() {
 
   // Query to get templates
   const { data: templates, isLoading: isLoadingTemplates } = useQuery<Template[]>({
-    queryKey: ['/api/templates', user?.id],
+    queryKey: ['/api/templates'],
     queryFn: async () => {
       const response = await fetch(`/api/templates`, {
         credentials: 'include'
@@ -164,7 +164,7 @@ export default function Templates() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
       setIsCreateDialogOpen(false);
       toast({
         title: 'Template created',
@@ -200,7 +200,7 @@ export default function Templates() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
       setIsEditDialogOpen(false);
       toast({
         title: 'Template updated',
@@ -248,12 +248,12 @@ export default function Templates() {
   // Mutation to create a workout from a template
   const createWorkoutFromTemplateMutation = useMutation({
     mutationFn: async (templateId: number) => {
-      const res = await fetch('/api/workouts/from-template', {
+      const res = await fetch(`/api/templates/${templateId}/create-workout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ templateId }),
+        body: JSON.stringify({ isPublic: false }),
         credentials: 'include'
       });
       if (!res.ok) {
@@ -263,12 +263,20 @@ export default function Templates() {
       return await res.json();
     },
     onSuccess: (workout: WorkoutWithDetails) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workouts', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workouts'] });
       toast({
         title: 'Workout started',
         description: 'Your workout has been created from the template.',
       });
-      // Ideally we would navigate to the workout page here
+      // Navigate to the workout logger page with the new workout
+      window.location.href = `/workout-logger/${workout.id}`;
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to create workout',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   });
 

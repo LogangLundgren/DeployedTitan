@@ -471,6 +471,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Create a workout from a template
+  app.post("/api/workouts/from-template", requireAuth, async (req, res) => {
+    try {
+      const { templateId } = req.body;
+      
+      if (!req.user || !req.session.userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      if (!templateId || isNaN(templateId)) {
+        return res.status(400).json({ message: "Valid template ID is required" });
+      }
+      
+      // Get the template with its exercises
+      const template = await storage.getTemplateWithExercises(templateId);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Check template ownership
+      if (template.userId !== req.session.userId) {
+        return res.status(403).json({ 
+          message: "Access denied. You can only use your own templates." 
+        });
+      }
+      
+      // Create a new workout based on the template
+      const workout = await storage.createWorkout({
+        name: template.name,
+        userId: req.session.userId,
+        date: new Date(),
+        notes: template.description || null,
+        duration: 0,
+        category: template.category || null,
+        isComplete: false,
+        isPublic: false
+      });
+      
+      // Add template exercises to the workout
+      if (template.exercises && template.exercises.length > 0) {
+        for (const templateExercise of template.exercises) {
+          await storage.createWorkoutExercise({
+            workoutId: workout.id,
+            exerciseId: templateExercise.exerciseId,
+            order: templateExercise.order,
+            notes: templateExercise.notes
+          });
+        }
+      }
+      
+      // Get the complete workout with details
+      const workoutWithDetails = await storage.getWorkoutWithDetails(workout.id);
+      
+      res.status(201).json(workoutWithDetails);
+    } catch (error) {
+      console.error("Create workout from template error:", error);
+      res.status(500).json({ message: "Failed to create workout from template" });
+    }
+  });
+  
   // Workout Exercise routes
   app.post("/api/workout-exercises", async (req, res) => {
     try {
@@ -584,14 +645,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Template routes
-  app.get("/api/templates", requireAuth, requireOwnership, async (req, res) => {
+  app.get("/api/templates", requireAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.query.userId as string);
-      
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
+      const userId = req.user.id;
       const templates = await storage.getTemplates(userId);
       
       res.status(200).json(templates);
@@ -816,7 +876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create workout from template
-  app.post("/api/templates/:id/create-workout", async (req, res) => {
+  app.post("/api/templates/:id/create-workout", requireAuth, async (req, res) => {
     try {
       const templateId = parseInt(req.params.id);
       
@@ -824,11 +884,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid template ID is required" });
       }
       
-      const { userId, isPublic } = req.body;
-      
-      if (!userId) {
-        return res.status(400).json({ message: "User ID is required" });
+      if (!req.user || !req.session.userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
+      
+      const { isPublic } = req.body;
+      const userId = req.session.userId;
       
       // Get template with exercises
       const template = await storage.getTemplateWithExercises(templateId);
