@@ -138,16 +138,8 @@ function ActivityFeed() {
   useEffect(() => {
     if (selectedWorkout) {
       // In a real implementation, this would fetch from a real endpoint
-      // Here we'll mock the comments data
-      const mockComments: WorkoutComment[] = [
-        {
-          id: 1,
-          userId: 2,
-          username: "JessicaFitPro",
-          text: "Great workout! What was the most challenging exercise?",
-          createdAt: new Date(Date.now() - 1000 * 60 * 30) // 30 minutes ago
-        }
-      ];
+      // Start with empty comments array for deployment readiness
+      const mockComments: WorkoutComment[] = [];
       setCommentsState(mockComments);
     }
   }, [selectedWorkout]);
