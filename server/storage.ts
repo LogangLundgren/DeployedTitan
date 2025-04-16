@@ -203,6 +203,7 @@ export class MemStorage implements IStorage {
   private mediaFiles: Map<number, MediaFile>;
   private comments: Map<number, Comment>;
   private likes: Map<number, Like>;
+  private follows: Map<number, Follow>;
   private coachProfiles: Map<number, CoachProfile>;
   private workoutPlans: Map<number, WorkoutPlan>;
   private workoutPlanDays: Map<number, WorkoutPlanDay>;
@@ -225,6 +226,7 @@ export class MemStorage implements IStorage {
   private mediaFileCurrentId: number;
   private commentCurrentId: number;
   private likeCurrentId: number;
+  private followCurrentId: number;
   private coachProfileCurrentId: number;
   private workoutPlanCurrentId: number;
   private workoutPlanDayCurrentId: number;
@@ -248,6 +250,7 @@ export class MemStorage implements IStorage {
     this.mediaFiles = new Map();
     this.comments = new Map();
     this.likes = new Map();
+    this.follows = new Map();
     this.coachProfiles = new Map();
     this.workoutPlans = new Map();
     this.workoutPlanDays = new Map();
@@ -270,6 +273,7 @@ export class MemStorage implements IStorage {
     this.mediaFileCurrentId = 1;
     this.commentCurrentId = 1;
     this.likeCurrentId = 1;
+    this.followCurrentId = 1;
     this.coachProfileCurrentId = 1;
     this.workoutPlanCurrentId = 1;
     this.workoutPlanDayCurrentId = 1;

@@ -320,6 +320,22 @@ export const insertLikeSchema = createInsertSchema(likes).pick({
 export type Like = typeof likes.$inferSelect;
 export type InsertLike = z.infer<typeof insertLikeSchema>;
 
+// User follows schema
+export const follows = pgTable("follows", {
+  id: serial("id").primaryKey(),
+  followerId: integer("follower_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  followedId: integer("followed_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertFollowSchema = createInsertSchema(follows).pick({
+  followerId: true,
+  followedId: true,
+});
+
+export type Follow = typeof follows.$inferSelect;
+export type InsertFollow = z.infer<typeof insertFollowSchema>;
+
 // Coach profile schema (extends user but with coaching specific fields)
 export const coachProfiles = pgTable("coach_profiles", {
   id: serial("id").primaryKey(),
