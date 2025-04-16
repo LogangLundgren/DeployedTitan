@@ -510,6 +510,20 @@ export class MemStorage implements IStorage {
     return workoutsWithDetails.filter((w): w is WorkoutWithDetails => w !== undefined);
   }
   
+  async getCommunityWorkouts(limit: number): Promise<WorkoutWithDetails[]> {
+    // Get public workouts from all users
+    const publicWorkouts = Array.from(this.workouts.values())
+      .filter(workout => workout.isPublic === true)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, limit);
+    
+    const workoutsWithDetails = await Promise.all(
+      publicWorkouts.map(workout => this.getWorkoutWithDetails(workout.id))
+    );
+    
+    return workoutsWithDetails.filter((w): w is WorkoutWithDetails => w !== undefined);
+  }
+  
   async createWorkout(insertWorkout: InsertWorkout): Promise<Workout> {
     const id = this.workoutCurrentId++;
     const workout: Workout = { 
@@ -2655,6 +2669,23 @@ export class DbStorage implements IStorage {
       .select()
       .from(workouts)
       .where(eq(workouts.userId, userId))
+      .orderBy(desc(workouts.date))
+      .limit(limit);
+    
+    // Get details for each workout
+    const workoutsWithDetails = await Promise.all(
+      workoutResults.map((workout: Workout) => this.getWorkoutWithDetails(workout.id))
+    );
+    
+    return workoutsWithDetails.filter((w): w is WorkoutWithDetails => w !== undefined);
+  }
+  
+  async getCommunityWorkouts(limit: number): Promise<WorkoutWithDetails[]> {
+    // Get public workouts from all users, sorted by date
+    const workoutResults = await db
+      .select()
+      .from(workouts)
+      .where(eq(workouts.isPublic, true))
       .orderBy(desc(workouts.date))
       .limit(limit);
     

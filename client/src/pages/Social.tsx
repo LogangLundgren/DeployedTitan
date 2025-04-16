@@ -104,29 +104,22 @@ function formatTime(date: Date | string) {
 
 // Component for activity feed
 function ActivityFeed() {
-  const userId = 1; // Hardcoded user ID for demo
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutWithDetails | null>(null);
   const [newComment, setNewComment] = useState<string>("");
   
-  // Query recent workouts from the community
+  // Query recent workouts from the community (public workouts from all users)
   const { data: communityWorkouts = [], isLoading: workoutsLoading, refetch } = useQuery({
     queryKey: ['/api/workouts/community'],
     queryFn: async () => {
-      // In a real implementation, this would fetch from a real endpoint
-      // Here we'll use the user's workouts as demo data
-      const response = await fetch(`/api/workouts?userId=1`).then(res => res.json());
-      
-      // Add extra stats to workout data
-      const workoutsWithStats = response.map((workout: Workout) => ({
-        ...workout,
-        totalExercises: Math.floor(Math.random() * 8) + 1, // Mock data for demo
-        volume: Math.floor(Math.random() * 5000) + 500 // Mock data for demo
-      })) as WorkoutWithExtraStats[];
-      
-      // Sort by date, newest first
-      return workoutsWithStats.sort((a, b) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
+      try {
+        const response = await fetch('/api/workouts/community');
+        if (!response.ok) throw new Error('Failed to fetch community workouts');
+        const workouts = await response.json();
+        return workouts;
+      } catch (error) {
+        console.error("Error fetching community workouts:", error);
+        return [];
+      }
     }
   });
 
