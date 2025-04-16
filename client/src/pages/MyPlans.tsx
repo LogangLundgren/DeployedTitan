@@ -181,7 +181,7 @@ export default function MyPlans() {
       }
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', 'coach', coachProfile?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans/my-plans'] });
       queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] }); // Also invalidate marketplace plans
       
       // Use the mutation variables to determine the action, not the response data
