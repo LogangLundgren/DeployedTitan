@@ -42,7 +42,7 @@ interface PersonalRecord {
 }
 
 interface PersonalRecordsProps {
-  userId: number;
+  userId?: number; // Made optional since we'll use the authenticated user
 }
 
 export default function PersonalRecords({ userId }: PersonalRecordsProps) {
