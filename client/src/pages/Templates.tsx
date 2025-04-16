@@ -59,7 +59,6 @@ const templateFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
   category: z.string().optional(),
-  userId: z.number(),
 });
 
 // Form typed values
@@ -229,7 +228,7 @@ export default function Templates() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/templates', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
       setIsDeleteDialogOpen(false);
       toast({
         title: 'Template deleted',
@@ -286,17 +285,9 @@ export default function Templates() {
     defaultValues: {
       name: '',
       description: '',
-      category: 'Strength',
-      userId: user?.id || 0
+      category: 'Strength'
     }
   });
-  
-  // Update userId when user changes
-  useEffect(() => {
-    if (user) {
-      createForm.setValue('userId', user.id);
-    }
-  }, [user, createForm]);
 
   // Form for editing an existing template
   const editForm = useForm<TemplateFormValues>({
@@ -304,17 +295,9 @@ export default function Templates() {
     defaultValues: {
       name: '',
       description: '',
-      category: '',
-      userId: user?.id || 0
+      category: ''
     }
   });
-  
-  // Update userId when user changes
-  useEffect(() => {
-    if (user) {
-      editForm.setValue('userId', user.id);
-    }
-  }, [user, editForm]);
 
   // Set values in edit form when a template is selected
   useEffect(() => {
@@ -322,8 +305,7 @@ export default function Templates() {
       editForm.reset({
         name: selectedTemplate.name,
         description: selectedTemplate.description || '',
-        category: selectedTemplate.category || '',
-        userId: selectedTemplate.userId
+        category: selectedTemplate.category || ''
       });
     }
   }, [selectedTemplate, editForm]);
