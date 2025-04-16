@@ -339,15 +339,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Endpoint for community workouts (public workouts from all users)
-  app.get("/api/workouts/community", requireAuth, async (req, res) => {
+  // No authentication required since these are public workouts
+  app.get("/api/workouts/community", async (req, res) => {
     try {
-      // Use the authenticated user's ID from the session
-      const userId = req.session.userId;
       const limit = parseInt(req.query.limit as string) || 10;
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
       
       // Get public workouts from all users
       const communityWorkouts = await storage.getCommunityWorkouts(limit);

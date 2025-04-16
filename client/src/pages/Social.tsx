@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
 import { Link } from "wouter";
 import { useFollow } from "@/context/follow-context";
+import { useAuth } from "@/hooks/use-auth";
 import { 
   Card,
   CardContent,
@@ -104,6 +105,7 @@ function formatTime(date: Date | string) {
 
 // Component for activity feed
 function ActivityFeed() {
+  const { user } = useAuth();
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutWithDetails | null>(null);
   const [newComment, setNewComment] = useState<string>("");
   
@@ -368,12 +370,12 @@ function ActivityFeed() {
                         <Avatar>
                           <AvatarImage src={""} />
                           <AvatarFallback>
-                            {workout.userId === userId ? "ME" : "U" + workout.userId}
+                            {user && workout.userId === user.id ? "ME" : "U" + workout.userId}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="font-medium">
-                            {workout.userId === userId 
+                            {user && workout.userId === user.id 
                               ? "You" 
                               : demoUsers.find(u => u.id === workout.userId)?.name || "User " + workout.userId}
                           </div>
@@ -524,7 +526,7 @@ function ActivityFeed() {
                     <div className="flex justify-between items-start">
                       <Badge>{goal.category}</Badge>
                       <div className="text-sm text-muted-foreground">
-                        By {goal.userId === userId ? 'You' : demoUsers.find(u => u.id === goal.userId)?.name || 'User ' + goal.userId}
+                        By {user && goal.userId === user.id ? 'You' : demoUsers.find(u => u.id === goal.userId)?.name || 'User ' + goal.userId}
                       </div>
                     </div>
                     <CardTitle className="mt-2">{goal.title}</CardTitle>
@@ -718,12 +720,12 @@ function ActivityFeed() {
                 <Avatar>
                   <AvatarImage src={""} />
                   <AvatarFallback>
-                    {selectedWorkout.userId === userId ? "ME" : "U" + selectedWorkout.userId}
+                    {user && selectedWorkout.userId === user.id ? "ME" : "U" + selectedWorkout.userId}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <DialogTitle className="text-xl">
-                    {selectedWorkout.userId === userId 
+                    {user && selectedWorkout.userId === user.id 
                       ? "Your workout" 
                       : (demoUsers.find(u => u.id === selectedWorkout.userId)?.name || "User") + "'s workout"}
                   </DialogTitle>
