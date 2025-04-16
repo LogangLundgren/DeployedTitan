@@ -154,12 +154,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/discover", async (req, res) => {
     try {
       const currentUserId = req.user?.id;
+      
+      // Get all active users
+      // Only show users that are valid and ensure there's a fixed list of protected users
+      // This will keep only the Logan Main account (ID: 9) when cleanup happens
+      const protectedUserIds = [9]; // Logan Main (ID: 9)
       const users = await storage.getAllUsers();
       
-      // Remove passwords and filter out current user
+      // Remove passwords and filter out current user, deleted accounts, and ensure admin is visible
       const filteredUsers = await Promise.all(
         users
-          .filter(user => !currentUserId || user.id !== currentUserId)
+          .filter(user => {
+            // Keep protected users, active accounts, but filter out current user
+            const isProtected = protectedUserIds.includes(user.id);
+            const isCurrentUser = currentUserId && user.id === currentUserId;
+            const hasUsername = !!user.username; // Filter out users without username
+            
+            return (isProtected || hasUsername) && !isCurrentUser;
+          })
           .map(async user => {
             const { password: _, ...userDataWithoutPassword } = user;
             
@@ -353,14 +365,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const followers = await storage.getFollowers(userId);
       
-      // Remove passwords from follower data
-      const sanitizedFollowers = followers.map(follower => {
-        const { password: _, ...followerData } = follower;
-        return {
-          ...followerData,
-          socialMedia: followerData.socialMedia ? JSON.parse(followerData.socialMedia) : null
-        };
-      });
+      // Remove passwords from follower data and filter out deleted accounts
+      const sanitizedFollowers = followers
+        .filter(follower => !!follower.username) // Only include users with a username
+        .map(follower => {
+          const { password: _, ...followerData } = follower;
+          return {
+            ...followerData,
+            socialMedia: followerData.socialMedia ? JSON.parse(followerData.socialMedia) : null
+          };
+        });
       
       res.status(200).json(sanitizedFollowers);
     } catch (error) {
@@ -386,14 +400,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const following = await storage.getFollowing(userId);
       
-      // Remove passwords from following data
-      const sanitizedFollowing = following.map(followedUser => {
-        const { password: _, ...followedData } = followedUser;
-        return {
-          ...followedData,
-          socialMedia: followedData.socialMedia ? JSON.parse(followedData.socialMedia) : null
-        };
-      });
+      // Remove passwords from following data and filter out deleted accounts
+      const sanitizedFollowing = following
+        .filter(followedUser => !!followedUser.username) // Only include users with a username
+        .map(followedUser => {
+          const { password: _, ...followedData } = followedUser;
+          return {
+            ...followedData,
+            socialMedia: followedData.socialMedia ? JSON.parse(followedData.socialMedia) : null
+          };
+        });
       
       res.status(200).json(sanitizedFollowing);
     } catch (error) {
@@ -559,7 +575,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 10;
       
       // Get public workouts from all users
-      const communityWorkouts = await storage.getCommunityWorkouts(limit);
+      let communityWorkouts = await storage.getCommunityWorkouts(limit);
+      
+      // Filter out workouts from deleted users
+      // Only show workouts from users that still exist (have a username)
+      const activeUserIds = new Set();
+      const protectedUserIds = [9]; // Logan Main (ID: 9)
+      
+      // Get all active users to filter workouts
+      const allUsers = await storage.getAllUsers();
+      allUsers.forEach(user => {
+        // Consider a user active if they have a username or are a protected user
+        if (user.username || protectedUserIds.includes(user.id)) {
+          activeUserIds.add(user.id);
+        }
+      });
+      
+      // Only show workouts from active users
+      communityWorkouts = communityWorkouts.filter(workout => 
+        activeUserIds.has(workout.userId)
+      );
       
       res.status(200).json(communityWorkouts);
     } catch (error) {
