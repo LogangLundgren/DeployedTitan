@@ -47,7 +47,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useWorkoutDelete } from "@/hooks/use-workout";
 
 interface WorkoutHistoryProps {
-  userId: number;
+  userId?: number; // Made optional since we'll use the authenticated user by default
   onViewWorkout?: (workout: WorkoutWithDetails) => void;
 }
 
@@ -65,16 +65,16 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
     isError, 
     refetch 
   } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts', userId],
+    queryKey: ['/api/workouts'],
     queryFn: async () => {
-      const res = await fetch(`/api/workouts?userId=${userId}`);
+      const res = await fetch(`/api/workouts`);
       if (!res.ok) throw new Error('Failed to fetch workouts');
       return res.json();
     }
   });
   
   const { data: categories } = useQuery<string[]>({
-    queryKey: ['/api/workouts/categories', userId],
+    queryKey: ['/api/workouts/categories'],
     queryFn: async () => {
       try {
         // This is a computed list from workouts since there's no dedicated categories endpoint

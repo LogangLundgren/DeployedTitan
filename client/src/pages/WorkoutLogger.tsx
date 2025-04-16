@@ -335,7 +335,6 @@ export default function WorkoutLogger() {
             
             <TabsContent value="history" className="p-0 m-0">
               <WorkoutHistory 
-                userId={userId} 
                 onViewWorkout={(workout) => {
                   setCurrentWorkout(workout);
                   setIsWorkoutStarted(true);
