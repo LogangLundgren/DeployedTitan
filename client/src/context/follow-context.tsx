@@ -60,9 +60,16 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       
       return await response.json();
     },
-    onSuccess: () => {
-      // Invalidate the following list query to refetch
+    onSuccess: (data) => {
+      // Invalidate queries to update UI
       queryClient.invalidateQueries({ queryKey: ['/api/users/following'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users/discover'] });
+      
+      // For profiles, we need to invalidate the specific user
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${data.userId}`] });
+      
+      // Update lists that might include users
+      queryClient.invalidateQueries({ queryKey: ['/api/workouts/community'] });
     },
     onError: (error) => {
       toast({
@@ -90,9 +97,16 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       
       return await response.json();
     },
-    onSuccess: () => {
-      // Invalidate the following list query to refetch
+    onSuccess: (data) => {
+      // Invalidate queries to update UI
       queryClient.invalidateQueries({ queryKey: ['/api/users/following'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users/discover'] });
+      
+      // For profiles, we need to invalidate the specific user
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${data.userId}`] });
+      
+      // Update lists that might include users
+      queryClient.invalidateQueries({ queryKey: ['/api/workouts/community'] });
     },
     onError: (error) => {
       toast({
@@ -111,11 +125,14 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     
     // Call the API
     followUserMutation.mutate(userId, {
-      onSuccess: () => {
+      onSuccess: (data) => {
         toast({
           title: `Following ${userName}`,
           description: `You are now following ${userName}. You'll see their workouts in your feed.`,
         });
+        
+        // Trigger immediate UI updates by invalidating relevant queries
+        queryClient.invalidateQueries({ queryKey: ['/api/users/discover'] });
       },
       onError: () => {
         // Rollback optimistic update on error
@@ -132,11 +149,14 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     
     // Call the API
     unfollowUserMutation.mutate(userId, {
-      onSuccess: () => {
+      onSuccess: (data) => {
         toast({
           title: `Unfollowed ${userName}`,
           description: `You are no longer following ${userName}.`,
         });
+        
+        // Trigger immediate UI updates by invalidating relevant queries
+        queryClient.invalidateQueries({ queryKey: ['/api/users/discover'] });
       },
       onError: () => {
         // Rollback optimistic update on error

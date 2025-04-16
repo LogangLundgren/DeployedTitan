@@ -710,18 +710,18 @@ function ActivityFeed() {
                 </>
               )}
               
-              {!usersLoading && users.filter(user => followedUsers.includes(user.id) && user.isFollowing).length === 0 && (
+              {!usersLoading && users.filter(user => user && followedUsers.includes(user.id)).length === 0 && (
                 <div className="text-center py-4 text-muted-foreground">
-                  No mutual connections found. Follow more users to see them in your leaderboard.
+                  No connections found. Follow more users to see them in your leaderboard.
                 </div>
               )}
               
-              {!usersLoading && users.filter(user => followedUsers.includes(user.id) && user.isFollowing).length > 0 && (
+              {!usersLoading && users.filter(user => user && followedUsers.includes(user.id)).length > 0 && (
                 <>
                   {users
                     .filter(user => 
-                      // Make sure the user still exists and is a mutual follow
-                      user && followedUsers.includes(user.id) && user.isFollowing
+                      // Make sure the user still exists and we're following them
+                      user && followedUsers.includes(user.id)
                     )
                     .sort((a, b) => ((b.weeklyVolume || 0) - (a.weeklyVolume || 0)))
                     .slice(0, 5)
