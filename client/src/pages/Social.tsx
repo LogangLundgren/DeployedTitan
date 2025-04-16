@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
 import { Link } from "wouter";
 import { useFollow } from "@/context/follow-context";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Card,
   CardContent,
@@ -645,25 +646,25 @@ function ActivityFeed() {
                   No suggested users found
                 </div>
               ) : (
-                users.slice(0, 4).map((user) => (
-                  <div key={user.id} className="flex items-center justify-between">
+                users.slice(0, 4).map((suggestedUser: any) => (
+                  <div key={suggestedUser.id} className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <Avatar>
-                        <AvatarImage src={user.profilePicture} />
-                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        <AvatarImage src={suggestedUser.profilePicture} />
+                        <AvatarFallback>{suggestedUser.name ? getInitials(suggestedUser.name) : "U"}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{user.name}</div>
-                        <div className="text-sm text-muted-foreground">@{user.username}</div>
+                        <div className="font-medium">{suggestedUser.name || "User"}</div>
+                        <div className="text-sm text-muted-foreground">@{suggestedUser.username}</div>
                       </div>
                     </div>
                     <Button 
-                      variant={user.isFollowing ? "default" : "outline"} 
+                      variant={suggestedUser.isFollowing ? "default" : "outline"} 
                       size="sm"
-                      onClick={() => handleFollowUser(user.id)}
+                      onClick={() => handleFollowUser(suggestedUser.id)}
                       disabled={followUserMutation.isPending}
                     >
-                      {user.isFollowing ? 'Unfollow' : 'Follow'}
+                      {suggestedUser.isFollowing ? 'Unfollow' : 'Follow'}
                     </Button>
                   </div>
                 ))
@@ -1485,6 +1486,9 @@ function PublicProfileView() {
 
 // Main Social component
 export default function Social() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
   return (
     <main className="container py-6">
       <h1 className="text-3xl font-bold mb-8">Social</h1>
