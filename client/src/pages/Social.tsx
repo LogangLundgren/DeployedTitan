@@ -186,10 +186,18 @@ function ActivityFeed() {
     }
   });
 
-  // Query public goals
-  const { data: publicGoals = [], isLoading: goalsLoading } = useQuery({
-    queryKey: ['/api/goals/public'],
-    queryFn: () => fetch('/api/goals/public').then(res => res.json()),
+  // Query user's goals instead of public goals
+  const { data: userGoals = [], isLoading: goalsLoading } = useQuery({
+    queryKey: ['/api/goals', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const response = await fetch(`/api/goals?userId=${user.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch user goals');
+      }
+      return response.json();
+    },
+    enabled: !!user
   });
 
   // Comment query - store comments in state for immediate updates
@@ -727,39 +735,7 @@ function ActivityFeed() {
             </CardFooter>
           </Card>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Current Challenge</CardTitle>
-              <CardDescription>
-                Weekly Squat Challenge
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <p className="mb-2">Complete 100 squats this week and earn a badge!</p>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Progress</span>
-                  <span>65 / 100 squats</span>
-                </div>
-                <Progress value={65} className="h-2" />
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-center text-sm">
-                <div className="border rounded p-2">
-                  <div className="font-medium">23</div>
-                  <div className="text-xs text-muted-foreground">Participants</div>
-                </div>
-                <div className="border rounded p-2">
-                  <div className="font-medium">3 days</div>
-                  <div className="text-xs text-muted-foreground">Remaining</div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button size="sm" className="w-full">
-                Log Squats
-              </Button>
-            </CardFooter>
-          </Card>
+
         </div>
       </div>
 
