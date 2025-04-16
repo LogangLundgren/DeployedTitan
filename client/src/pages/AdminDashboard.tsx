@@ -19,6 +19,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { User, Shield, Trash2, UserX, UserCheck, AlertTriangle } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // Type for user suggestions
 interface UserSuggestion {
@@ -42,28 +45,22 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  // Only allow founders access
-  const isFounder = user?.id === 1; // Assuming user with ID 1 is founder
+  // Only allow admin (Logan Main) access
+  const isAdmin = user?.id === 9; // Logan Main (ID: 9)
 
   // Fetch user suggestions
   const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery<UserSuggestion[]>({
     queryKey: ['/api/user-suggestions'],
-    enabled: isFounder,
+    enabled: isAdmin,
     retry: false
   });
 
   // Mutation to update suggestion status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: number, status: string, notes?: string }) => {
-      return await apiRequest(`/api/user-suggestions/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          status, 
-          adminNotes: notes 
-        })
+      return await apiRequest("PATCH", `/api/user-suggestions/${id}`, { 
+        status, 
+        adminNotes: notes 
       });
     },
     onSuccess: () => {

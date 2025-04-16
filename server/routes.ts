@@ -3713,6 +3713,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Admin endpoint to get all users (for admin dashboard)
+  app.get("/api/admin/users", async (req: Request, res: Response) => {
+    try {
+      // Only allow admin (Logan Main) to perform this operation
+      if (!req.user || req.user.id !== 9) {
+        return res.status(403).json({ message: "Unauthorized. Only admin user can perform this operation." });
+      }
+      
+      // Get all users
+      const users = await storage.getAllUsers();
+      
+      // Remove passwords for security
+      const sanitizedUsers = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return {
+          ...userWithoutPassword,
+          isProtected: user.id === 9 // Mark Logan Main as protected
+        };
+      });
+      
+      return res.status(200).json(sanitizedUsers);
+    } catch (error) {
+      console.error("Error fetching users for admin:", error);
+      return res.status(500).json({ message: "Internal server error fetching users" });
+    }
+  });
+  
+  // Admin endpoint to delete a specific user
+  app.delete("/api/admin/users/:id", async (req: Request, res: Response) => {
+    try {
+      // Only allow admin (Logan Main) to perform this operation
+      if (!req.user || req.user.id !== 9) {
+        return res.status(403).json({ message: "Unauthorized. Only admin user can perform this operation." });
+      }
+      
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Prevent deleting the admin user (Logan Main)
+      if (userId === 9) {
+        return res.status(403).json({ message: "Cannot delete the admin user (Logan Main)" });
+      }
+      
+      // Get the user first to check if they exist
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Delete the user
+      const success = await storage.deleteUser(userId);
+      
+      if (success) {
+        return res.status(200).json({ 
+          message: `Successfully deleted user ${user.username} (ID: ${userId})`,
+          success: true
+        });
+      } else {
+        return res.status(500).json({ 
+          message: `Failed to delete user ${user.username} (ID: ${userId})`,
+          success: false
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      return res.status(500).json({ message: "Internal server error deleting user" });
+    }
+  });
+
   // Admin endpoint to delete all users except Logan Main
   app.delete("/api/admin/cleanup-users", async (req: Request, res: Response) => {
     try {
