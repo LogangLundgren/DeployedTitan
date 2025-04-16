@@ -28,7 +28,7 @@ interface WorkoutData {
 type MetricType = 'weight' | 'reps' | 'volume';
 
 interface WorkoutAnalyticsProps {
-  userId: number;
+  userId?: number; // Made optional since we'll use the authenticated user
 }
 
 export default function WorkoutAnalytics({ userId }: WorkoutAnalyticsProps) {
@@ -40,10 +40,10 @@ export default function WorkoutAnalytics({ userId }: WorkoutAnalyticsProps) {
 
   // Fetch recent workouts
   const { data: recentWorkouts, isLoading: workoutsLoading } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts/recent', userId],
+    queryKey: ['/api/workouts/recent'],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/workouts/recent?userId=${userId}&limit=50`);
+        const res = await fetch(`/api/workouts/recent?limit=50`);
         if (!res.ok) throw new Error('Failed to fetch recent workouts');
         return res.json();
       } catch (error) {

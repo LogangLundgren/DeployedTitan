@@ -344,7 +344,7 @@ export default function WorkoutLogger() {
             </TabsContent>
             
             <TabsContent value="analytics" className="p-0 m-0">
-              <EnhancedAnalytics userId={userId} />
+              <EnhancedAnalytics />
             </TabsContent>
             
 

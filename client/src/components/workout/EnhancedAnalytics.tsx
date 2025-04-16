@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/tabs";
 
 interface EnhancedAnalyticsProps {
-  userId: number;
+  userId?: number; // Made optional since we'll use the authenticated user
 }
 
 export default function EnhancedAnalytics({ userId }: EnhancedAnalyticsProps) {
