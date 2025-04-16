@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
@@ -126,12 +127,15 @@ export default function Profile() {
   const coachSpecialtiesRef = useRef<HTMLTextAreaElement>(null);
   const coachHourlyRateRef = useRef<HTMLInputElement>(null);
 
+  // Get the authenticated user information
+  const { user: authUser } = useAuth();
+  
   // Get the user's profile information
   const { data: user, isLoading, refetch } = useQuery({
-    queryKey: ['/api/users/1'],
+    queryKey: ['/api/user'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/users/1');
+        const response = await fetch('/api/user');
         if (!response.ok) {
           throw new Error('Failed to fetch user data');
         }
@@ -141,6 +145,7 @@ export default function Profile() {
         throw error;
       }
     },
+    enabled: !!authUser,
     refetchOnWindowFocus: false
   });
   
@@ -231,17 +236,12 @@ export default function Profile() {
   // Mutation for updating user profile
   const updateProfileMutation = useMutation({
     mutationFn: async (userData: any) => {
-      return await apiRequest(`/api/users/${user?.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(userData)
-      });
+      const response = await apiRequest("PATCH", `/api/users/${user?.id}`, userData);
+      return response;
     },
     onSuccess: () => {
       // Invalidate the user query to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['/api/users/1'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       // Also explicitly refetch
       refetch();
       
@@ -270,13 +270,11 @@ export default function Profile() {
   const updateCoachProfileMutation = useMutation({
     mutationFn: async (coachData: any) => {
       try {
-        const response = await apiRequest(`/api/coaches/profile/${coachProfile?.id || 'new'}`, {
-          method: coachProfile ? 'PATCH' : 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(coachData)
-        });
+        const response = await apiRequest(
+          coachProfile ? "PATCH" : "POST", 
+          `/api/coaches/profile/${coachProfile?.id || 'new'}`,
+          coachData
+        );
         return response;
       } catch (error) {
         console.error("Error in primary coach update endpoint, trying alternate...");
@@ -571,10 +569,24 @@ export default function Profile() {
         {/* User Information */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-xl">Personal Information</CardTitle>
-            <CardDescription>
-              Your fitness profile and experience
-            </CardDescription>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-xl">Personal Information</CardTitle>
+                <CardDescription>
+                  Your fitness profile and experience
+                </CardDescription>
+              </div>
+              {isEditing && (
+                <Button 
+                  variant="outline"
+                  onClick={handleSaveProfile}
+                  disabled={updateProfileMutation.isPending}
+                  size="sm"
+                >
+                  {updateProfileMutation.isPending ? "Saving..." : "Save"}
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
