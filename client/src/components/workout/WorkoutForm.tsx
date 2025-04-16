@@ -240,7 +240,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
         }
         
         // Fetch the updated workout
-        const response = await apiRequest<WorkoutWithDetails>(`/api/workouts/${workoutId}`);
+        const response = await apiRequest<WorkoutWithDetails>('GET', `/api/workouts/${workoutId}`);
         return response;
       } else {
         // Create a new workout
@@ -275,13 +275,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
               order: set.order
             };
             
-            await apiRequest('/api/sets', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(setData)
-            });
+            await apiRequest('POST', '/api/sets', setData);
           }
         }
         
@@ -322,7 +316,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
         try {
           // Fetch the complete workout details with exercises and sets
           const workoutWithDetails = await apiRequest<WorkoutWithDetails>(
-            `/api/workouts/${data.id}`
+            'GET', `/api/workouts/${data.id}`
           );
           onWorkoutCreated(workoutWithDetails);
         } catch (error) {
