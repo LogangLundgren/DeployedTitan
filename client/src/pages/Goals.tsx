@@ -20,6 +20,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormDescription,
@@ -98,6 +108,8 @@ export default function Goals() {
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [goalToDelete, setGoalToDelete] = useState<Goal | null>(null);
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   
   // Query all goals (both user's goals and public goals)
   const { data: goals = [], isLoading: goalsLoading } = useQuery({
@@ -754,9 +766,8 @@ export default function Goals() {
                         size="sm"
                         className="flex-1 text-red-600 hover:text-red-800"
                         onClick={() => {
-                          if (confirm("Are you sure you want to delete this goal?")) {
-                            deleteGoalMutation.mutate(goal.id);
-                          }
+                          setGoalToDelete(goal);
+                          setDeleteAlertOpen(true);
                         }}
                       >
                         Delete
@@ -787,9 +798,8 @@ export default function Goals() {
                         variant="destructive" 
                         size="sm"
                         onClick={() => {
-                          if (confirm("Are you sure you want to delete this goal? This action cannot be undone.")) {
-                            deleteGoalMutation.mutate(selectedGoal.id);
-                          }
+                          setGoalToDelete(selectedGoal);
+                          setDeleteAlertOpen(true);
                         }}
                       >
                         Delete
@@ -1016,6 +1026,32 @@ export default function Goals() {
             </DialogContent>
           </Dialog>
         )}
+        {/* Delete goal confirmation alert dialog */}
+        <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Goal</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this goal? This action cannot be undone 
+                and all associated milestones will also be deleted.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (goalToDelete) {
+                    deleteGoalMutation.mutate(goalToDelete.id);
+                    setGoalToDelete(null);
+                  }
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </main>
   );
