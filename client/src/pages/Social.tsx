@@ -779,17 +779,17 @@ function ActivityFeed() {
                       <div key={comment.id} className="flex items-start space-x-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback>
-                            {comment.userId === userId ? "ME" : getInitials(comment.username)}
+                            {user && comment.userId === user.id ? "ME" : getInitials(comment.username)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="bg-muted p-3 rounded-md text-sm flex-1 relative group">
                           <div className="font-medium mb-1">
-                            {comment.userId === userId ? "You" : comment.username}
+                            {user && comment.userId === user.id ? "You" : comment.username}
                           </div>
                           <p>{comment.text}</p>
                           <div className="text-xs text-muted-foreground mt-1 flex justify-between items-center">
                             <span>{formatDate(comment.createdAt)}</span>
-                            {comment.userId === userId && (
+                            {user && comment.userId === user.id && (
                               <button 
                                 className="text-xs text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                                 onClick={() => setSelectedComment(comment)}
@@ -821,15 +821,15 @@ function ActivityFeed() {
                       size="sm" 
                       className="ml-2"
                       onClick={() => {
-                        if (newComment.trim()) {
+                        if (newComment.trim() && user) {
                           addCommentMutation.mutate({
                             workoutId: selectedWorkout.id,
-                            userId,
+                            userId: user.id,
                             content: newComment
                           });
                         }
                       }}
-                      disabled={!newComment.trim() || addCommentMutation.isPending}
+                      disabled={!newComment.trim() || addCommentMutation.isPending || !user}
                     >
                       Post
                     </Button>
@@ -1113,32 +1113,35 @@ function calculateProgress(current: number, target: number) {
 
 // Public Profile View component
 function PublicProfileView() {
-  const userId = 1; // Hardcoded for demo, would be the current user's ID
+  const { user } = useAuth(); // Get the authenticated user
   
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery({
-    queryKey: ['/api/users', userId],
-    queryFn: () => fetch(`/api/users/${userId}`).then(res => res.json()),
+    queryKey: ['/api/users', user?.id],
+    queryFn: () => user ? fetch(`/api/users/${user.id}`).then(res => res.json()) : null,
+    enabled: !!user
   });
   
   // Fetch user's workouts
   const { data: userWorkouts = [], isLoading: workoutsLoading } = useQuery({
-    queryKey: ['/api/workouts', userId],
-    queryFn: () => fetch(`/api/workouts?userId=${userId}`).then(res => res.json()),
+    queryKey: ['/api/workouts', user?.id],
+    queryFn: () => user ? fetch(`/api/workouts?userId=${user.id}`).then(res => res.json()) : [],
+    enabled: !!user
   });
   
   // Fetch user's goals
   const { data: userGoals = [], isLoading: goalsLoading } = useQuery({
-    queryKey: ['/api/goals', userId],
-    queryFn: () => fetch(`/api/goals?userId=${userId}`).then(res => res.json()),
+    queryKey: ['/api/goals', user?.id],
+    queryFn: () => user ? fetch(`/api/goals?userId=${user.id}`).then(res => res.json()) : [],
+    enabled: !!user
   });
 
   // Fetch coach profile if user is a coach
   const { data: coachProfile, isLoading: coachLoading } = useQuery({
-    queryKey: ['/api/users', userId, 'coach-profile'],
-    queryFn: () => fetch(`/api/users/${userId}/coach-profile`).then(res => res.json()),
+    queryKey: ['/api/users', user?.id, 'coach-profile'],
+    queryFn: () => user ? fetch(`/api/users/${user.id}/coach-profile`).then(res => res.json()) : null,
     // Only attempt to fetch if user exists and is a coach
-    enabled: !!userData?.isCoach,
+    enabled: !!user && !!userData?.isCoach,
   });
   
   // Calculate stats
@@ -1291,7 +1294,7 @@ function PublicProfileView() {
           </CardContent>
           <CardFooter>
             <Button asChild className="w-full">
-              <Link href={`/marketplace?coach=${userId}`}>View Workout Plans</Link>
+              <Link href={`/marketplace?coach=${user?.id}`}>View Workout Plans</Link>
             </Button>
           </CardFooter>
         </Card>
