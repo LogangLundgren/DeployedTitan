@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { WorkoutWithDetails } from "@shared/schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import WorkoutForm from "@/components/workout/WorkoutForm";
 import WorkoutHistory from "@/components/workout/WorkoutHistory";
 import TemplateSelector from "@/components/workout/TemplateSelector";
@@ -72,8 +73,8 @@ export default function WorkoutLogger() {
   const [currentWorkout, setCurrentWorkout] = useState<WorkoutWithDetails | null>(null);
   const [isWorkoutStarted, setIsWorkoutStarted] = useState(false);
   
-  // In a real app, this would use the authenticated user's ID
-  const userId = 1;
+  // Get authenticated user's ID
+  const { user } = useAuth();
   
   // Handle when a new workout is created from template
   const handleWorkoutCreated = (workout: WorkoutWithDetails) => {
@@ -247,8 +248,7 @@ export default function WorkoutLogger() {
                             body: JSON.stringify({
                               name,
                               description,
-                              category,
-                              userId: 1
+                              category
                             }),
                             credentials: 'include'
                           })
@@ -325,7 +325,7 @@ export default function WorkoutLogger() {
                   </div>
                   <div>
                     <TemplateSelector 
-                      userId={userId}
+                      userId={user?.id}
                       onWorkoutCreated={handleWorkoutCreated} 
                     />
                   </div>
