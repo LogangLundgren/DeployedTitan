@@ -60,6 +60,7 @@ export interface IStorage {
   deleteSet(id: number): Promise<boolean>;
   
   // Template operations
+  getTemplate(id: number): Promise<Template | undefined>;
   getTemplates(userId: number): Promise<Template[]>;
   getTemplateWithExercises(id: number): Promise<TemplateWithExercises | undefined>;
   createTemplate(template: InsertTemplate): Promise<Template>;
@@ -599,6 +600,10 @@ export class MemStorage implements IStorage {
   }
   
   // Template operations
+  async getTemplate(id: number): Promise<Template | undefined> {
+    return this.templates.get(id);
+  }
+  
   async getTemplates(userId: number): Promise<Template[]> {
     return Array.from(this.templates.values())
       .filter(template => template.userId === userId)
@@ -2745,6 +2750,15 @@ export class DbStorage implements IStorage {
   }
   
   // Template operations
+  async getTemplate(id: number): Promise<Template | undefined> {
+    const results = await db
+      .select()
+      .from(templates)
+      .where(eq(templates.id, id));
+    
+    return results.length > 0 ? results[0] : undefined;
+  }
+  
   async getTemplates(userId: number): Promise<Template[]> {
     return await db
       .select()
