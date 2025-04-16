@@ -2911,7 +2911,8 @@ export class DbStorage implements IStorage {
         }
         
         // If user is a coach, get and handle their coach profile and plans
-        const user = await tx.select().from(users).where(eq(users.id, id)).first();
+        const userResults = await tx.select().from(users).where(eq(users.id, id));
+        const user = userResults.length > 0 ? userResults[0] : null;
         if (user && user.isCoach) {
           const coachProfile = await tx.select({ id: coachProfiles.id })
             .from(coachProfiles)

@@ -16,6 +16,7 @@ import PurchasedPlanDetail from "@/pages/PurchasedPlanDetail";
 import CoachProfile from "@/pages/CoachProfile";
 import UserProfile from "@/pages/UserProfile";
 import AdminDashboard from "@/pages/AdminDashboard";
+import AdminCleanup from "@/pages/AdminCleanup";
 import MyPlans from "@/pages/MyPlans";
 import BecomeCoach from "@/pages/BecomeCoach";
 import CreatePlan from "@/pages/CreatePlan";
@@ -72,6 +73,7 @@ function Router() {
             <ProtectedRoute path="/checkout" component={Checkout} />
             <ProtectedRoute path="/payment-success" component={PaymentSuccess} />
             <ProtectedRoute path="/admin" component={AdminDashboard} />
+            <ProtectedRoute path="/admin/cleanup" component={AdminCleanup} />
             
             {/* Fallback to 404 */}
             <Route component={NotFound} />
