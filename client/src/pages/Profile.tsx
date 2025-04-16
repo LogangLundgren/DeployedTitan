@@ -1070,21 +1070,30 @@ export default function Profile() {
                       <p className="font-medium">Email Notifications</p>
                       <p className="text-sm text-gray-500">Receive email updates about your activity</p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch 
+                      checked={emailNotifications}
+                      onCheckedChange={setEmailNotifications}
+                    />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">Push Notifications</p>
                       <p className="text-sm text-gray-500">Get notifications in the app</p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch 
+                      checked={pushNotifications}
+                      onCheckedChange={setPushNotifications}
+                    />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">Workout Reminders</p>
                       <p className="text-sm text-gray-500">Get reminded about scheduled workouts</p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch 
+                      checked={workoutReminders}
+                      onCheckedChange={setWorkoutReminders}
+                    />
                   </div>
                 </div>
               </div>
@@ -1097,21 +1106,30 @@ export default function Profile() {
                       <p className="font-medium">Public Profile</p>
                       <p className="text-sm text-gray-500">Make your profile visible to others</p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch 
+                      checked={publicProfile}
+                      onCheckedChange={setPublicProfile}
+                    />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">Show Activity</p>
                       <p className="text-sm text-gray-500">Allow others to see your recent workouts</p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch 
+                      checked={showActivity}
+                      onCheckedChange={setShowActivity}
+                    />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">Anonymous Statistics</p>
                       <p className="text-sm text-gray-500">Contribute anonymously to fitness statistics</p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch 
+                      checked={anonymousStats}
+                      onCheckedChange={setAnonymousStats}
+                    />
                   </div>
                 </div>
               </div>
