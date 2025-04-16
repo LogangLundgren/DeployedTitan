@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { WorkoutWithDetails } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
 import { Search, Calendar, Filter, ChevronRight, Edit, Trash, Dumbbell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
