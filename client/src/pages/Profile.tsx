@@ -52,6 +52,14 @@ export default function Profile() {
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  
+  // Settings preferences
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [pushNotifications, setPushNotifications] = useState(true);
+  const [workoutReminders, setWorkoutReminders] = useState(true);
+  const [publicProfile, setPublicProfile] = useState(true);
+  const [showActivity, setShowActivity] = useState(true);
+  const [anonymousStats, setAnonymousStats] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -337,6 +345,15 @@ export default function Profile() {
         instagram: instagramRef.current?.value || user.socialMedia?.instagram || '',
         twitter: twitterRef.current?.value || user.socialMedia?.twitter || '',
         facebook: facebookRef.current?.value || user.socialMedia?.facebook || ''
+      },
+      preferences: {
+        theme,
+        emailNotifications,
+        pushNotifications,
+        workoutReminders,
+        publicProfile,
+        showActivity,
+        anonymousStats
       }
     };
     
@@ -1001,7 +1018,17 @@ export default function Profile() {
       {/* Settings Section */}
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-xl">Settings</CardTitle>
+          <div className="flex justify-between items-start">
+            <CardTitle className="text-xl">Settings</CardTitle>
+            <Button 
+              variant="outline"
+              onClick={handleSaveProfile}
+              disabled={updateProfileMutation.isPending}
+              size="sm"
+            >
+              {updateProfileMutation.isPending ? "Saving..." : "Save Settings"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
