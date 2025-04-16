@@ -213,6 +213,42 @@ export default function Profile() {
     }
   }, [coachProfile]);
   
+  // Initialize preference state variables from user data
+  useEffect(() => {
+    if (user && user.preferences) {
+      // Set theme preference
+      if (user.preferences.theme) {
+        setTheme(user.preferences.theme);
+      }
+      
+      // Set notification preferences
+      if (user.preferences.emailNotifications !== undefined) {
+        setEmailNotifications(user.preferences.emailNotifications);
+      }
+      
+      if (user.preferences.pushNotifications !== undefined) {
+        setPushNotifications(user.preferences.pushNotifications);
+      }
+      
+      if (user.preferences.workoutReminders !== undefined) {
+        setWorkoutReminders(user.preferences.workoutReminders);
+      }
+      
+      // Set privacy preferences
+      if (user.preferences.publicProfile !== undefined) {
+        setPublicProfile(user.preferences.publicProfile);
+      }
+      
+      if (user.preferences.showActivity !== undefined) {
+        setShowActivity(user.preferences.showActivity);
+      }
+      
+      if (user.preferences.anonymousStats !== undefined) {
+        setAnonymousStats(user.preferences.anonymousStats);
+      }
+    }
+  }, [user]);
+  
   // Get the user's recent workouts for displaying stats
   const { data: workouts } = useQuery({
     queryKey: ['/api/workouts/recent', user?.id],
@@ -1133,6 +1169,16 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
+            </div>
+            
+            {/* Save Settings Button */}
+            <div className="mt-6 flex justify-end">
+              <Button 
+                onClick={handleSaveProfile}
+                disabled={updateProfileMutation.isPending}
+              >
+                {updateProfileMutation.isPending ? "Saving..." : "Save Settings"}
+              </Button>
             </div>
           </div>
         </CardContent>
