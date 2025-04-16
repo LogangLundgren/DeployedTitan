@@ -35,6 +35,7 @@ export interface IStorage {
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
   updateUserCoachStatus(id: number, isCoach: boolean): Promise<User | undefined>;
   updateUserStripeInfo(id: number, stripeInfo: { customerId?: string, subscriptionId?: string }): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
   
   // Follow operations
   isFollowing(followerId: number, followedId: number): Promise<boolean>;
@@ -410,6 +411,53 @@ export class MemStorage implements IStorage {
     };
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    if (!this.users.has(id)) return false;
+    
+    // Delete the user account
+    this.users.delete(id);
+    
+    // Delete associated data
+    // This is a simplified version - in a real app, you'd need to cascade delete all related entities
+    
+    // Delete workouts
+    for (const [workoutId, workout] of this.workouts.entries()) {
+      if (workout.userId === id) {
+        this.workouts.delete(workoutId);
+      }
+    }
+    
+    // Delete templates
+    for (const [templateId, template] of this.templates.entries()) {
+      if (template.userId === id) {
+        this.templates.delete(templateId);
+      }
+    }
+    
+    // Delete goals
+    for (const [goalId, goal] of this.goals.entries()) {
+      if (goal.userId === id) {
+        this.goals.delete(goalId);
+      }
+    }
+    
+    // Delete notifications
+    for (const [notificationId, notification] of this.notifications.entries()) {
+      if (notification.userId === id) {
+        this.notifications.delete(notificationId);
+      }
+    }
+    
+    // Delete follows
+    for (const [followId, follow] of this.follows.entries()) {
+      if (follow.followerId === id || follow.followedId === id) {
+        this.follows.delete(followId);
+      }
+    }
+    
+    return true;
   }
   
   // Exercise methods
@@ -2803,6 +2851,22 @@ export class DbStorage implements IStorage {
       .returning();
       
     return result[0];
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    try {
+      // In the database, we rely on CASCADE DELETE in the schema
+      // So deleting the user should automatically delete all related records
+      const result = await db
+        .delete(users)
+        .where(eq(users.id, id))
+        .returning();
+        
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      return false;
+    }
   }
   
   // Exercise operations
