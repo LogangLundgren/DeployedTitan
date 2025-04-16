@@ -2855,14 +2855,87 @@ export class DbStorage implements IStorage {
   
   async deleteUser(id: number): Promise<boolean> {
     try {
-      // In the database, we rely on CASCADE DELETE in the schema
-      // So deleting the user should automatically delete all related records
-      const result = await db
-        .delete(users)
-        .where(eq(users.id, id))
-        .returning();
+      // First delete all related records manually since CASCADE DELETE might not be properly set up
+      console.log(`Starting deletion of user ID ${id} and all associated data...`);
+      
+      // Using a transaction to ensure all operations succeed or fail together
+      return await db.transaction(async (tx) => {
+        // Delete workouts by this user
+        console.log("Deleting user's workouts...");
+        await tx.delete(workouts).where(eq(workouts.userId, id));
         
-      return result.length > 0;
+        // Delete workout exercises from this user's workouts
+        console.log("Deleting user's workout exercises...");
+        await tx.delete(workoutExercises)
+          .where(
+            inArray(
+              workoutExercises.workoutId,
+              tx.select({ id: workouts.id }).from(workouts).where(eq(workouts.userId, id))
+            )
+          );
+        
+        // Delete workout logs by this user
+        console.log("Deleting user's workout logs...");
+        await tx.delete(workoutLogs).where(eq(workoutLogs.userId, id));
+          
+        // Delete workout likes by this user
+        console.log("Deleting user's workout likes...");
+        await tx.delete(workoutLikes).where(eq(workoutLikes.userId, id));
+        
+        // Delete this user's templates
+        console.log("Deleting user's templates...");
+        await tx.delete(workoutTemplates).where(eq(workoutTemplates.userId, id));
+        
+        // Delete template exercises from this user's templates
+        console.log("Deleting user's template exercises...");
+        await tx.delete(templateExercises)
+          .where(
+            inArray(
+              templateExercises.templateId,
+              tx.select({ id: workoutTemplates.id }).from(workoutTemplates).where(eq(workoutTemplates.userId, id))
+            )
+          );
+          
+        // Delete user's goals
+        console.log("Deleting user's goals...");
+        await tx.delete(goals).where(eq(goals.userId, id));
+        
+        // Delete user's notifications
+        console.log("Deleting user's notifications...");
+        await tx.delete(notifications).where(eq(notifications.userId, id));
+        
+        // Delete follows where this user is following or being followed
+        console.log("Deleting user's follow relationships...");
+        await tx.delete(follows).where(eq(follows.followerId, id));
+        await tx.delete(follows).where(eq(follows.followedId, id));
+        
+        // Delete user's comments
+        console.log("Deleting user's comments...");
+        await tx.delete(comments).where(eq(comments.userId, id));
+        
+        // Delete user's reviews
+        console.log("Deleting user's reviews...");
+        await tx.delete(reviews).where(eq(reviews.userId, id));
+        
+        // If user is a coach, delete their coach profile
+        console.log("Deleting user's coach profile if any...");
+        await tx.delete(coachProfiles).where(eq(coachProfiles.userId, id));
+        
+        // Delete workout plans created by this user
+        console.log("Deleting user's workout plans...");
+        await tx.delete(workoutPlans).where(eq(workoutPlans.coachId, id));
+        
+        // Delete transactions for this user
+        console.log("Deleting user's transactions...");
+        await tx.delete(transactions).where(eq(transactions.userId, id));
+        
+        // Finally delete the user
+        console.log("Deleting user account...");
+        const result = await tx.delete(users).where(eq(users.id, id)).returning();
+        
+        console.log(`User ID ${id} deletion completed successfully.`);
+        return result.length > 0;
+      });
     } catch (error) {
       console.error("Error deleting user:", error);
       return false;
