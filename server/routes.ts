@@ -270,6 +270,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+  
+  // Get users that the current user is following
+  app.get("/api/users/following", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const following = await storage.getFollowing(userId);
+      res.json(following);
+    } catch (error) {
+      console.error("Error fetching following users:", error);
+      res.status(500).json({ message: "Error fetching following users", error: String(error) });
+    }
+  });
 
   app.get("/api/users/:id", async (req, res) => {
     try {

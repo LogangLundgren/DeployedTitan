@@ -995,13 +995,15 @@ function PeopleDiscover() {
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to ${action} user`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to ${action} user`);
       }
       
+      const responseData = await response.json();
       return { 
         success: true, 
         userId, 
-        isFollowing: !currentlyFollowing // Toggle the following state
+        isFollowing: action === 'follow' // Set based on action, not toggling
       };
     },
     onSuccess: (response) => {
@@ -1009,23 +1011,31 @@ function PeopleDiscover() {
       const user = users.find(u => u.id === response.userId);
       const userName = user?.name || "User";
       
-      // Update follow context based on the action
-      if (isFollowing(response.userId)) {
-        // Unfollow
-        unfollowUser(response.userId, userName);
-      } else {
+      // Update follow context based on the response
+      if (response.isFollowing) {
         // Follow
         followUser(response.userId, userName);
+      } else {
+        // Unfollow
+        unfollowUser(response.userId, userName);
       }
       
       // Update the UI by updating the users array with the new isFollowing state
       setUsers(prev => 
         prev.map(user => 
           user.id === response.userId 
-            ? { ...user, isFollowing: !user.isFollowing }
+            ? { ...user, isFollowing: response.isFollowing }
             : user
         )
       );
+    },
+    onError: (error) => {
+      // Show error message
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
