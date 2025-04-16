@@ -118,6 +118,11 @@ export interface IStorage {
   createLike(like: InsertLike): Promise<Like>;
   deleteLike(workoutId: number, userId: number): Promise<boolean>;
   
+  // Follow operations
+  isFollowing(followerId: number, followedId: number): Promise<boolean>;
+  followUser(followerId: number, followedId: number): Promise<void>;
+  unfollowUser(followerId: number, followedId: number): Promise<void>;
+  
   // Coach Profile operations
   getCoachProfile(userId: number): Promise<CoachProfile | undefined>;
   getCoachProfileById(id: number): Promise<CoachProfile | undefined>;

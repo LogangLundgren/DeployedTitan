@@ -173,6 +173,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Follow a user
+  app.post("/api/users/:id/follow", requireAuth, async (req, res) => {
+    try {
+      const targetUserId = parseInt(req.params.id);
+      if (!req.user || !req.session.userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      if (req.session.userId === targetUserId) {
+        return res.status(400).json({ message: "You cannot follow yourself" });
+      }
+      
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User to follow not found" });
+      }
+      
+      // Check if already following
+      const isAlreadyFollowing = await storage.isFollowing(req.session.userId, targetUserId);
+      if (isAlreadyFollowing) {
+        return res.status(400).json({ message: "Already following this user" });
+      }
+      
+      // Create follow relationship
+      await storage.followUser(req.session.userId, targetUserId);
+      
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Follow user error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Unfollow a user
+  app.post("/api/users/:id/unfollow", requireAuth, async (req, res) => {
+    try {
+      const targetUserId = parseInt(req.params.id);
+      if (!req.user || !req.session.userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User to unfollow not found" });
+      }
+      
+      // Check if following
+      const isFollowing = await storage.isFollowing(req.session.userId, targetUserId);
+      if (!isFollowing) {
+        return res.status(400).json({ message: "Not following this user" });
+      }
+      
+      // Remove follow relationship
+      await storage.unfollowUser(req.session.userId, targetUserId);
+      
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Unfollow user error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/users/:id", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);

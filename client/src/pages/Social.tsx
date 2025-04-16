@@ -844,18 +844,15 @@ function PeopleDiscover() {
   // Local state for users to enable real-time UI updates
   const [users, setUsers] = useState<UserProfile[]>([]);
   
-  // Query users 
+  // Query users from real API endpoint
   const { isLoading: usersLoading } = useQuery({
     queryKey: ['/api/users/discover'],
-    queryFn: () => {
-      // In a real app, this would be a real endpoint
-      // Add isFollowing flag to some users for demonstration
-      const enhancedUsers = demoUsers.map((user, index) => ({
-        ...user,
-        // Make Jessica (id:2) and Alex (id:5) already followed
-        isFollowing: user.id === 2 || user.id === 5
-      }));
-      return Promise.resolve(enhancedUsers);
+    queryFn: async () => {
+      const response = await fetch('/api/users/discover');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      return response.json();
     }
   });
   
@@ -896,14 +893,27 @@ function PeopleDiscover() {
   }, [followedUsers, users, isFollowing]);
   
   const followUserMutation = useMutation({
-    mutationFn: (userId: number) => {
-      // In a real app, this would be a real endpoint
+    mutationFn: async (userId: number) => {
+      // Use real API endpoint to follow/unfollow user
       const currentlyFollowing = isFollowing(userId);
-      return Promise.resolve({ 
+      const action = currentlyFollowing ? 'unfollow' : 'follow';
+      
+      const response = await fetch(`/api/users/${userId}/${action}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} user`);
+      }
+      
+      return { 
         success: true, 
         userId, 
         isFollowing: !currentlyFollowing // Toggle the following state
-      });
+      };
     },
     onSuccess: (response) => {
       // Get user name for toast message
