@@ -17,6 +17,16 @@ import {
   TabsList, 
   TabsTrigger 
 } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Edit, 
   User as UserIcon,
@@ -33,7 +43,8 @@ import {
   BadgeCheck,
   BookOpen,
   Star,
-  Eye
+  Eye,
+  Trash2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,6 +59,7 @@ export default function Profile() {
   const [isCoachProfileEditing, setIsCoachProfileEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedTab, setSelectedTab] = useState("profile");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [coachAvailability, setCoachAvailability] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
   const [profileImage, setProfileImage] = useState<string | null>(null);

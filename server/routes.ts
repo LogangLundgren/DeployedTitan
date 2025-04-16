@@ -3613,6 +3613,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Delete user account endpoint
+  app.delete("/api/user", async (req: Request, res: Response) => {
+    try {
+      // Get userId from session
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      // Delete the user account
+      const success = await storage.deleteUser(userId);
+      
+      if (success) {
+        // Log the user out by destroying their session
+        req.session.destroy((err) => {
+          if (err) {
+            console.error("Error destroying session after account deletion:", err);
+            return res.status(500).json({ message: "Error during logout after account deletion" });
+          }
+          res.clearCookie("connect.sid"); // Clear the session cookie
+          return res.status(200).json({ message: "Account deleted successfully" });
+        });
+      } else {
+        return res.status(500).json({ message: "Failed to delete account" });
+      }
+    } catch (error) {
+      console.error("Error deleting user account:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   app.post("/api/init-plan-checkout", async (req: Request, res: Response) => {
     try {
       console.log("CHECKOUT DEBUG - Request body:", req.body);
