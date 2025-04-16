@@ -209,13 +209,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
           category: workout?.category || 'Strength'
         };
         
-        await apiRequest(`/api/workouts/${workoutId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(workoutUpdateData)
-        });
+        await apiRequest('PUT', `/api/workouts/${workoutId}`, workoutUpdateData);
         
         // Update sets (this is simplified - in a more complete implementation, we would
         // track which sets are new, updated, or deleted)
@@ -229,13 +223,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
                 notes: set.notes || null
               };
               
-              await apiRequest(`/api/sets/${set.id}`, {
-                method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(setData)
-              });
+              await apiRequest('PUT', `/api/sets/${set.id}`, setData);
             } else {
               // Create new set
               const setData = {
@@ -246,13 +234,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
                 order: set.order
               };
               
-              await apiRequest('/api/sets', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(setData)
-              });
+              await apiRequest('POST', '/api/sets', setData);
             }
           }
         }
@@ -271,13 +253,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
           category: 'Strength'  // Could be made dynamic in a more complete implementation
         };
         
-        const workout = await apiRequest<Workout>('/api/workouts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(workoutData)
-        });
+        const workout = await apiRequest<Workout>('POST', '/api/workouts', workoutData);
         
         // Create workout exercises and sets
         for (const exercise of exercises) {
@@ -287,13 +263,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
             order: exercise.order
           };
           
-          const workoutExercise = await apiRequest<WorkoutExercise>('/api/workout-exercises', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(workoutExerciseData)
-          });
+          const workoutExercise = await apiRequest<WorkoutExercise>('POST', '/api/workout-exercises', workoutExerciseData);
           
           // Create sets for each workout exercise
           for (const set of exercise.sets) {
