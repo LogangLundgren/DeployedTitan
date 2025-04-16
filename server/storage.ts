@@ -2946,7 +2946,8 @@ export class DbStorage implements IStorage {
                 
               // Delete plan purchases/transactions
               console.log("Deleting plan purchases...");
-              // This depends on your transaction schema
+              await tx.delete(purchases)
+                .where(inArray(purchases.planId, planIds));
             }
               
             // Delete coach reviews

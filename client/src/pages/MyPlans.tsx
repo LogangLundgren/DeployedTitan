@@ -19,6 +19,7 @@ import {
   Eye
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Tabs,
@@ -106,19 +107,21 @@ export default function MyPlans() {
   const [planToDelete, setPlanToDelete] = useState<WorkoutPlan | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const { toast } = useToast();
-  const userId = 1; // Assume user 1 is logged in - in a real app, would come from auth context
+  const { user: authUser } = useAuth();
+  const userId = authUser?.id;
   
   // Fetch user info to check if they're a coach
   const { data: user, isLoading: isUserLoading } = useQuery({
     queryKey: ['/api/users', userId],
-    queryFn: () => fetch(`/api/users/${userId}`).then(res => res.json())
+    queryFn: () => fetch(`/api/users/${userId}`).then(res => res.json()),
+    enabled: !!userId
   });
 
   // Fetch coach profile if user is a coach
   const { data: coachProfile, isLoading: isCoachProfileLoading } = useQuery({
     queryKey: ['/api/users', userId, 'coach-profile'],
     queryFn: () => fetch(`/api/users/${userId}/coach-profile`).then(res => res.json()),
-    enabled: !!user?.isCoach
+    enabled: !!userId && !!user?.isCoach
   });
   
   // Fetch coach's workout plans if user is a coach and we have their coach profile
@@ -128,7 +131,7 @@ export default function MyPlans() {
   } = useQuery({
     queryKey: ['/api/workout-plans', 'coach', coachProfile?.id],
     queryFn: () => fetch(`/api/workout-plans?coachId=${coachProfile?.id}&publishedOnly=false`).then(res => res.json()),
-    enabled: !!user?.isCoach && !!coachProfile?.id
+    enabled: !!userId && !!user?.isCoach && !!coachProfile?.id
   });
   
   // Fetch user's purchases
@@ -138,15 +141,14 @@ export default function MyPlans() {
     error
   } = useQuery({
     queryKey: ['/api/purchases', userId],
-    queryFn: () => fetch(`/api/purchases?userId=${userId}`).then(res => res.json())
+    queryFn: () => fetch(`/api/purchases?userId=${userId}`).then(res => res.json()),
+    enabled: !!userId
   });
   
   // Delete workout plan mutation
   const deletePlanMutation = useMutation({
     mutationFn: async (planId: number) => {
-      return await apiRequest(`/api/workout-plans/${planId}`, {
-        method: "DELETE"
-      });
+      return await apiRequest("DELETE", `/api/workout-plans/${planId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', 'coach', coachProfile?.id] });
@@ -173,15 +175,9 @@ export default function MyPlans() {
       console.log("Publishing plan with isPublished =", isPublished);
       // Use the specialized publish endpoint for publishing, and regular update for unpublishing
       if (isPublished) {
-        return await apiRequest(`/api/workout-plans/${planId}/publish`, {
-          method: "POST",
-          body: JSON.stringify({}) // Empty body since the endpoint knows to set isPublished=true
-        });
+        return await apiRequest("POST", `/api/workout-plans/${planId}/publish`, {});
       } else {
-        return await apiRequest(`/api/workout-plans/${planId}`, {
-          method: "PUT",
-          body: JSON.stringify({ isPublished: false })
-        });
+        return await apiRequest("PUT", `/api/workout-plans/${planId}`, { isPublished: false });
       }
     },
     onSuccess: (data, variables) => {
