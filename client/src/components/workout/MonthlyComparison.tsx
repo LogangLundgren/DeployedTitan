@@ -37,7 +37,7 @@ interface MonthlyData {
 type MetricType = 'workouts' | 'volume' | 'sets';
 
 interface MonthlyComparisonProps {
-  userId: number;
+  userId?: number; // Made optional since we'll use the authenticated user
 }
 
 export default function MonthlyComparison({ userId }: MonthlyComparisonProps) {
@@ -46,10 +46,10 @@ export default function MonthlyComparison({ userId }: MonthlyComparisonProps) {
   
   // Fetch all workouts for the user - we need a good amount of data for comparison
   const { data: workouts, isLoading } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts/recent', userId, 365], // Get a year's worth of workouts
+    queryKey: ['/api/workouts/recent', 365], // Get a year's worth of workouts
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/workouts/recent?userId=${userId}&limit=365`);
+        const res = await fetch(`/api/workouts/recent?limit=365`);
         if (!res.ok) throw new Error('Failed to fetch workouts');
         return res.json();
       } catch (error) {

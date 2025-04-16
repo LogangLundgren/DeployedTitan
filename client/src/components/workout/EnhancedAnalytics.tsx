@@ -30,23 +30,23 @@ export default function EnhancedAnalytics({ userId }: EnhancedAnalyticsProps) {
         </TabsList>
         
         <TabsContent value="progress" className="mt-6">
-          <WorkoutAnalytics userId={userId} />
+          <WorkoutAnalytics />
         </TabsContent>
         
         <TabsContent value="records" className="mt-6">
-          <PersonalRecords userId={userId} />
+          <PersonalRecords />
         </TabsContent>
         
         <TabsContent value="comparison" className="mt-6">
-          <MonthlyComparison userId={userId} />
+          <MonthlyComparison />
         </TabsContent>
         
         <TabsContent value="heatmap" className="mt-6">
-          <WorkoutHeatmap userId={userId} />
+          <WorkoutHeatmap />
         </TabsContent>
         
         <TabsContent value="frequency" className="mt-6">
-          <ExerciseFrequency userId={userId} />
+          <ExerciseFrequency />
         </TabsContent>
       </Tabs>
     </div>

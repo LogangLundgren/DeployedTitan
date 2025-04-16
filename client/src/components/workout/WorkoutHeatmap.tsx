@@ -35,7 +35,7 @@ interface DailyActivity {
 }
 
 interface WorkoutHeatmapProps {
-  userId: number;
+  userId?: number; // Made optional since we'll use the authenticated user
 }
 
 export default function WorkoutHeatmap({ userId }: WorkoutHeatmapProps) {

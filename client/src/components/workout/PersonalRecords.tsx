@@ -53,11 +53,11 @@ export default function PersonalRecords({ userId }: PersonalRecordsProps) {
 
   // Fetch recent workouts
   const { data: workouts, isLoading: workoutsLoading } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts/recent', userId],
+    queryKey: ['/api/workouts/recent'],
     queryFn: async () => {
       try {
         // Request more workouts for accurate personal records
-        const res = await fetch(`/api/workouts/recent?userId=${userId}&limit=100`);
+        const res = await fetch('/api/workouts/recent?limit=100');
         if (!res.ok) throw new Error('Failed to fetch workouts');
         return res.json();
       } catch (error) {
