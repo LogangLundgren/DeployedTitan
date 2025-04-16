@@ -1143,7 +1143,7 @@ export class MemStorage implements IStorage {
       .some(follow => follow.followerId === followerId && follow.followedId === followedId);
   }
   
-  async followUser(followerId: number, followedId: number): Promise<Follow> {
+  async followUser(followerId: number, followedId: number): Promise<void> {
     // Check if already following
     const isAlreadyFollowing = await this.isFollowing(followerId, followedId);
     if (isAlreadyFollowing) {
@@ -1152,7 +1152,7 @@ export class MemStorage implements IStorage {
     
     // Create follow relationship
     const id = this.followCurrentId++;
-    const follow: Follow = {
+    const follow = {
       id,
       followerId,
       followedId,
@@ -1171,19 +1171,15 @@ export class MemStorage implements IStorage {
         link: `/profile/${followerId}`
       });
     }
-    
-    return follow;
   }
   
-  async unfollowUser(followerId: number, followedId: number): Promise<boolean> {
+  async unfollowUser(followerId: number, followedId: number): Promise<void> {
     const follow = Array.from(this.follows.values())
       .find(follow => follow.followerId === followerId && follow.followedId === followedId);
     
     if (follow) {
-      return this.follows.delete(follow.id);
+      this.follows.delete(follow.id);
     }
-    
-    return false;
   }
   
   // Coach Profile operations
@@ -1954,6 +1950,50 @@ export class DbStorage implements IStorage {
   // User operations
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
+  }
+  
+  // Follow operations
+  async isFollowing(followerId: number, followedId: number): Promise<boolean> {
+    const result = await db.select().from(follows)
+      .where(and(
+        eq(follows.followerId, followerId),
+        eq(follows.followedId, followedId)
+      ));
+    return result.length > 0;
+  }
+  
+  async followUser(followerId: number, followedId: number): Promise<void> {
+    // Check if already following
+    const isAlreadyFollowing = await this.isFollowing(followerId, followedId);
+    if (isAlreadyFollowing) {
+      throw new Error("Already following this user");
+    }
+    
+    // Create follow relationship
+    await db.insert(follows).values({
+      followerId,
+      followedId
+    });
+    
+    // Create notification for followed user
+    const follower = await this.getUser(followerId);
+    if (follower) {
+      await this.createNotification({
+        userId: followedId,
+        title: "New Follower",
+        message: `${follower.username} started following you`,
+        type: "social",
+        link: `/profile/${followerId}`
+      });
+    }
+  }
+  
+  async unfollowUser(followerId: number, followedId: number): Promise<void> {
+    await db.delete(follows)
+      .where(and(
+        eq(follows.followerId, followerId),
+        eq(follows.followedId, followedId)
+      ));
   }
   
   // Workout Plan operations

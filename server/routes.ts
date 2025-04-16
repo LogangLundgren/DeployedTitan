@@ -157,19 +157,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.getAllUsers();
       
       // Remove passwords and filter out current user
-      const filteredUsers = users
-        .filter(user => !currentUserId || user.id !== currentUserId)
-        .map(user => {
-          const { password: _, ...userDataWithoutPassword } = user;
-          return {
-            ...userDataWithoutPassword,
-            isFollowing: false, // Initially no following relationship
-          };
-        });
+      const filteredUsers = await Promise.all(
+        users
+          .filter(user => !currentUserId || user.id !== currentUserId)
+          .map(async user => {
+            const { password: _, ...userDataWithoutPassword } = user;
+            
+            // Check if the current user is following this user
+            let isFollowing = false;
+            if (currentUserId) {
+              isFollowing = await storage.isFollowing(currentUserId, user.id);
+            }
+            
+            return {
+              ...userDataWithoutPassword,
+              isFollowing,
+            };
+          })
+      );
       
       res.json(filteredUsers);
     } catch (error) {
-      res.status(500).json({ message: "Error fetching users", error });
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Error fetching users", error: String(error) });
     }
   });
 
