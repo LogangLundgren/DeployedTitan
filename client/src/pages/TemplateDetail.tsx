@@ -199,9 +199,8 @@ export default function TemplateDetail() {
     mutationFn: async () => {
       setIsDeleting(true);
       try {
-        return await apiRequest(`/api/templates/${templateId}`, {
-          method: 'DELETE'
-        });
+        const res = await apiRequest('DELETE', `/api/templates/${templateId}`);
+        return res;
       } catch (error: any) {
         // Check if error is related to foreign key constraint
         if (error.message && error.message.includes('foreign key constraint')) {
