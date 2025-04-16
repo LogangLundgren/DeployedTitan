@@ -672,6 +672,10 @@ export class MemStorage implements IStorage {
   }
   
   // Template Exercise operations
+  async getTemplateExercise(id: number): Promise<TemplateExercise | undefined> {
+    return this.templateExercises.get(id);
+  }
+  
   async createTemplateExercise(insertTemplateExercise: InsertTemplateExercise): Promise<TemplateExercise> {
     const id = this.templateExerciseCurrentId++;
     const templateExercise: TemplateExercise = {
@@ -2860,6 +2864,32 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error('Error deleting template exercise:', error);
       return false;
+    }
+  }
+  
+  async getTemplateExercise(id: number): Promise<TemplateExercise | undefined> {
+    try {
+      const result = await db
+        .select()
+        .from(templateExercises)
+        .where(eq(templateExercises.id, id));
+      
+      if (result.length === 0) {
+        return undefined;
+      }
+      
+      const exerciseResult = await db
+        .select()
+        .from(exercises)
+        .where(eq(exercises.id, result[0].exerciseId));
+        
+      return {
+        ...result[0],
+        exercise: exerciseResult[0]
+      };
+    } catch (error) {
+      console.error('Error getting template exercise:', error);
+      return undefined;
     }
   }
   
