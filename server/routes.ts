@@ -3662,6 +3662,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Admin endpoint to delete a specific user
+  app.delete("/api/users/:id", async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const userToDelete = await storage.getUser(userId);
+      if (!userToDelete) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Delete the user account
+      const success = await storage.deleteUser(userId);
+      
+      if (success) {
+        return res.status(200).json({ 
+          message: `User ${userToDelete.username} deleted successfully`,
+          username: userToDelete.username
+        });
+      } else {
+        return res.status(500).json({ message: "Failed to delete account" });
+      }
+    } catch (error) {
+      console.error("Error deleting user account:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   app.post("/api/init-plan-checkout", async (req: Request, res: Response) => {
     try {
       console.log("CHECKOUT DEBUG - Request body:", req.body);
