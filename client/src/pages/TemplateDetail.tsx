@@ -103,7 +103,8 @@ export default function TemplateDetail() {
   const { data: template, isLoading: isLoadingTemplate } = useQuery({
     queryKey: ['/api/templates', templateId],
     queryFn: async () => {
-      return await apiRequest<TemplateWithExercises>(`/api/templates/${templateId}`);
+      const res = await apiRequest<TemplateWithExercises>('GET', `/api/templates/${templateId}`);
+      return await res.json();
     },
     enabled: !isNaN(templateId)
   });
@@ -112,7 +113,8 @@ export default function TemplateDetail() {
   const { data: allExercises, isLoading: isLoadingExercises } = useQuery({
     queryKey: ['/api/exercises'],
     queryFn: async () => {
-      return await apiRequest<Exercise[]>('/api/exercises');
+      const res = await apiRequest<Exercise[]>('GET', '/api/exercises');
+      return await res.json();
     }
   });
 
@@ -126,13 +128,8 @@ export default function TemplateDetail() {
   // Add exercise mutation
   const addExerciseMutation = useMutation({
     mutationFn: async (values: ExerciseFormValues) => {
-      return await apiRequest<TemplateExercise>('/api/template-exercises', {
-        method: 'POST',
-        body: JSON.stringify(values),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const res = await apiRequest<TemplateExercise>('POST', '/api/template-exercises', values);
+      return await res.json();
     },
     onSuccess: () => {
       toast({
@@ -154,13 +151,8 @@ export default function TemplateDetail() {
   // Update exercise mutation
   const updateExerciseMutation = useMutation({
     mutationFn: async ({ id, values }: { id: number; values: Partial<TemplateExercise> }) => {
-      return await apiRequest<TemplateExercise>(`/api/template-exercises/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(values),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const res = await apiRequest<TemplateExercise>('PUT', `/api/template-exercises/${id}`, values);
+      return await res.json();
     },
     onSuccess: () => {
       toast({
@@ -182,9 +174,8 @@ export default function TemplateDetail() {
   // Delete exercise mutation
   const deleteExerciseMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/template-exercises/${id}`, {
-        method: 'DELETE'
-      });
+      const res = await apiRequest('DELETE', `/api/template-exercises/${id}`);
+      return res;
     },
     onSuccess: () => {
       toast({
