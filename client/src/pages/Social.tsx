@@ -567,23 +567,47 @@ function ActivityFeed() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {demoUsers.slice(0, 4).map((user) => (
-                <div key={user.id} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Avatar>
-                      <AvatarImage src={user.profilePicture} />
-                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">{user.name}</div>
-                      <div className="text-sm text-muted-foreground">@{user.username}</div>
+              {usersLoading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between animate-pulse">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full bg-muted"></div>
+                      <div className="space-y-2">
+                        <div className="h-4 w-24 bg-muted rounded"></div>
+                        <div className="h-3 w-16 bg-muted rounded"></div>
+                      </div>
                     </div>
+                    <div className="h-8 w-16 bg-muted rounded"></div>
                   </div>
-                  <Button variant="outline" size="sm">
-                    Follow
-                  </Button>
+                ))
+              ) : users.length === 0 ? (
+                <div className="text-center py-2 text-muted-foreground">
+                  No suggested users found
                 </div>
-              ))}
+              ) : (
+                users.slice(0, 4).map((user) => (
+                  <div key={user.id} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Avatar>
+                        <AvatarImage src={user.profilePicture} />
+                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">{user.name}</div>
+                        <div className="text-sm text-muted-foreground">@{user.username}</div>
+                      </div>
+                    </div>
+                    <Button 
+                      variant={user.isFollowing ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => handleFollowUser(user.id)}
+                      disabled={followUserMutation.isPending}
+                    >
+                      {user.isFollowing ? 'Unfollow' : 'Follow'}
+                    </Button>
+                  </div>
+                ))
+              )}
             </CardContent>
             <CardFooter>
               <Button variant="ghost" size="sm" className="w-full">
