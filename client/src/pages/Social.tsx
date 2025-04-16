@@ -689,7 +689,7 @@ function ActivityFeed() {
             <CardHeader>
               <CardTitle>Weekly Leaderboard</CardTitle>
               <CardDescription>
-                Friends with highest weekly volume
+                Users you follow with highest weekly volume
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
