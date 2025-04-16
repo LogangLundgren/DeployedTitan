@@ -106,8 +106,68 @@ function formatTime(date: Date | string) {
 // Component for activity feed
 function ActivityFeed() {
   const { user } = useAuth();
+  const { followedUsers, followUser, unfollowUser, isFollowing } = useFollow();
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutWithDetails | null>(null);
   const [newComment, setNewComment] = useState<string>("");
+  
+  // Query users for suggested users section
+  const { data: users = [], isLoading: usersLoading } = useQuery({
+    queryKey: ['/api/users/discover'],
+    queryFn: async () => {
+      const response = await fetch('/api/users/discover');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      return response.json();
+    }
+  });
+  
+  // Follow/unfollow user mutation
+  const followUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      // Determine action based on current following state
+      const currentlyFollowing = isFollowing(userId);
+      const action = currentlyFollowing ? 'unfollow' : 'follow';
+      
+      // Call the appropriate API endpoint
+      const response = await fetch(`/api/users/${userId}/${action}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} user`);
+      }
+      
+      return { 
+        success: true, 
+        userId, 
+        isFollowing: !currentlyFollowing
+      };
+    },
+    onSuccess: (result) => {
+      // Get user name for context update
+      const userObj = users.find((u: any) => u.id === result.userId);
+      const userName = userObj?.name || "User";
+      
+      // Update the follow context
+      if (result.isFollowing) {
+        followUser(result.userId, userName);
+      } else {
+        unfollowUser(result.userId, userName);
+      }
+      
+      // Refresh the users data
+      queryClient.invalidateQueries({ queryKey: ['/api/users/discover'] });
+    }
+  });
+  
+  // Handler function for follow/unfollow button
+  const handleFollowUser = (userId: number) => {
+    followUserMutation.mutate(userId);
+  };
   
   // Query recent workouts from the community (public workouts from all users)
   const { data: communityWorkouts = [], isLoading: workoutsLoading, refetch } = useQuery({
