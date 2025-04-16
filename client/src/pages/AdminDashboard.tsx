@@ -37,11 +37,29 @@ interface UserSuggestion {
   updatedAt: string;
 }
 
+// Type for user management
+interface AdminUser {
+  id: number;
+  username: string;
+  name: string | null;
+  email: string | null;
+  bio: string | null;
+  location: string | null;
+  fitnessLevel: string | null;
+  experienceYears: number | null;
+  goals: string | null;
+  certifications: string | null;
+  isCoach: boolean | null;
+  isProtected: boolean;
+}
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<string>("suggestions");
   const [adminNotes, setAdminNotes] = useState<string>("");
   const [selectedSuggestion, setSelectedSuggestion] = useState<UserSuggestion | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -54,6 +72,49 @@ export default function AdminDashboard() {
     enabled: isAdmin,
     retry: false
   });
+  
+  // Fetch users for admin
+  const { data: users = [], isLoading: usersLoading } = useQuery<AdminUser[]>({
+    queryKey: ['/api/admin/users'],
+    enabled: isAdmin,
+    retry: false
+  });
+  
+  // Mutation to delete a user
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      return await apiRequest("DELETE", `/api/admin/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: "User deleted",
+        description: "The user has been successfully deleted."
+      });
+      setIsAlertDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete user: ${error.message}`,
+        variant: "destructive"
+      });
+      setIsAlertDialogOpen(false);
+    }
+  });
+  
+  // Handle user deletion confirmation
+  const handleDeleteUser = (user: AdminUser) => {
+    setSelectedUser(user);
+    setIsAlertDialogOpen(true);
+  };
+  
+  // Confirm and execute user deletion
+  const confirmDeleteUser = () => {
+    if (selectedUser) {
+      deleteUserMutation.mutate(selectedUser.id);
+    }
+  };
 
   // Mutation to update suggestion status
   const updateStatusMutation = useMutation({
@@ -284,38 +345,107 @@ export default function AdminDashboard() {
             <CardHeader>
               <CardTitle>User Management</CardTitle>
               <CardDescription>
-                This section is under development. Check back soon!
+                View and manage user accounts
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex justify-center py-16">
-              <div className="text-center">
-                <div className="rounded-full bg-primary/10 p-6 mb-4 inline-block">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-primary"
-                  >
-                    <path d="M11 12H3" />
-                    <path d="M16 6H3" />
-                    <path d="M16 18H3" />
-                    <path d="M18 9v6" />
-                    <path d="M21 12h-6" />
-                  </svg>
+            <CardContent>
+              {usersLoading ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-full mb-2.5"></div>
+                      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    </div>
+                  ))}
                 </div>
-                <h3 className="text-lg font-medium mb-2">Coming Soon</h3>
-                <p className="text-muted-foreground max-w-md">
-                  We're working on this feature. You'll be able to manage users, assign roles,
-                  and configure permissions here.
-                </p>
-              </div>
+              ) : users.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="inline-block rounded-full bg-primary/10 p-6 mb-4">
+                    <User className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">No Users Found</h3>
+                  <p className="text-muted-foreground">
+                    There are no users in the system or there was an error fetching users.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <Table className="border">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12 text-center">ID</TableHead>
+                        <TableHead>Username</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="text-center">Coach</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((user) => (
+                        <TableRow key={user.id} className={user.isProtected ? "bg-muted/30" : ""}>
+                          <TableCell className="text-center font-medium">{user.id}</TableCell>
+                          <TableCell>{user.username}</TableCell>
+                          <TableCell>{user.name || "-"}</TableCell>
+                          <TableCell>{user.email || "-"}</TableCell>
+                          <TableCell className="text-center">
+                            {user.isCoach ? (
+                              <Badge variant="default" className="bg-green-500 hover:bg-green-600">Yes</Badge>
+                            ) : (
+                              <Badge variant="outline">No</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {user.isProtected ? (
+                              <Badge variant="secondary" className="flex items-center justify-center mx-auto gap-1">
+                                <Shield className="h-3 w-3" /> Protected
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="mx-auto">Normal</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                asChild
+                              >
+                                <Link href={`/profile/${user.id}`}>
+                                  <User className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                disabled={user.isProtected || deleteUserMutation.isPending}
+                                onClick={() => handleDeleteUser(user)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
+            <CardFooter className="flex justify-between">
+              <div className="text-sm text-muted-foreground">
+                Showing {users.length} users
+              </div>
+              <Link href="/admin/cleanup">
+                <Button variant="outline" size="sm">
+                  <UserX className="h-4 w-4 mr-2" />
+                  Cleanup Accounts
+                </Button>
+              </Link>
+            </CardFooter>
           </Card>
         </TabsContent>
 
@@ -405,6 +535,39 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Alert Dialog for user deletion confirmation */}
+      <AlertDialog open={isAlertDialogOpen} onOpenChange={setIsAlertDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the user account
+              for <span className="font-semibold">{selectedUser?.username}</span> and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteUserMutation.isPending}
+            >
+              {deleteUserMutation.isPending ? (
+                <>
+                  <AlertTriangle className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Account
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }

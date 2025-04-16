@@ -1,211 +1,217 @@
-import { useState } from 'react';
-import { apiRequest } from "@/lib/queryClient";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { 
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, CheckCircle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { Redirect } from "wouter";
-
-type User = {
-  id: number;
-  username: string;
-};
-
-type CleanupResult = {
-  message: string;
-  results: {
-    total: number;
-    success: number;
-    failed: number;
-    details: {
-      id: number;
-      username: string;
-      status: 'success' | 'failed';
-    }[];
-  };
-};
+import { UserX, ArrowLeft, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function AdminCleanup() {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
-  const [results, setResults] = useState<CleanupResult | null>(null);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
+  const [cleanupComplete, setCleanupComplete] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Only allow admin (Logan Main) access
+  const isAdmin = user?.id === 9; // Logan Main (ID: 9)
 
-  // Check if user is admin (Logan Main, ID 9)
-  if (!user || user.id !== 9) {
-    return <Redirect to="/" />;
+  // Mutation to clean up inactive users
+  const cleanupMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("DELETE", "/api/admin/cleanup-users");
+    },
+    onSuccess: () => {
+      toast({
+        title: "Cleanup Successful",
+        description: "All inactive user accounts have been removed.",
+      });
+      setCleanupComplete(true);
+      setIsAlertDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to clean up users: ${error.message}`,
+        variant: "destructive"
+      });
+      setIsAlertDialogOpen(false);
+    }
+  });
+
+  // Handle cleanup confirmation
+  const handleCleanup = () => {
+    setIsAlertDialogOpen(true);
+  };
+
+  // Confirm and execute cleanup
+  const confirmCleanup = () => {
+    cleanupMutation.mutate();
+  };
+
+  if (!isAdmin) {
+    return (
+      <main className="container py-16">
+        <div className="flex flex-col items-center justify-center text-center">
+          <AlertTriangle className="h-16 w-16 text-destructive mb-4" />
+          <h1 className="text-3xl font-bold mb-2">Access Denied</h1>
+          <p className="text-muted-foreground mb-6">You don't have permission to access this admin area.</p>
+          <Button asChild>
+            <Link href="/">Return to Dashboard</Link>
+          </Button>
+        </div>
+      </main>
+    );
   }
 
-  const fetchUsers = async () => {
-    setLoadingUsers(true);
-    try {
-      const response = await apiRequest('GET', '/api/users');
-      const data = await response.json();
-      setUsers(data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch users",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
-  const runCleanup = async () => {
-    if (!confirm("WARNING: This will delete ALL users except Logan Main (ID: 9). This action cannot be undone. Continue?")) {
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const response = await apiRequest('DELETE', '/api/admin/cleanup-users');
-      const data = await response.json();
-      setResults(data);
-      toast({
-        title: "Success",
-        description: `Cleanup completed. ${data.results.success} users deleted.`,
-      });
-    } catch (error) {
-      console.error('Error running user cleanup:', error);
-      toast({
-        title: "Error",
-        description: "Failed to run user cleanup",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="container py-10 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard - User Cleanup</h1>
-      
-      <Alert className="mb-8">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Warning</AlertTitle>
-        <AlertDescription>
-          This page contains dangerous admin actions that will permanently delete data. 
-          Only proceed if you are absolutely sure.
-        </AlertDescription>
-      </Alert>
+    <main className="container py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">User Cleanup Tool</h1>
+        <Button asChild variant="outline">
+          <Link href="/admin">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Admin
+          </Link>
+        </Button>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Fetch Users</CardTitle>
-            <CardDescription>View all users in the database</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {users.length > 0 ? (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {users.map(user => (
-                  <div key={user.id} className="flex items-center justify-between p-2 border rounded">
-                    <span>{user.username} (ID: {user.id})</span>
-                    {user.id === 9 && (
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">ADMIN</span>
-                    )}
-                  </div>
-                ))}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Bulk User Cleanup</CardTitle>
+          <CardDescription>
+            Remove all inactive user accounts except for protected users
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {cleanupComplete ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="rounded-full bg-green-100 p-6 mb-4">
+                <CheckCircle2 className="h-12 w-12 text-green-600" />
               </div>
-            ) : (
-              <p className="text-muted-foreground">No users fetched yet</p>
-            )}
-          </CardContent>
-          <CardFooter>
-            <Button 
-              onClick={fetchUsers} 
-              disabled={loadingUsers}
-              variant="outline"
-              className="w-full"
-            >
-              {loadingUsers && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Fetch Users
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>User Cleanup</CardTitle>
-            <CardDescription className="text-red-500 font-medium">
-              Delete all users except Logan Main (ID: 9)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {results ? (
-              <div className="space-y-4">
-                <Alert variant={results.results.failed > 0 ? "destructive" : "default"}>
-                  {results.results.failed > 0 ? (
-                    <AlertTriangle className="h-4 w-4" />
-                  ) : (
-                    <CheckCircle className="h-4 w-4" />
-                  )}
-                  <AlertTitle>Cleanup Results</AlertTitle>
-                  <AlertDescription>
-                    {results.message}
-                  </AlertDescription>
-                </Alert>
-                
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="p-2 border rounded bg-gray-50">
-                    <p className="text-sm text-muted-foreground">Total</p>
-                    <p className="text-xl font-bold">{results.results.total}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-green-50">
-                    <p className="text-sm text-muted-foreground">Success</p>
-                    <p className="text-xl font-bold text-green-600">{results.results.success}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-red-50">
-                    <p className="text-sm text-muted-foreground">Failed</p>
-                    <p className="text-xl font-bold text-red-600">{results.results.failed}</p>
+              <h3 className="text-xl font-medium mb-2">Cleanup Complete</h3>
+              <p className="text-muted-foreground max-w-md mb-6">
+                All inactive user accounts have been successfully deleted from the system.
+                Only the protected accounts and active users remain.
+              </p>
+              <div className="flex space-x-4">
+                <Button asChild variant="outline">
+                  <Link href="/admin">
+                    Return to Admin Dashboard
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="rounded-lg border p-6 bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+                <div className="flex items-start">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 mr-3" />
+                  <div>
+                    <h4 className="font-medium text-amber-800 dark:text-amber-300">Warning: Destructive Action</h4>
+                    <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                      This action will permanently delete all inactive user accounts and their associated data.
+                      Protected users (including Logan Main) will not be affected. This cannot be undone.
+                    </p>
                   </div>
                 </div>
-                
-                {results.results.details.length > 0 && (
-                  <div className="max-h-[200px] overflow-y-auto border rounded p-2">
-                    <p className="text-sm font-medium mb-2">Details:</p>
-                    {results.results.details.map((detail, index) => (
-                      <div key={index} className="text-sm flex items-center space-x-2">
-                        {detail.status === 'success' ? (
-                          <CheckCircle className="h-3 w-3 text-green-600" />
-                        ) : (
-                          <AlertTriangle className="h-3 w-3 text-red-600" />
-                        )}
-                        <span>{detail.username} (ID: {detail.id}): {detail.status}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
-            ) : (
-              <div className="py-6 text-center text-muted-foreground">
-                <AlertTriangle className="h-10 w-10 mx-auto mb-2" />
-                <p>This action will permanently delete all users except Logan Main (ID: 9)</p>
-                <p className="text-sm mt-2">All related data for deleted users will also be removed</p>
+
+              <div className="border rounded-md p-4">
+                <h3 className="font-medium mb-2">What will be deleted:</h3>
+                <ul className="list-disc pl-6 space-y-1 text-sm">
+                  <li>All inactive user accounts</li>
+                  <li>All profile data associated with those accounts</li>
+                  <li>All workouts, templates, and comments created by those accounts</li>
+                  <li>All social connections (follows) from/to those accounts</li>
+                </ul>
               </div>
-            )}
-          </CardContent>
-          <CardFooter>
-            <Button
-              onClick={runCleanup}
-              disabled={loading}
-              variant="destructive"
-              className="w-full"
+
+              <div className="border rounded-md p-4">
+                <h3 className="font-medium mb-2">What will be preserved:</h3>
+                <ul className="list-disc pl-6 space-y-1 text-sm">
+                  <li>Protected user accounts (e.g., Logan Main)</li>
+                  <li>System-essential data</li>
+                  <li>Any data marked as public and shared with the community</li>
+                </ul>
+              </div>
+
+              <div className="flex justify-end">
+                <Button 
+                  variant="destructive" 
+                  onClick={handleCleanup}
+                  disabled={cleanupMutation.isPending}
+                  className="flex items-center"
+                >
+                  {cleanupMutation.isPending ? (
+                    <>
+                      <div className="animate-spin mr-2 h-4 w-4 border-2 border-background border-t-transparent rounded-full" /> 
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <UserX className="mr-2 h-4 w-4" /> 
+                      Clean Up Inactive Users
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-between border-t pt-6">
+          <p className="text-sm text-muted-foreground">
+            Admin: {user?.username || "Unknown"} (ID: {user?.id || "?"})
+          </p>
+        </CardFooter>
+      </Card>
+
+      {/* Alert Dialog for confirmation */}
+      <AlertDialog open={isAlertDialogOpen} onOpenChange={setIsAlertDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                This action cannot be undone. This will permanently delete ALL inactive user
+                accounts and ALL of their associated data from the database.
+              </p>
+              <p className="font-medium">
+                Only protected accounts (like Logan Main) will be preserved.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmCleanup}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={cleanupMutation.isPending}
             >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Run User Cleanup
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    </div>
+              {cleanupMutation.isPending ? (
+                <>
+                  <AlertTriangle className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <UserX className="mr-2 h-4 w-4" />
+                  Yes, Delete Inactive Users
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </main>
   );
 }
