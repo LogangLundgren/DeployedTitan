@@ -902,12 +902,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/template-exercises/:id", async (req, res) => {
+  app.delete("/api/template-exercises/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
       if (isNaN(id)) {
         return res.status(400).json({ message: "Valid template exercise ID is required" });
+      }
+      
+      // Get the template exercise to check ownership
+      const templateExercise = await storage.getTemplateExercise(id);
+      
+      if (!templateExercise) {
+        return res.status(404).json({ message: "Template exercise not found" });
+      }
+      
+      // Get the template to verify ownership
+      const template = await storage.getTemplate(templateExercise.templateId);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Verify that the authenticated user owns the template
+      if (template.userId !== req.user?.id) {
+        return res.status(403).json({ message: "You don't have permission to delete this template exercise" });
       }
       
       const deleted = await storage.deleteTemplateExercise(id);
