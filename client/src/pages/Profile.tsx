@@ -148,7 +148,7 @@ export default function Profile() {
   const coachHourlyRateRef = useRef<HTMLInputElement>(null);
 
   // Get the authenticated user information
-  const { user: authUser } = useAuth();
+  const { user: authUser, logoutMutation } = useAuth();
   
   // Get the user's profile information
   const { data: user, isLoading, refetch } = useQuery({
@@ -224,6 +224,44 @@ export default function Profile() {
       setCoachAvailability(coachProfile.isAvailableForHire !== false);
     }
   }, [coachProfile]);
+  
+  // Delete account mutation
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("DELETE", "/api/user");
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Account deleted",
+        description: "Your account has been successfully deleted.",
+        variant: "default",
+      });
+      
+      // Log out the user after account deletion
+      logoutMutation.mutate();
+      
+      // Redirect to the home page
+      setLocation("/");
+    },
+    onError: (error) => {
+      console.error("Failed to delete account:", error);
+      
+      toast({
+        title: "Delete failed",
+        description: "There was a problem deleting your account. Please try again.",
+        variant: "destructive",
+      });
+      
+      // Close the delete dialog
+      setDeleteDialogOpen(false);
+    }
+  });
+  
+  // Handle account deletion
+  const handleDeleteAccount = () => {
+    deleteAccountMutation.mutate();
+  };
   
   // Initialize preference state variables from user data
   useEffect(() => {
@@ -1183,6 +1221,29 @@ export default function Profile() {
               </div>
             </div>
             
+            {/* Account Management Section */}
+            <div className="mt-6 border-t pt-6">
+              <h3 className="font-medium mb-3">Account Management</h3>
+              <div className="space-y-4">
+                <div className="bg-red-50 dark:bg-red-950 p-4 rounded-md border border-red-200 dark:border-red-800">
+                  <h4 className="text-red-600 dark:text-red-400 font-medium mb-2 flex items-center">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Account
+                  </h4>
+                  <p className="text-red-600 dark:text-red-400 text-sm mb-4">
+                    Warning: This action is permanent and cannot be undone. All your data will be permanently deleted.
+                  </p>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    Delete Account
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
             {/* Save Settings Button */}
             <div className="mt-6 flex justify-end">
               <Button 
@@ -1192,6 +1253,31 @@ export default function Profile() {
                 {updateProfileMutation.isPending ? "Saving..." : "Save Settings"}
               </Button>
             </div>
+            
+            {/* Delete Account Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-red-600">
+                    Are you sure you want to delete your account?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. It will permanently delete your account and remove all your data 
+                    from our servers, including your workout history, templates, and personal information.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    onClick={handleDeleteAccount}
+                    disabled={deleteAccountMutation.isPending}
+                  >
+                    {deleteAccountMutation.isPending ? "Deleting..." : "Delete Account"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </CardContent>
       </Card>
