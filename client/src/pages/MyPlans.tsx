@@ -112,15 +112,15 @@ export default function MyPlans() {
   
   // Fetch user info to check if they're a coach
   const { data: user, isLoading: isUserLoading } = useQuery({
-    queryKey: ['/api/users', userId],
-    queryFn: () => fetch(`/api/users/${userId}`).then(res => res.json()),
+    queryKey: ['/api/user'],
+    queryFn: () => fetch('/api/user').then(res => res.json()),
     enabled: !!userId
   });
 
   // Fetch coach profile if user is a coach
   const { data: coachProfile, isLoading: isCoachProfileLoading } = useQuery({
-    queryKey: ['/api/users', userId, 'coach-profile'],
-    queryFn: () => fetch(`/api/users/${userId}/coach-profile`).then(res => res.json()),
+    queryKey: ['/api/coach-profile'],
+    queryFn: () => fetch('/api/coach-profile').then(res => res.json()),
     enabled: !!userId && !!user?.isCoach
   });
   
@@ -129,9 +129,9 @@ export default function MyPlans() {
     data: coachPlans = [], 
     isLoading: isCoachPlansLoading 
   } = useQuery({
-    queryKey: ['/api/workout-plans', 'coach', coachProfile?.id],
-    queryFn: () => fetch(`/api/workout-plans?coachId=${coachProfile?.id}&publishedOnly=false`).then(res => res.json()),
-    enabled: !!userId && !!user?.isCoach && !!coachProfile?.id
+    queryKey: ['/api/workout-plans/my-plans'],
+    queryFn: () => fetch('/api/workout-plans/my-plans').then(res => res.json()),
+    enabled: !!userId && !!user?.isCoach
   });
   
   // Fetch user's purchases
@@ -140,8 +140,8 @@ export default function MyPlans() {
     isLoading: isPurchasesLoading,
     error
   } = useQuery({
-    queryKey: ['/api/purchases', userId],
-    queryFn: () => fetch(`/api/purchases?userId=${userId}`).then(res => res.json()),
+    queryKey: ['/api/purchases/my-purchases'],
+    queryFn: () => fetch('/api/purchases/my-purchases').then(res => res.json()),
     enabled: !!userId
   });
   
@@ -151,7 +151,7 @@ export default function MyPlans() {
       return await apiRequest("DELETE", `/api/workout-plans/${planId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', 'coach', coachProfile?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans/my-plans'] });
       queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] }); // Also invalidate marketplace plans
       toast({
         title: "Plan deleted",
