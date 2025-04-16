@@ -58,6 +58,8 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const { deleteWorkout, isDeleting } = useWorkoutDelete();
+  const { user } = useAuth();
+  const currentUserId = userId || user?.id;
   
   const { 
     data: workouts, 
@@ -67,6 +69,7 @@ export default function WorkoutHistory({ userId, onViewWorkout }: WorkoutHistory
   } = useQuery<WorkoutWithDetails[]>({
     queryKey: ['/api/workouts'],
     queryFn: async () => {
+      // No need to pass userId as the server will use the authenticated user
       const res = await fetch(`/api/workouts`);
       if (!res.ok) throw new Error('Failed to fetch workouts');
       return res.json();

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Card,
   CardHeader,
@@ -20,13 +21,15 @@ import { Link } from "wouter";
 import { Template, TemplateWithExercises, WorkoutWithDetails } from "@shared/schema";
 
 interface TemplateSelectorProps {
-  userId: number;
+  userId?: number; // Made optional since we'll use the authenticated user by default
   onWorkoutCreated?: (workout: WorkoutWithDetails) => void;
 }
 
 export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateSelectorProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const currentUserId = userId || user?.id;
   
   // State to track if we're creating a workout
   const [creatingWorkoutId, setCreatingWorkoutId] = useState<number | null>(null);
@@ -36,9 +39,10 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
   
   // Fetch all templates for the user
   const { data: templates, isLoading } = useQuery<Template[]>({
-    queryKey: ['/api/templates', userId],
+    queryKey: ['/api/templates'],
     queryFn: async () => {
-      const response = await apiRequest<Template[]>("GET", `/api/templates?userId=${userId}`);
+      // No need to pass userId as the server will use the authenticated user
+      const response = await apiRequest<Template[]>("GET", `/api/templates`);
       if (!response.ok) {
         throw new Error(`Failed to fetch templates: ${response.statusText}`);
       }
@@ -50,7 +54,6 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
   const createWorkoutMutation = useMutation({
     mutationFn: async ({ templateId, isPublic }: { templateId: number, isPublic: boolean }) => {
       const response = await apiRequest<WorkoutWithDetails>("POST", `/api/templates/${templateId}/create-workout`, { 
-        userId, 
         isPublic 
       });
       if (!response.ok) {

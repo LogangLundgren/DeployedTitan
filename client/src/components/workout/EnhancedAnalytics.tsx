@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import WorkoutAnalytics from "./WorkoutAnalytics";
 import PersonalRecords from "./PersonalRecords";
 import MonthlyComparison from "./MonthlyComparison";
@@ -16,6 +17,8 @@ interface EnhancedAnalyticsProps {
 }
 
 export default function EnhancedAnalytics({ userId }: EnhancedAnalyticsProps) {
+  const { user } = useAuth();
+  const currentUserId = userId || user?.id;
   const [activeTab, setActiveTab] = useState("progress");
 
   return (
@@ -30,23 +33,23 @@ export default function EnhancedAnalytics({ userId }: EnhancedAnalyticsProps) {
         </TabsList>
         
         <TabsContent value="progress" className="mt-6">
-          <WorkoutAnalytics />
+          <WorkoutAnalytics userId={currentUserId} />
         </TabsContent>
         
         <TabsContent value="records" className="mt-6">
-          <PersonalRecords />
+          <PersonalRecords userId={currentUserId} />
         </TabsContent>
         
         <TabsContent value="comparison" className="mt-6">
-          <MonthlyComparison />
+          <MonthlyComparison userId={currentUserId} />
         </TabsContent>
         
         <TabsContent value="heatmap" className="mt-6">
-          <WorkoutHeatmap />
+          <WorkoutHeatmap userId={currentUserId} />
         </TabsContent>
         
         <TabsContent value="frequency" className="mt-6">
-          <ExerciseFrequency />
+          <ExerciseFrequency userId={currentUserId} />
         </TabsContent>
       </Tabs>
     </div>
