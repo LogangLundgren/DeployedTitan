@@ -193,7 +193,7 @@ export interface TemplateWithExercises extends Template {
 // Notifications model
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   title: text("title"),
   message: text("message").notNull(),
   type: text("type").notNull(), // "info", "success", "warning", "error", "goal", "achievement", "progress", "milestone"
@@ -260,7 +260,7 @@ export const mediaFiles = pgTable("media_files", {
   id: serial("id").primaryKey(),
   workoutId: integer("workout_id").references(() => workouts.id, { onDelete: "cascade" }),
   workoutExerciseId: integer("workout_exercise_id").references(() => workoutExercises.id, { onDelete: "cascade" }),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   fileType: varchar("file_type", { length: 10 }).notNull(), // "image" or "video"
   fileUrl: text("file_url").notNull(),
   fileName: text("file_name").notNull(),
