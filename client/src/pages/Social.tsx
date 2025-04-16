@@ -555,7 +555,7 @@ function ActivityFeed() {
             </div>
           )}
           
-          <h2 className="text-xl font-semibold mt-8">Community Goals</h2>
+          <h2 className="text-xl font-semibold mt-8">Your Goals</h2>
           
           {goalsLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -571,17 +571,17 @@ function ActivityFeed() {
                 </Card>
               ))}
             </div>
-          ) : publicGoals.length === 0 ? (
+          ) : userGoals.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8">
                 <p className="text-center text-muted-foreground">
-                  No public goals available. Create a public goal to share with the community.
+                  You haven't set any goals yet. Add some goals to track your progress.
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {publicGoals.slice(0, 4).map((goal: Goal) => (
+              {userGoals.slice(0, 4).map((goal: Goal) => (
                 <Card key={goal.id}>
                   <CardHeader className="pb-4">
                     <div className="flex justify-between items-start">
@@ -689,44 +689,69 @@ function ActivityFeed() {
             <CardHeader>
               <CardTitle>Weekly Leaderboard</CardTitle>
               <CardDescription>
-                Top performers this week
+                Friends with highest weekly volume
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {[
-                { id: 1, name: "You", username: "LoganStrength", score: 5240, rank: 1 },
-                ...demoUsers.slice(0, 3).map((user, index) => ({
-                  id: user.id,
-                  name: user.name,
-                  username: user.username,
-                  score: 5240 - ((index + 1) * 340),
-                  rank: index + 2
-                }))
-              ].map((user) => (
-                <div key={user.id} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                      user.rank === 1 
-                        ? "bg-yellow-400 text-yellow-800" 
-                        : user.rank === 2 
-                          ? "bg-gray-300 text-gray-800" 
-                          : user.rank === 3 
-                            ? "bg-amber-700 text-amber-100" 
-                            : "bg-gray-100 text-gray-800"
-                    } font-medium text-sm`}>
-                      {user.rank}
+              {usersLoading && (
+                <>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between animate-pulse">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-muted"></div>
+                        <div className="space-y-2">
+                          <div className="h-4 w-24 bg-muted rounded"></div>
+                          <div className="h-3 w-16 bg-muted rounded"></div>
+                        </div>
+                      </div>
+                      <div className="h-4 w-16 bg-muted rounded"></div>
                     </div>
-                    <div>
-                      <div className="font-medium">{user.name}</div>
-                      <div className="text-sm text-muted-foreground">@{user.username}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium">{user.score}</div>
-                    <div className="text-xs text-muted-foreground">points</div>
-                  </div>
+                  ))}
+                </>
+              )}
+              
+              {!usersLoading && users.filter(user => followedUsers.includes(user.id) && user.isFollowing).length === 0 && (
+                <div className="text-center py-4 text-muted-foreground">
+                  No mutual connections found. Follow more users to see them in your leaderboard.
                 </div>
-              ))}
+              )}
+              
+              {!usersLoading && users.filter(user => followedUsers.includes(user.id) && user.isFollowing).length > 0 && (
+                <>
+                  {users
+                    .filter(user => followedUsers.includes(user.id) && user.isFollowing)
+                    .sort((a, b) => ((b.weeklyVolume || 0) - (a.weeklyVolume || 0)))
+                    .slice(0, 5)
+                    .map((user, index) => {
+                      const rank = index + 1;
+                      return (
+                        <div key={user.id} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                              rank === 1 
+                                ? "bg-yellow-400 text-yellow-800" 
+                                : rank === 2 
+                                  ? "bg-gray-300 text-gray-800" 
+                                  : rank === 3 
+                                    ? "bg-amber-700 text-amber-100" 
+                                    : "bg-gray-100 text-gray-800"
+                            } font-medium text-sm`}>
+                              {rank}
+                            </div>
+                            <div>
+                              <div className="font-medium">{user.name}</div>
+                              <div className="text-sm text-muted-foreground">@{user.username}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium">{user.weeklyVolume || 0}</div>
+                            <div className="text-xs text-muted-foreground">volume</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </>
+              )}
             </CardContent>
             <CardFooter>
               <Button variant="outline" size="sm" className="w-full">
