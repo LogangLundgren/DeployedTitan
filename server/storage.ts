@@ -12,6 +12,7 @@ import {
   mediaFiles, type MediaFile, type InsertMediaFile,
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
+  follows, type Follow, type InsertFollow,
   coachProfiles, type CoachProfile, type InsertCoachProfile,
   workoutPlans, type WorkoutPlan, type InsertWorkoutPlan,
   workoutPlanDays, type WorkoutPlanDay, type InsertWorkoutPlanDay,
@@ -1954,46 +1955,62 @@ export class DbStorage implements IStorage {
   
   // Follow operations
   async isFollowing(followerId: number, followedId: number): Promise<boolean> {
-    const result = await db.select().from(follows)
-      .where(and(
-        eq(follows.followerId, followerId),
-        eq(follows.followedId, followedId)
-      ));
-    return result.length > 0;
+    try {
+      const result = await db.select()
+        .from(follows)
+        .where(and(
+          eq(follows.followerId, followerId),
+          eq(follows.followedId, followedId)
+        ));
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error checking if following:", error);
+      return false;
+    }
   }
   
   async followUser(followerId: number, followedId: number): Promise<void> {
-    // Check if already following
-    const isAlreadyFollowing = await this.isFollowing(followerId, followedId);
-    if (isAlreadyFollowing) {
-      throw new Error("Already following this user");
-    }
-    
-    // Create follow relationship
-    await db.insert(follows).values({
-      followerId,
-      followedId
-    });
-    
-    // Create notification for followed user
-    const follower = await this.getUser(followerId);
-    if (follower) {
-      await this.createNotification({
-        userId: followedId,
-        title: "New Follower",
-        message: `${follower.username} started following you`,
-        type: "social",
-        link: `/profile/${followerId}`
+    try {
+      // Check if already following
+      const isAlreadyFollowing = await this.isFollowing(followerId, followedId);
+      if (isAlreadyFollowing) {
+        throw new Error("Already following this user");
+      }
+      
+      // Create follow relationship
+      await db.insert(follows).values({
+        followerId,
+        followedId
       });
+      
+      // Create notification for followed user
+      const follower = await this.getUser(followerId);
+      if (follower) {
+        await this.createNotification({
+          userId: followedId,
+          title: "New Follower",
+          message: `${follower.username} started following you`,
+          type: "social",
+          link: `/profile/${followerId}`
+        });
+      }
+    } catch (error) {
+      console.error("Error following user:", error);
+      throw error;
     }
   }
   
   async unfollowUser(followerId: number, followedId: number): Promise<void> {
-    await db.delete(follows)
-      .where(and(
-        eq(follows.followerId, followerId),
-        eq(follows.followedId, followedId)
-      ));
+    try {
+      await db.delete(follows)
+        .where(and(
+          eq(follows.followerId, followerId),
+          eq(follows.followedId, followedId)
+        ));
+    } catch (error) {
+      console.error("Error unfollowing user:", error);
+      throw error;
+    }
   }
   
   // Workout Plan operations
