@@ -185,7 +185,7 @@ export default function Templates() {
     mutationFn: async (values: TemplateFormValues & { id: number }) => {
       const { id, ...rest } = values;
       const res = await fetch(`/api/templates/${id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
