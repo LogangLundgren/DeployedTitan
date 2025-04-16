@@ -719,7 +719,10 @@ function ActivityFeed() {
               {!usersLoading && users.filter(user => followedUsers.includes(user.id) && user.isFollowing).length > 0 && (
                 <>
                   {users
-                    .filter(user => followedUsers.includes(user.id) && user.isFollowing)
+                    .filter(user => 
+                      // Make sure the user still exists and is a mutual follow
+                      user && followedUsers.includes(user.id) && user.isFollowing
+                    )
                     .sort((a, b) => ((b.weeklyVolume || 0) - (a.weeklyVolume || 0)))
                     .slice(0, 5)
                     .map((user, index) => {
@@ -1030,10 +1033,12 @@ function PeopleDiscover() {
     followUserMutation.mutate(userId);
   };
   
-  // Filter users based on search query
+  // Filter users based on search query, ensure user exists and has name/username properties
   const filteredUsers = users.filter((user: UserProfile) => 
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    user.username.toLowerCase().includes(searchQuery.toLowerCase())
+    user && user.name && user.username && (
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      user.username.toLowerCase().includes(searchQuery.toLowerCase())
+    )
   );
 
   return (
