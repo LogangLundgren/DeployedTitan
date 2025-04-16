@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 import { 
   Card,
   CardContent,
@@ -92,7 +93,8 @@ const milestoneFormSchema = z.object({
 });
 
 export default function Goals() {
-  const userId = 1; // Hardcoded user ID for demo
+  const { user: authUser } = useAuth();
+  const userId = authUser?.id;
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
@@ -101,6 +103,7 @@ export default function Goals() {
   const { data: goals = [], isLoading: goalsLoading } = useQuery({
     queryKey: ['/api/goals', userId],
     queryFn: () => fetch(`/api/goals?userId=${userId}`).then(res => res.json()),
+    enabled: !!userId,
   });
 
   // Query milestones for selected goal
