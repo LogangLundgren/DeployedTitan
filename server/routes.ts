@@ -292,12 +292,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Workout routes
-  app.get("/api/workouts", requireAuth, requireOwnership, async (req, res) => {
+  app.get("/api/workouts", requireAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.query.userId as string);
+      // Use the authenticated user's ID from the session
+      const userId = req.session.userId;
       
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Valid user ID is required" });
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       // We should return full workout details when getting all workouts

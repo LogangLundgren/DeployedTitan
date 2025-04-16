@@ -45,10 +45,10 @@ export default function WorkoutHeatmap({ userId }: WorkoutHeatmapProps) {
 
   // Fetch workouts for the last year
   const { data: workouts, isLoading } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts/recent', userId, 365],
+    queryKey: ['/api/workouts/recent', 365],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/workouts/recent?userId=${userId}&limit=365`);
+        const res = await fetch(`/api/workouts/recent?limit=365`);
         if (!res.ok) throw new Error('Failed to fetch workouts');
         return res.json();
       } catch (error) {

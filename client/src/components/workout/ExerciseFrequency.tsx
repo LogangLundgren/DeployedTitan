@@ -45,7 +45,7 @@ interface CategoryData {
 }
 
 interface ExerciseFrequencyProps {
-  userId: number;
+  userId?: number; // Made optional since we'll use the authenticated user
 }
 
 export default function ExerciseFrequency({ userId }: ExerciseFrequencyProps) {
@@ -57,10 +57,10 @@ export default function ExerciseFrequency({ userId }: ExerciseFrequencyProps) {
   
   // Fetch recent workouts
   const { data: workouts, isLoading: workoutsLoading } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts/recent', userId, parseInt(timeRange)],
+    queryKey: ['/api/workouts/recent', parseInt(timeRange)],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/workouts/recent?userId=${userId}&limit=${timeRange}`);
+        const res = await fetch(`/api/workouts/recent?limit=${timeRange}`);
         if (!res.ok) throw new Error('Failed to fetch workouts');
         return res.json();
       } catch (error) {
