@@ -253,7 +253,7 @@ export default function Templates() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ templateId, userId: user?.id }),
+        body: JSON.stringify({ templateId }),
         credentials: 'include'
       });
       if (!res.ok) {
@@ -297,9 +297,16 @@ export default function Templates() {
       name: '',
       description: '',
       category: '',
-      userId: user?.id
+      userId: user?.id || 0
     }
   });
+  
+  // Update userId when user changes
+  useEffect(() => {
+    if (user) {
+      editForm.setValue('userId', user.id);
+    }
+  }, [user, editForm]);
 
   // Set values in edit form when a template is selected
   useEffect(() => {
