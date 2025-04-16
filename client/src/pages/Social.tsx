@@ -981,66 +981,34 @@ function PeopleDiscover() {
     }
   }, [followedUsers, users, isFollowing]);
   
-  const followUserMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      // Use real API endpoint to follow/unfollow user
-      const currentlyFollowing = isFollowing(userId);
-      const action = currentlyFollowing ? 'unfollow' : 'follow';
+  // We'll use our FollowContext directly instead of duplicating the logic
+  const handleFollowUser = (userId: number) => {
+    const user = users.find(u => u.id === userId);
+    const userName = user?.name || "User";
+    
+    if (isFollowing(userId)) {
+      unfollowUser(userId, userName);
       
-      const response = await fetch(`/api/users/${userId}/${action}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to ${action} user`);
-      }
-      
-      const responseData = await response.json();
-      return { 
-        success: true, 
-        userId, 
-        isFollowing: action === 'follow' // Set based on action, not toggling
-      };
-    },
-    onSuccess: (response) => {
-      // Get user name for toast message
-      const user = users.find(u => u.id === response.userId);
-      const userName = user?.name || "User";
-      
-      // Update follow context based on the response
-      if (response.isFollowing) {
-        // Follow
-        followUser(response.userId, userName);
-      } else {
-        // Unfollow
-        unfollowUser(response.userId, userName);
-      }
-      
-      // Update the UI by updating the users array with the new isFollowing state
+      // Update local state for immediate UI feedback
       setUsers(prev => 
         prev.map(user => 
-          user.id === response.userId 
-            ? { ...user, isFollowing: response.isFollowing }
+          user.id === userId 
+            ? { ...user, isFollowing: false }
             : user
         )
       );
-    },
-    onError: (error) => {
-      // Show error message
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleFollowUser = (userId: number) => {
-    followUserMutation.mutate(userId);
+    } else {
+      followUser(userId, userName);
+      
+      // Update local state for immediate UI feedback
+      setUsers(prev => 
+        prev.map(user => 
+          user.id === userId 
+            ? { ...user, isFollowing: true }
+            : user
+        )
+      );
+    }
   };
   
   // Filter users based on search query, ensure user exists and has name/username properties
