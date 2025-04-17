@@ -953,8 +953,8 @@ function PeopleDiscover() {
   }, [usersLoading]);
 
   // Follow user mutation
-  // Use the follow context instead of local state
-  const { followedUsers, followUser, unfollowUser, isFollowing } = useFollow();
+  // Use the updated follow context with our new interface
+  const { isFollowing, toggleFollow, getFollowerCount } = useFollow();
   
   // Initialize users with isFollowing data from the context
   useEffect(() => {
@@ -963,7 +963,7 @@ function PeopleDiscover() {
       // an infinite update loop by comparing with current state
       const updatedUsers = users.map(user => ({
         ...user,
-        isFollowing: isFollowing(user.id)
+        isFollowing: isFollowing[user.id] || false
       }));
       
       // Only update state if there's an actual change
@@ -975,36 +975,21 @@ function PeopleDiscover() {
         setUsers(updatedUsers);
       }
     }
-  }, [followedUsers, users, isFollowing]);
+  }, [users, isFollowing]);
   
   // We'll use our FollowContext directly instead of duplicating the logic
   const handleFollowUser = (userId: number) => {
-    const user = users.find(u => u.id === userId);
-    const userName = user?.name || "User";
+    // Toggle the follow status using our context method
+    toggleFollow(userId);
     
-    if (isFollowing(userId)) {
-      unfollowUser(userId, userName);
-      
-      // Update local state for immediate UI feedback
-      setUsers(prev => 
-        prev.map(user => 
-          user.id === userId 
-            ? { ...user, isFollowing: false }
-            : user
-        )
-      );
-    } else {
-      followUser(userId, userName);
-      
-      // Update local state for immediate UI feedback
-      setUsers(prev => 
-        prev.map(user => 
-          user.id === userId 
-            ? { ...user, isFollowing: true }
-            : user
-        )
-      );
-    }
+    // Update local state for immediate UI feedback
+    setUsers(prev => 
+      prev.map(user => 
+        user.id === userId 
+          ? { ...user, isFollowing: !user.isFollowing }
+          : user
+      )
+    );
   };
   
   // Filter users based on search query, ensure user exists and has name/username properties
