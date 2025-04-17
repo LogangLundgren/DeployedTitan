@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { format } from "date-fns";
 import { useFollow } from "@/context/follow-context";
+import { useLikes } from "@/context/likes-context";
+import { useComments } from "@/context/comments-context";
 import { 
   Card,
   CardContent,
@@ -21,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 // import type { Workout } from "@shared/schema"; - Avoiding conflict with local Workout type
 
 // Basic workout type for the social feed
@@ -121,13 +124,20 @@ export default function UserProfile() {
     enabled: !!parsedUserId,
   });
   
-  // Query user workouts
+  // State for workout pagination
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [allWorkouts, setAllWorkouts] = useState<WorkoutWithExtraStats[]>([]);
+  const ITEMS_PER_PAGE = 5;
+  
+  // Query first page of user workouts
   const { data: userWorkouts = [], isLoading: workoutsLoading } = useQuery<WorkoutWithExtraStats[]>({
-    queryKey: [`/api/workouts`, parsedUserId],
+    queryKey: [`/api/workouts`, parsedUserId, page],
     queryFn: async () => {
       try {
         // Use the proper endpoint with the user ID
-        const response = await fetch(`/api/users/${parsedUserId}/workouts`).then(res => res.json());
+        const response = await fetch(`/api/users/${parsedUserId}/workouts?page=${page}&limit=${ITEMS_PER_PAGE}`).then(res => res.json());
         
         // Process workout data with real statistics if available
         const workoutsWithStats = response.map((workout: any) => {
@@ -140,9 +150,24 @@ export default function UserProfile() {
         }) as WorkoutWithExtraStats[];
         
         // Sort by date, newest first
-        return workoutsWithStats.sort((a, b) => 
+        const sortedWorkouts = workoutsWithStats.sort((a, b) => 
           new Date(b.date).getTime() - new Date(a.date).getTime()
         );
+        
+        // Update all workouts state
+        setAllWorkouts(prev => {
+          if (page === 1) {
+            return sortedWorkouts;
+          } else {
+            // Combine with previous workouts
+            return [...prev, ...sortedWorkouts];
+          }
+        });
+        
+        // Check if there might be more workouts
+        setHasMore(workoutsWithStats.length >= ITEMS_PER_PAGE);
+        
+        return sortedWorkouts;
       } catch (error) {
         console.error("Error fetching user workouts:", error);
         return [];
@@ -150,6 +175,48 @@ export default function UserProfile() {
     },
     enabled: !!parsedUserId,
   });
+  
+  // Function to load more workouts
+  const loadMoreWorkouts = async () => {
+    if (loadingMore || !hasMore) return;
+    
+    try {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      
+      // Fetch next page of workouts
+      const response = await fetch(`/api/users/${parsedUserId}/workouts?page=${nextPage}&limit=${ITEMS_PER_PAGE}`);
+      const newWorkouts = await response.json();
+      
+      // Process and sort the new workouts
+      const workoutsWithStats = newWorkouts.map((workout: any) => {
+        return {
+          ...workout,
+          totalExercises: workout.totalExercises || 0,
+          volume: workout.volume || 0
+        };
+      }) as WorkoutWithExtraStats[];
+      
+      const sortedWorkouts = workoutsWithStats.sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      
+      // Update states
+      setAllWorkouts(prev => [...prev, ...sortedWorkouts]);
+      setPage(nextPage);
+      setHasMore(sortedWorkouts.length >= ITEMS_PER_PAGE);
+      
+    } catch (error) {
+      console.error("Error loading more workouts:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load more workouts",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
   
   // Query public goals for this specific user
   const { data: userGoals = [], isLoading: goalsLoading } = useQuery({
