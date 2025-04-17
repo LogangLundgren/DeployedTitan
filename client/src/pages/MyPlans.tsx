@@ -16,7 +16,8 @@ import {
   Edit,
   Trash2,
   AlertTriangle,
-  Eye
+  Eye,
+  BadgeCheck
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -278,13 +279,18 @@ export default function MyPlans() {
           </p>
         </div>
         <div className="flex gap-3">
-          {user?.isCoach && (
+          {user?.isCoach ? (
             <Button variant="default" onClick={() => setLocation('/create-plan')}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Create New Plan
             </Button>
+          ) : (
+            <Button variant="default" onClick={() => setLocation('/become-coach')}>
+              <BadgeCheck className="mr-2 h-4 w-4" />
+              Become a Coach
+            </Button>
           )}
-          <Button variant={user?.isCoach ? "outline" : "default"} onClick={() => setLocation('/marketplace')}>
+          <Button variant="outline" onClick={() => setLocation('/marketplace')}>
             <ShoppingBag className="mr-2 h-4 w-4" />
             Browse Marketplace
           </Button>
@@ -577,8 +583,25 @@ export default function MyPlans() {
               <p className="mt-2">Loading your coaching services...</p>
             </div>
           ) : error ? (
-            <div className="text-center py-8 text-red-500">
-              Error loading your purchases. Please try again.
+            <div className="text-center py-12 border rounded-lg">
+              <CalendarCheck className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-xl font-medium mb-2">No Coaching Services</h3>
+              <p className="text-gray-500 mb-6">
+                {!user?.isCoach
+                  ? "You haven't purchased any coaching services yet."
+                  : "You haven't purchased any coaching services from other coaches."}
+              </p>
+              <div className="flex flex-col md:flex-row gap-4 justify-center">
+                <Button onClick={() => setLocation('/marketplace')}>
+                  Browse Coaching Services
+                </Button>
+                {!user?.isCoach && (
+                  <Button variant="outline" onClick={() => setLocation('/become-coach')}>
+                    <BadgeCheck className="mr-2 h-4 w-4" />
+                    Become a Coach
+                  </Button>
+                )}
+              </div>
             </div>
           ) : servicePurchases.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
