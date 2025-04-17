@@ -127,7 +127,7 @@ function ActivityFeed() {
   const followUserMutation = useMutation({
     mutationFn: async (userId: number) => {
       // Determine action based on current following state
-      const currentlyFollowing = isFollowing ? isFollowing(userId) : false;
+      const currentlyFollowing = isFollowing[userId] || false;
       const action = currentlyFollowing ? 'unfollow' : 'follow';
       
       // Call the appropriate API endpoint
@@ -706,18 +706,18 @@ function ActivityFeed() {
                 </>
               )}
               
-              {!usersLoading && users.filter(user => user && followedUsers.includes(user.id)).length === 0 && (
+              {!usersLoading && users.filter(user => user && isFollowing[user.id]).length === 0 && (
                 <div className="text-center py-4 text-muted-foreground">
                   No connections found. Follow more users to see them in your leaderboard.
                 </div>
               )}
               
-              {!usersLoading && users.filter(user => user && followedUsers.includes(user.id)).length > 0 && (
+              {!usersLoading && users.filter(user => user && isFollowing[user.id]).length > 0 && (
                 <>
                   {users
                     .filter(user => 
                       // Make sure the user still exists and we're following them
-                      user && followedUsers.includes(user.id)
+                      user && isFollowing[user.id]
                     )
                     .sort((a, b) => ((b.weeklyVolume || 0) - (a.weeklyVolume || 0)))
                     .slice(0, 5)

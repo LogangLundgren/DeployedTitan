@@ -279,7 +279,7 @@ export default function UserProfile() {
   });
   
   // Using the follow context to maintain consistent follow state
-  const { isFollowing, followUser, unfollowUser } = useFollow();
+  const { isFollowing, toggleFollow, getFollowerCount } = useFollow();
   
   // Track if this particular user is being followed
   const [userIsFollowed, setUserIsFollowed] = useState<boolean>(false);
@@ -292,7 +292,7 @@ export default function UserProfile() {
         setUserIsFollowed(userProfile.isFollowing);
       } else {
         // Fallback to context if API doesn't provide this info
-        const isCurrentlyFollowed = isFollowing(parsedUserId);
+        const isCurrentlyFollowed = isFollowing[parsedUserId] || false;
         setUserIsFollowed(isCurrentlyFollowed);
       }
     }
