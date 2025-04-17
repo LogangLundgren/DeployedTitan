@@ -49,6 +49,21 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Enhanced authentication middleware that ensures user object is populated
+export function requireAuthWithUser(req: Request, res: Response, next: NextFunction) {
+  // First ensure the user is authenticated via session
+  if (!req.session.userId) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  
+  // Then verify that the user object is populated
+  if (!req.user) {
+    return res.status(401).json({ message: 'User not found or session expired' });
+  }
+  
+  next();
+}
+
 // Data ownership middleware - ensures users can only access their own data
 export function requireOwnership(req: Request, res: Response, next: NextFunction) {
   // First ensure the user is authenticated
