@@ -24,9 +24,21 @@ import { useToast } from "@/hooks/use-toast";
 import type { Workout } from "@shared/schema";
 
 // Extended workout type with stats for the social feed
+interface Workout {
+  id: number;
+  name: string;
+  date: Date;
+  userId: number;
+  category: string | null;
+  duration: number | null;
+  notes: string | null;
+  isPublic: boolean | null;
+}
+
 interface WorkoutWithExtraStats extends Workout {
-  totalExercises?: number;
-  volume?: number;
+  totalExercises: number;
+  totalSets?: number;
+  volume: number;
 }
 
 // User profile type
@@ -66,7 +78,7 @@ export default function UserProfile() {
   
   // Query user profile with real data
   const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
-    queryKey: [`/api/users/${parsedUserId}`],
+    queryKey: [`/api/users/${parsedUserId}/profile`],
     queryFn: async () => {
       try {
         // Fetch the user profile data from the API
