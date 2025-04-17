@@ -451,6 +451,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if the requesting user is following this user
       let isFollowing = false;
       if (req.user) {
+        isFollowing = await storage.isFollowing(req.user.id, userId);
+      }
+      
+      res.status(200).json({
+        workoutsCount,
+        followersCount,
+        followingCount,
+        isFollowing
+      });
+    } catch (error) {
+      console.error("Get user stats error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Enhanced user profile endpoint for profile page
+  app.get("/api/users/:id/profile", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Format profile picture URL if available
+      let profilePicture = null;
+      if (user.profilePicUrl) {
+        profilePicture = user.profilePicUrl;
+      }
+      
+      // Format social media JSON if it exists
+      let socialMedia = null;
+      if (user.socialMedia) {
+        try {
+          if (typeof user.socialMedia === 'string') {
+            socialMedia = JSON.parse(user.socialMedia);
+          } else {
+            socialMedia = user.socialMedia;
+          }
+        } catch (e) {
+          console.error("Error parsing social media data:", e);
+        }
+      }
+      
+      // Build profile response - omitting sensitive information
+      const profile = {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        bio: user.bio,
+        location: user.location,
+        fitnessLevel: user.fitnessLevel,
+        experienceYears: user.experienceYears,
+        goals: user.goals,
+        certifications: user.certifications,
+        socialMedia: socialMedia,
+        isCoach: user.isCoach,
+        profilePicture: profilePicture
+      };
+      
+      res.status(200).json(profile);
+    } catch (error) {
+      console.error("Get user profile error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // User statistics endpoint
+  app.get("/api/users/:id/stats", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Get user workout count
+      const workouts = await storage.getWorkouts(userId);
+      const workoutsCount = workouts.length;
+      
+      // Get follower count
+      const followers = await storage.getUserFollowers(userId);
+      const followersCount = followers.length;
+      
+      // Get following count
+      const following = await storage.getUserFollowing(userId);
+      const followingCount = following.length;
+      
+      // Check if the requesting user is following this user
+      let isFollowing = false;
+      if (req.user) {
         isFollowing = followers.some(follow => follow.followerId === req.user?.id);
       }
       
