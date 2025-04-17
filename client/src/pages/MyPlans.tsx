@@ -501,11 +501,7 @@ export default function MyPlans() {
               <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
               <p className="mt-2">Loading your workout plans...</p>
             </div>
-          ) : error ? (
-            <div className="text-center py-8 text-red-500">
-              Error loading your purchases. Please try again.
-            </div>
-          ) : planPurchases.length > 0 ? (
+          ) : planPurchases && planPurchases.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {planPurchases.map((purchase: Purchase) => (
                 <Card key={purchase.id} className="hover:shadow-md transition-shadow">
@@ -544,8 +540,8 @@ export default function MyPlans() {
                       <Calendar className="mr-1 h-4 w-4" />
                       Purchased on {new Date(purchase.purchaseDate).toLocaleDateString()}
                     </div>
-                    {purchase.planDetails?.rating !== null && (
-                      <StarRating rating={purchase.planDetails?.rating} />
+                    {purchase.planDetails?.rating !== null && purchase.planDetails?.rating !== undefined && (
+                      <StarRating rating={purchase.planDetails.rating} />
                     )}
                   </CardContent>
                   <Separator />
@@ -567,11 +563,21 @@ export default function MyPlans() {
               <ShoppingBag className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-xl font-medium mb-2">No Workout Plans</h3>
               <p className="text-gray-500 mb-6">
-                You haven't purchased any workout plans yet.
+                {!user?.isCoach
+                  ? "You haven't purchased any workout plans yet."
+                  : "You haven't purchased any workout plans from other coaches."}
               </p>
-              <Button onClick={() => setLocation('/marketplace')}>
-                Browse Marketplace
-              </Button>
+              <div className="flex flex-col md:flex-row gap-4 justify-center">
+                <Button onClick={() => setLocation('/marketplace')}>
+                  Browse Workout Plans
+                </Button>
+                {!user?.isCoach && (
+                  <Button variant="outline" onClick={() => setLocation('/become-coach')}>
+                    <BadgeCheck className="mr-2 h-4 w-4" />
+                    Become a Coach
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </TabsContent>
@@ -582,28 +588,7 @@ export default function MyPlans() {
               <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
               <p className="mt-2">Loading your coaching services...</p>
             </div>
-          ) : error ? (
-            <div className="text-center py-12 border rounded-lg">
-              <CalendarCheck className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-xl font-medium mb-2">No Coaching Services</h3>
-              <p className="text-gray-500 mb-6">
-                {!user?.isCoach
-                  ? "You haven't purchased any coaching services yet."
-                  : "You haven't purchased any coaching services from other coaches."}
-              </p>
-              <div className="flex flex-col md:flex-row gap-4 justify-center">
-                <Button onClick={() => setLocation('/marketplace')}>
-                  Browse Coaching Services
-                </Button>
-                {!user?.isCoach && (
-                  <Button variant="outline" onClick={() => setLocation('/become-coach')}>
-                    <BadgeCheck className="mr-2 h-4 w-4" />
-                    Become a Coach
-                  </Button>
-                )}
-              </div>
-            </div>
-          ) : servicePurchases.length > 0 ? (
+          ) : servicePurchases && servicePurchases.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {servicePurchases.map((purchase: Purchase) => (
                 <Card key={purchase.id} className="hover:shadow-md transition-shadow">
@@ -659,11 +644,21 @@ export default function MyPlans() {
               <CalendarCheck className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-xl font-medium mb-2">No Coaching Services</h3>
               <p className="text-gray-500 mb-6">
-                You haven't purchased any coaching services yet.
+                {!user?.isCoach
+                  ? "You haven't purchased any coaching services yet."
+                  : "You haven't purchased any coaching services from other coaches."}
               </p>
-              <Button onClick={() => setLocation('/marketplace')}>
-                Browse Marketplace
-              </Button>
+              <div className="flex flex-col md:flex-row gap-4 justify-center">
+                <Button onClick={() => setLocation('/marketplace')}>
+                  Browse Coaching Services
+                </Button>
+                {!user?.isCoach && (
+                  <Button variant="outline" onClick={() => setLocation('/become-coach')}>
+                    <BadgeCheck className="mr-2 h-4 w-4" />
+                    Become a Coach
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </TabsContent>
