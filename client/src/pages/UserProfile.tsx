@@ -21,9 +21,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import type { Workout } from "@shared/schema";
+// import type { Workout } from "@shared/schema"; - Avoiding conflict with local Workout type
 
-// Extended workout type with stats for the social feed
+// Basic workout type for the social feed
 interface Workout {
   id: number;
   name: string;
@@ -35,6 +35,7 @@ interface Workout {
   isPublic: boolean | null;
 }
 
+// Extended workout type with additional stats
 interface WorkoutWithExtraStats extends Workout {
   totalExercises: number;
   totalSets?: number;
@@ -129,7 +130,7 @@ export default function UserProfile() {
         const response = await fetch(`/api/users/${parsedUserId}/workouts`).then(res => res.json());
         
         // Process workout data with real statistics if available
-        const workoutsWithStats = response.map((workout: Workout) => {
+        const workoutsWithStats = response.map((workout: any) => {
           // If the workout already has these stats, use them, otherwise set defaults
           return {
             ...workout,
