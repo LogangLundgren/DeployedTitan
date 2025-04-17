@@ -1,4 +1,5 @@
 import { createContext, ReactNode, useContext, useState, useEffect } from "react";
+import { useLocation } from "wouter";
 
 type OnboardingStep = "dashboard" | "workouts" | "social" | "marketplace" | "myplans" | "profile" | "finished";
 
@@ -9,9 +10,21 @@ interface OnboardingContextType {
   showOnboarding: boolean;
   startOnboarding: () => void;
   skipOnboarding: () => void;
+  getPathForStep: (step: OnboardingStep) => string;
 }
 
 const OnboardingContext = createContext<OnboardingContextType | null>(null);
+
+// Define the order of steps and their corresponding paths
+const stepConfig: Record<OnboardingStep, { path: string }> = {
+  dashboard: { path: "/" },
+  workouts: { path: "/workouts" },
+  social: { path: "/social" },
+  marketplace: { path: "/marketplace" },
+  myplans: { path: "/my-plans" },
+  profile: { path: "/profile" },
+  finished: { path: "/" }
+};
 
 const stepOrder: OnboardingStep[] = [
   "dashboard", 
@@ -26,6 +39,12 @@ const stepOrder: OnboardingStep[] = [
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep | null>(null);
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
+  const [location, setLocation] = useLocation();
+
+  // Get the path for a specific step
+  const getPathForStep = (step: OnboardingStep): string => {
+    return stepConfig[step].path;
+  };
 
   // Check localStorage to see if this is a first time user
   useEffect(() => {
@@ -35,6 +54,18 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       // or show a welcome screen elsewhere in the app
     }
   }, []);
+
+  // Navigate to the correct route when the step changes
+  useEffect(() => {
+    if (currentStep && currentStep !== "finished") {
+      const path = getPathForStep(currentStep);
+      
+      // Only navigate if we're not already on this path
+      if (location !== path) {
+        setLocation(path);
+      }
+    }
+  }, [currentStep, location, setLocation]);
 
   // Move to the next step in the onboarding process
   const nextStep = () => {
@@ -75,7 +106,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         nextStep,
         showOnboarding,
         startOnboarding,
-        skipOnboarding
+        skipOnboarding,
+        getPathForStep
       }}
     >
       {children}
