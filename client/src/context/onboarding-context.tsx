@@ -16,14 +16,14 @@ interface OnboardingContextType {
 const OnboardingContext = createContext<OnboardingContextType | null>(null);
 
 // Define the order of steps and their corresponding paths
-const stepConfig: Record<OnboardingStep, { path: string }> = {
-  dashboard: { path: "/" },
-  workouts: { path: "/workouts" },
-  social: { path: "/social" },
-  marketplace: { path: "/marketplace" },
-  myplans: { path: "/my-plans" },
-  profile: { path: "/profile" },
-  finished: { path: "/" }
+const stepConfig: Record<OnboardingStep, { path: string, title: string }> = {
+  dashboard: { path: "/", title: "Dashboard" },
+  workouts: { path: "/workouts", title: "Workouts" },
+  social: { path: "/social", title: "Social" },
+  marketplace: { path: "/marketplace", title: "Marketplace" },
+  myplans: { path: "/my-plans", title: "My Plans" },
+  profile: { path: "/profile", title: "Profile" },
+  finished: { path: "/", title: "Completed" }
 };
 
 const stepOrder: OnboardingStep[] = [
@@ -36,39 +36,53 @@ const stepOrder: OnboardingStep[] = [
   "finished"
 ];
 
+// Delay between steps to allow for smooth transitions
+const NAVIGATION_DELAY = 500;
+
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep | null>(null);
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
   const [location, setLocation] = useLocation();
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
 
   // Get the path for a specific step
   const getPathForStep = (step: OnboardingStep): string => {
     return stepConfig[step].path;
   };
 
-  // Check localStorage to see if this is a first time user
+  // Check if a first-time user has logged in
   useEffect(() => {
     const hasCompletedOnboarding = localStorage.getItem("titan-fitness-onboarding-completed");
-    if (!hasCompletedOnboarding) {
-      // Don't automatically start onboarding - let the user start it manually
-      // or show a welcome screen elsewhere in the app
+    const isFirstLogin = sessionStorage.getItem("first-login");
+    
+    if (!hasCompletedOnboarding && isFirstLogin) {
+      // Automatically show the welcome screen for first-time users
+      setShowOnboarding(true);
     }
   }, []);
 
-  // Navigate to the correct route when the step changes
+  // Handle navigation between steps
   useEffect(() => {
-    if (currentStep && currentStep !== "finished") {
+    if (currentStep && currentStep !== "finished" && !isNavigating) {
       const path = getPathForStep(currentStep);
       
       // Only navigate if we're not already on this path
       if (location !== path) {
-        setLocation(path);
+        setIsNavigating(true);
+        
+        // Add a small delay to allow for animations
+        setTimeout(() => {
+          setLocation(path);
+          setIsNavigating(false);
+        }, NAVIGATION_DELAY);
       }
     }
-  }, [currentStep, location, setLocation]);
+  }, [currentStep, location, setLocation, isNavigating]);
 
   // Move to the next step in the onboarding process
   const nextStep = () => {
+    if (isNavigating) return;
+    
     if (currentStep === null) {
       setCurrentStep("dashboard");
       return;
@@ -80,8 +94,15 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       setCurrentStep(null);
       setShowOnboarding(false);
       localStorage.setItem("titan-fitness-onboarding-completed", "true");
+      setLocation("/");
     } else {
-      setCurrentStep(stepOrder[currentIndex + 1]);
+      // Set navigating state to prevent multiple clicks
+      setIsNavigating(true);
+      
+      // Slight delay before showing next step
+      setTimeout(() => {
+        setCurrentStep(stepOrder[currentIndex + 1]);
+      }, NAVIGATION_DELAY / 2);
     }
   };
   
@@ -89,6 +110,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const startOnboarding = () => {
     setShowOnboarding(true);
     setCurrentStep("dashboard");
+    // Remove first login flag to avoid reshowing the welcome screen
+    sessionStorage.removeItem("first-login");
   };
   
   // Skip the rest of the onboarding
@@ -96,6 +119,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     setCurrentStep(null);
     setShowOnboarding(false);
     localStorage.setItem("titan-fitness-onboarding-completed", "true");
+    // Remove first login flag
+    sessionStorage.removeItem("first-login");
   };
 
   return (

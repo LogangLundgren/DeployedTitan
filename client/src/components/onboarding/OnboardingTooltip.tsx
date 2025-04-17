@@ -25,12 +25,15 @@ interface StepContent {
 }
 
 export function OnboardingTooltip() {
-  const { currentStep, nextStep, skipOnboarding } = useOnboarding();
+  const { currentStep, nextStep, skipOnboarding, getPathForStep } = useOnboarding();
   const [open, setOpen] = useState(false);
+  const [animating, setAnimating] = useState(false);
 
+  // When the current step changes, update dialog visibility
   useEffect(() => {
     if (currentStep) {
       setOpen(true);
+      setAnimating(false);
     } else {
       setOpen(false);
     }
@@ -77,9 +80,24 @@ export function OnboardingTooltip() {
   if (!currentStep) return null;
 
   const content = stepContent[currentStep];
+  
+  const handleNextStep = () => {
+    if (animating) return;
+    
+    setAnimating(true);
+    nextStep();
+  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          skipOnboarding();
+        }
+        setOpen(isOpen);
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-4 mb-2">
@@ -95,7 +113,7 @@ export function OnboardingTooltip() {
           <Button variant="outline" onClick={skipOnboarding}>
             Skip Tour
           </Button>
-          <Button onClick={nextStep}>
+          <Button onClick={handleNextStep} disabled={animating}>
             {currentStep === "finished" ? "Finish" : "Next"}
           </Button>
         </DialogFooter>

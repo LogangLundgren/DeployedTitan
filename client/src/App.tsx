@@ -2,6 +2,7 @@ import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import WorkoutLogger from "@/pages/WorkoutLogger";
@@ -48,6 +49,23 @@ function Router() {
   // Determine whether to show the main layout based on current route
   // Don't show header/nav/footer on auth page
   const isAuthPage = window.location.pathname === '/auth';
+  
+  // Track when a user has just logged in or registered
+  // This helps show the onboarding immediately after authentication
+  useEffect(() => {
+    // If user is logged in and has just arrived (new session)
+    if (user && !sessionStorage.getItem("onboarding-checked")) {
+      sessionStorage.setItem("onboarding-checked", "true");
+      
+      // Check if this user has completed onboarding
+      const hasCompletedOnboarding = localStorage.getItem("titan-fitness-onboarding-completed");
+      
+      // For new users, mark this session as the first login
+      if (!hasCompletedOnboarding) {
+        sessionStorage.setItem("first-login", "true");
+      }
+    }
+  }, [user]);
   
   return (
     <div className="min-h-screen flex flex-col">
