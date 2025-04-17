@@ -23,8 +23,52 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Heart, MessageCircle } from "lucide-react";
 // import type { Workout } from "@shared/schema"; - Avoiding conflict with local Workout type
+
+// Like button component with persistent state
+const LikeButton = ({ workout }: { workout: WorkoutWithExtraStats }) => {
+  const { hasLiked, toggleLike, getLikesCount } = useLikes();
+  const liked = hasLiked(workout.id);
+  const likesCount = getLikesCount(workout.id);
+
+  return (
+    <Button 
+      variant="ghost" 
+      size="sm" 
+      className={`text-muted-foreground ${liked ? 'text-red-500 hover:text-red-600' : ''}`}
+      onClick={() => toggleLike(workout.id)}
+    >
+      <Heart className={`mr-1 h-4 w-4 ${liked ? 'fill-current' : ''}`} />
+      {likesCount > 0 && <span className="ml-1">{likesCount}</span>}
+    </Button>
+  );
+};
+
+// Comment button component with persistent state
+const CommentButton = ({ workout }: { workout: WorkoutWithExtraStats }) => {
+  const { getCommentsCount, loadCommentsForWorkout } = useComments();
+  const commentsCount = getCommentsCount(workout.id);
+  
+  // Load comments data when component mounts
+  useEffect(() => {
+    loadCommentsForWorkout(workout.id);
+  }, [workout.id, loadCommentsForWorkout]);
+
+  return (
+    <Button 
+      variant="ghost" 
+      size="sm" 
+      className="text-muted-foreground"
+      asChild
+    >
+      <Link to={`/workouts/${workout.id}`}>
+        <MessageCircle className="mr-1 h-4 w-4" />
+        {commentsCount > 0 && <span className="ml-1">{commentsCount}</span>}
+      </Link>
+    </Button>
+  );
+};
 
 // Basic workout type for the social feed
 interface Workout {
@@ -462,7 +506,7 @@ export default function UserProfile() {
                 </Card>
               ) : (
                 <div className="space-y-6">
-                  {userWorkouts.map((workout: WorkoutWithExtraStats) => (
+                  {allWorkouts.map((workout: WorkoutWithExtraStats) => (
                     <Card key={workout.id}>
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
@@ -513,24 +557,9 @@ export default function UserProfile() {
                           </div>
                         </div>
                       </CardContent>
-                      <CardFooter className="pt-0 pb-4">
-                        <Button variant="ghost" size="sm" className="text-muted-foreground">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="mr-1"
-                          >
-                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                          </svg>
-                          Like
-                        </Button>
+                      <CardFooter className="pt-0 pb-4 flex justify-between">
+                        <LikeButton workout={workout} />
+                        <CommentButton workout={workout} />
                       </CardFooter>
                     </Card>
                   ))}

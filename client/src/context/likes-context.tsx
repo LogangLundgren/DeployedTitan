@@ -28,106 +28,118 @@ export function LikesProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [likedWorkouts, setLikedWorkouts] = useState<Record<number, boolean>>({});
   const [likesCount, setLikesCount] = useState<Record<number, number>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load liked workouts from API
+  // Load likes data on mount and when the user changes
   useEffect(() => {
-    if (user) {
-      loadLikedWorkouts();
-    } else {
-      setLikedWorkouts({});
-      setLikesCount({});
-      setIsLoading(false);
-    }
+    const loadLikes = async () => {
+      if (!user) return; // Only load likes if we have a user
+      
+      try {
+        setIsLoading(true);
+        const response = await apiRequest("GET", "/api/likes");
+        const data = await response.json();
+        
+        // Convert array of likes to a map for easy lookup
+        const likedMap: Record<number, boolean> = {};
+        const countMap: Record<number, number> = {};
+        
+        // Process likes data
+        data.forEach((like: any) => {
+          // Map workout ID to liked status
+          if (like.workoutId) {
+            likedMap[like.workoutId] = true;
+          }
+          
+          // Count likes per workout
+          if (like.workoutId) {
+            if (!countMap[like.workoutId]) {
+              countMap[like.workoutId] = 0;
+            }
+            countMap[like.workoutId]++;
+          }
+        });
+        
+        setLikedWorkouts(likedMap);
+        setLikesCount(countMap);
+      } catch (error) {
+        console.error("Error loading liked workouts:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadLikes();
   }, [user]);
-
-  // Load all user's liked workouts on mount
-  const loadLikedWorkouts = async () => {
-    try {
-      setIsLoading(true);
-      const response = await apiRequest("GET", "/api/likes");
-      const data = await response.json();
-      
-      // Create a map of workoutId -> true
-      const likedMap: Record<number, boolean> = {};
-      const countsMap: Record<number, number> = {};
-      
-      // Process user likes
-      if (Array.isArray(data.likes)) {
-        data.likes.forEach((like: any) => {
-          likedMap[like.workoutId] = true;
-        });
-      }
-      
-      // Process workout counts
-      if (Array.isArray(data.counts)) {
-        data.counts.forEach((count: any) => {
-          countsMap[count.workoutId] = count.count || 0;
-        });
-      }
-      
-      setLikedWorkouts(likedMap);
-      setLikesCount(countsMap);
-    } catch (error) {
-      console.error("Error loading liked workouts:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Toggle like status for a workout
   const toggleLike = async (workoutId: number) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to like workouts",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
+      // Check if already liked
       const isCurrentlyLiked = likedWorkouts[workoutId] || false;
       
-      // Optimistically update UI
-      setLikedWorkouts(prev => ({
-        ...prev,
-        [workoutId]: !isCurrentlyLiked
-      }));
-      
-      // Update likes count
-      setLikesCount(prev => ({
-        ...prev,
-        [workoutId]: (prev[workoutId] || 0) + (isCurrentlyLiked ? -1 : 1)
-      }));
-      
-      // Send API request to update server
       if (isCurrentlyLiked) {
-        await apiRequest("DELETE", `/api/workouts/${workoutId}/like`);
+        // Unlike the workout
+        await apiRequest("DELETE", `/api/likes/${workoutId}`);
+        
+        setLikedWorkouts(prev => ({
+          ...prev,
+          [workoutId]: false
+        }));
+        
+        setLikesCount(prev => ({
+          ...prev,
+          [workoutId]: Math.max(0, (prev[workoutId] || 0) - 1)
+        }));
+        
+        toast({
+          title: "Unliked",
+          description: "Workout removed from liked workouts",
+        });
       } else {
-        await apiRequest("POST", `/api/workouts/${workoutId}/like`);
+        // Like the workout
+        await apiRequest("POST", "/api/likes", { workoutId });
+        
+        setLikedWorkouts(prev => ({
+          ...prev,
+          [workoutId]: true
+        }));
+        
+        setLikesCount(prev => ({
+          ...prev,
+          [workoutId]: (prev[workoutId] || 0) + 1
+        }));
+        
+        toast({
+          title: "Liked",
+          description: "Workout added to liked workouts",
+        });
       }
     } catch (error) {
       console.error("Error toggling like:", error);
-      
-      // Revert optimistic UI update on error
-      const isCurrentlyLiked = likedWorkouts[workoutId] || false;
-      setLikedWorkouts(prev => ({
-        ...prev,
-        [workoutId]: isCurrentlyLiked
-      }));
-      
-      // Revert likes count
-      setLikesCount(prev => ({
-        ...prev,
-        [workoutId]: (prev[workoutId] || 0) + (isCurrentlyLiked ? 1 : -1)
-      }));
-      
       toast({
-        title: "Error updating like",
-        description: "Please try again later",
+        title: "Error",
+        description: "Failed to update like status",
         variant: "destructive"
       });
     }
   };
 
-  // Check if user has liked a workout
+  // Check if the current user has liked a workout
   const hasLiked = (workoutId: number): boolean => {
-    return !!likedWorkouts[workoutId];
+    return likedWorkouts[workoutId] || false;
   };
 
-  // Get likes count for a workout
+  // Get the count of likes for a workout
   const getLikesCount = (workoutId: number): number => {
     return likesCount[workoutId] || 0;
   };
