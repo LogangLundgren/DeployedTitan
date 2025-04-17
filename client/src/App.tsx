@@ -34,6 +34,9 @@ import { CommentsProvider } from "./context/comments-context";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { User } from "@shared/schema";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { OnboardingProvider } from "./context/onboarding-context";
+import { OnboardingTooltip } from "./components/onboarding/OnboardingTooltip";
+import { WelcomeScreen } from "./components/onboarding/WelcomeScreen";
 
 function Router() {
   const { user } = useAuth();
@@ -82,6 +85,14 @@ function Router() {
           </Switch>
         </div>
         {!isAuthPage && <Footer />}
+        
+        {/* Onboarding components */}
+        {user && (
+          <>
+            <WelcomeScreen />
+            <OnboardingTooltip />
+          </>
+        )}
       </NotificationsProvider>
     </div>
   );
@@ -91,14 +102,16 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <FollowProvider>
-          <LikesProvider>
-            <CommentsProvider>
-              <Router />
-              <Toaster />
-            </CommentsProvider>
-          </LikesProvider>
-        </FollowProvider>
+        <OnboardingProvider>
+          <FollowProvider>
+            <LikesProvider>
+              <CommentsProvider>
+                <Router />
+                <Toaster />
+              </CommentsProvider>
+            </LikesProvider>
+          </FollowProvider>
+        </OnboardingProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
