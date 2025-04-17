@@ -51,15 +51,17 @@ export default function PersonalRecords({ userId }: PersonalRecordsProps) {
   const [categories, setCategories] = useState<string[]>([]);
   const [recordView, setRecordView] = useState<"weight" | "reps" | "volume">("weight");
 
-  // Fetch recent workouts
+  // Fetch ALL workouts for all-time personal records
   const { data: workouts, isLoading: workoutsLoading } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts/recent'],
+    queryKey: ['/api/workouts'],
     queryFn: async () => {
       try {
-        // Request more workouts for accurate personal records
-        const res = await fetch('/api/workouts/recent?limit=100');
+        // Get all workouts ever recorded for truly all-time PRs
+        const res = await fetch('/api/workouts');
         if (!res.ok) throw new Error('Failed to fetch workouts');
-        return res.json();
+        const data = await res.json();
+        console.log("Fetched all workouts for personal records:", data.length);
+        return data;
       } catch (error) {
         console.error('Error fetching workouts:', error);
         return [];
