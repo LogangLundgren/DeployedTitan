@@ -36,7 +36,7 @@ export default function WorkoutAnalytics({ userId }: WorkoutAnalyticsProps) {
   // State for chart controls
   const [selectedExercise, setSelectedExercise] = useState<number | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('weight');
-  const [dateRange, setDateRange] = useState<number>(365); // Expanded default range to see more workouts
+  const [dateRange, setDateRange] = useState<number>(9999); // Default to all-time, using a very large number
   const [chartData, setChartData] = useState<WorkoutData[]>([]);
   const { toast } = useToast();
 
@@ -264,7 +264,7 @@ export default function WorkoutAnalytics({ userId }: WorkoutAnalyticsProps) {
                 <SelectItem value="30">Last 30 days</SelectItem>
                 <SelectItem value="90">Last 90 days</SelectItem>
                 <SelectItem value="365">Last year</SelectItem>
-                <SelectItem value="1000">All time</SelectItem>
+                <SelectItem value="9999">All time</SelectItem>
               </SelectContent>
             </Select>
           </div>

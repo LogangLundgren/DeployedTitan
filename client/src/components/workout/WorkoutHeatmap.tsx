@@ -43,14 +43,16 @@ export default function WorkoutHeatmap({ userId }: WorkoutHeatmapProps) {
   const [heatmapData, setHeatmapData] = useState<DailyActivity[]>([]);
   const [weeks, setWeeks] = useState<DailyActivity[][]>([]);
 
-  // Fetch workouts for the last year
+  // Fetch ALL workouts for all-time data
   const { data: workouts, isLoading } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts/recent', 365],
+    queryKey: ['/api/workouts'],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/workouts/recent?limit=365`);
+        const res = await fetch(`/api/workouts`);
         if (!res.ok) throw new Error('Failed to fetch workouts');
-        return res.json();
+        const data = await res.json();
+        console.log("Fetched all workouts for heatmap:", data.length);
+        return data;
       } catch (error) {
         console.error('Error fetching workouts:', error);
         return [];
@@ -289,7 +291,7 @@ export default function WorkoutHeatmap({ userId }: WorkoutHeatmapProps) {
       <CardHeader>
         <CardTitle className="text-xl">Workout Activity Heatmap</CardTitle>
         <CardDescription>
-          View your workout patterns over the last 4 months
+          View your recent workout patterns based on all your tracked data
         </CardDescription>
       </CardHeader>
       <CardContent>

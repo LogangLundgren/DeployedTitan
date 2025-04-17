@@ -44,14 +44,16 @@ export default function MonthlyComparison({ userId }: MonthlyComparisonProps) {
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('workouts');
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   
-  // Fetch all workouts for the user - we need a good amount of data for comparison
+  // Fetch ALL workouts for the user for all-time comparison
   const { data: workouts, isLoading } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts/recent', 365], // Get a year's worth of workouts
+    queryKey: ['/api/workouts'], // Get all workouts, not just recent ones
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/workouts/recent?limit=365`);
+        const res = await fetch(`/api/workouts`);
         if (!res.ok) throw new Error('Failed to fetch workouts');
-        return res.json();
+        const data = await res.json();
+        console.log("Fetched all workouts for comparison:", data.length);
+        return data;
       } catch (error) {
         console.error('Error fetching workouts:', error);
         return [];
@@ -196,9 +198,9 @@ export default function MonthlyComparison({ userId }: MonthlyComparisonProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Monthly Progress Comparison</CardTitle>
+        <CardTitle className="text-xl">Year-Over-Year Progress</CardTitle>
         <CardDescription>
-          Compare your progress this year versus last year
+          Compare all your workout data by month, current year vs. previous year
         </CardDescription>
       </CardHeader>
       <CardContent>
