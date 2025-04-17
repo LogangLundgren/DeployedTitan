@@ -3136,8 +3136,9 @@ export class DbStorage implements IStorage {
     return workoutsWithDetails.filter((w): w is WorkoutWithDetails => w !== undefined);
   }
   
-  async getCommunityWorkouts(limit: number): Promise<WorkoutWithDetails[]> {
+  async getCommunityWorkouts(limit: number = 50): Promise<WorkoutWithDetails[]> {
     // Get public workouts from all users, sorted by date
+    // Use a much higher default limit to ensure we get all workouts
     const workoutResults = await db
       .select()
       .from(workouts)

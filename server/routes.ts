@@ -756,9 +756,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // No authentication required since these are public workouts
   app.get("/api/workouts/community", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(req.query.limit as string) || 50;
       
-      // Get public workouts from all users
+      // Get public workouts from all users with higher default limit (50 instead of 10)
       let communityWorkouts = await storage.getCommunityWorkouts(limit);
       
       // Filter out workouts from deleted users
