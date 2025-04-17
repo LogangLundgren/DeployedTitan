@@ -336,6 +336,10 @@ export default function Profile() {
     onSuccess: () => {
       // Invalidate the user query to refetch updated data
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
+      // Also invalidate the profile query used by UserProfile.tsx
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/profile`] });
+      
       // Also explicitly refetch
       refetch();
       
@@ -388,6 +392,10 @@ export default function Profile() {
       // Invalidate both possible query keys
       queryClient.invalidateQueries({ queryKey: ['/api/coaches/profile', user?.id] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/coach-profile`] });
+      
+      // Also invalidate the profile query used by UserProfile.tsx
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/profile`] });
+      
       setIsCoachProfileEditing(false);
       setIsSaving(false);
       
