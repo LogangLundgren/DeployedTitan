@@ -64,36 +64,46 @@ export default function UserProfile() {
   const { toast } = useToast();
   const parsedUserId = parseInt(userId || "0");
   
-  // Query user profile
+  // Query user profile with real data
   const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: [`/api/users/${parsedUserId}`],
     queryFn: async () => {
-      // This would fetch from a real API in a production app
-      // For demo, use hardcoded data
-      const demoUsers = [
-        { id: 1, username: "you", name: "Your Name", profilePicture: "", isCoach: false },
-        { id: 2, username: "JessicaFitPro", name: "Jessica Chen", profilePicture: "", isCoach: true },
-        { id: 3, username: "StrengthCoach", name: "Mike Johnson", profilePicture: "", isCoach: true },
-        { id: 4, username: "RunnerGirl", name: "Sarah Williams", profilePicture: "", isCoach: false },
-        { id: 5, username: "IronPumper", name: "Alex Rodriguez", profilePicture: "", isCoach: false },
-      ];
-      
-      const user = demoUsers.find(u => u.id === parsedUserId);
-      
-      if (!user) {
-        throw new Error("User not found");
+      try {
+        // Fetch the user profile data from the API
+        const response = await fetch(`/api/users/${parsedUserId}/profile`);
+        
+        if (!response.ok) {
+          throw new Error("Failed to fetch user profile");
+        }
+        
+        const userData = await response.json();
+        
+        if (!userData) {
+          throw new Error("User not found");
+        }
+        
+        // Get statistics for this user
+        const statsResponse = await fetch(`/api/users/${parsedUserId}/stats`);
+        const stats = await statsResponse.json();
+        
+        // Return formatted user profile with stats
+        return {
+          id: userData.id,
+          username: userData.username,
+          name: userData.name || userData.username,
+          profilePicture: userData.profilePicture || "",
+          bio: userData.bio || "Fitness enthusiast passionate about strength training and healthy living.",
+          isCoach: !!userData.isCoach,
+          // These statistics now come from the API
+          workoutsCount: stats.workoutsCount || 0,
+          followersCount: stats.followersCount || 0,
+          followingCount: stats.followingCount || 0,
+          isFollowing: stats.isFollowing || false
+        };
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        throw error;
       }
-      
-      return {
-        ...user,
-        // Use the values from the API response if they exist, or provide default values if not
-        bio: user.bio || "Fitness enthusiast passionate about strength training and healthy living.",
-        // These statistics now come from the API instead of being hardcoded
-        workoutsCount: user.workoutsCount || 0,
-        followersCount: user.followersCount || 0,
-        followingCount: user.followingCount || 0,
-        isFollowing: user.isFollowing || false
-      };
     },
     enabled: !!parsedUserId,
   });
