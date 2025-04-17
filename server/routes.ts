@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import Stripe from "stripe";
-import { hashPassword, verifyPassword, requireAuth, requireOwnership } from "./auth";
+import { hashPassword, verifyPassword, requireAuth, requireAuthWithUser, requireOwnership } from "./auth";
 
 // Initialize Stripe with the secret key
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -209,9 +209,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Follow a user
-  app.post("/api/users/:id/follow", requireAuth, async (req, res) => {
+  app.post("/api/users/:id/follow", requireAuthWithUser, async (req, res) => {
     try {
-      // Get user ID from the authenticated session
+      // Get user ID from the authenticated session (req.user is guaranteed by requireAuthWithUser)
       const followerId = req.user.id;
       const targetUserId = parseInt(req.params.id);
       
@@ -253,9 +253,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Unfollow a user
-  app.post("/api/users/:id/unfollow", requireAuth, async (req, res) => {
+  app.post("/api/users/:id/unfollow", requireAuthWithUser, async (req, res) => {
     try {
-      // Get user ID from the authenticated session
+      // Get user ID from the authenticated session (req.user is guaranteed by requireAuthWithUser)
       const followerId = req.user.id;
       const targetUserId = parseInt(req.params.id);
       
