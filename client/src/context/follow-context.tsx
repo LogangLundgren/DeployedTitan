@@ -1,185 +1,193 @@
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { 
+  createContext, 
+  ReactNode, 
+  useContext, 
+  useState,
+  useEffect
+} from "react";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 interface FollowContextType {
-  followedUsers: number[];
-  followUser: (userId: number, userName: string) => void;
-  unfollowUser: (userId: number, userName: string) => void;
-  isFollowing: (userId: number) => boolean;
+  isFollowing: Record<number, boolean>;
+  followerCounts: Record<number, number>;
   isLoading: boolean;
-  error: Error | null;
+  toggleFollow: (userId: number) => Promise<void>;
+  checkFollowStatus: (userId: number) => boolean;
+  getFollowerCount: (userId: number) => number;
+  refreshFollowData: (userId: number) => Promise<void>;
 }
 
-const FollowContext = createContext<FollowContextType | undefined>(undefined);
+const FollowContext = createContext<FollowContextType | null>(null);
 
 export function FollowProvider({ children }: { children: ReactNode }) {
-  const [followedUsers, setFollowedUsers] = useState<number[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [isFollowing, setIsFollowing] = useState<Record<number, boolean>>({});
+  const [followerCounts, setFollowerCounts] = useState<Record<number, number>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch the user's followed users from the API
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['/api/users/following'],
-    queryFn: async () => {
-      const response = await fetch('/api/users/following');
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Not authenticated, don't throw error
-          return [];
-        }
-        throw new Error('Failed to fetch followed users');
-      }
-      return response.json();
-    },
-  });
-  
-  // Update the followedUsers state when the query data changes
+  // Load user's follow data on mount
   useEffect(() => {
-    if (data && Array.isArray(data)) {
-      // Extract just the user IDs from the followed users array
-      const followedIds = data.map((user: any) => user.id);
-      setFollowedUsers(followedIds);
-    }
-  }, [data]);
-
-  // Follow user mutation
-  const followUserMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      const response = await fetch(`/api/users/${userId}/follow`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to follow user");
+    if (!user) return;
+    
+    const loadFollowData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await apiRequest("GET", "/api/users/following");
+        const followings = await response.json();
+        
+        // Convert to lookup maps for O(1) access
+        const followMap: Record<number, boolean> = {};
+        const countMap: Record<number, number> = {};
+        
+        followings.forEach((follow: any) => {
+          if (follow.followedId) {
+            followMap[follow.followedId] = true;
+            // Initialize count for this user
+            if (!countMap[follow.followedId]) {
+              countMap[follow.followedId] = 0;
+            }
+          }
+        });
+        
+        // Get follower counts
+        const countsResponse = await apiRequest("GET", "/api/users/follower-counts");
+        const counts = await countsResponse.json();
+        
+        counts.forEach((item: any) => {
+          if (item.userId && typeof item.count === 'number') {
+            countMap[item.userId] = item.count;
+          }
+        });
+        
+        setIsFollowing(followMap);
+        setFollowerCounts(countMap);
+      } catch (error) {
+        console.error("Error loading follow data:", error);
+      } finally {
+        setIsLoading(false);
       }
+    };
+    
+    loadFollowData();
+  }, [user]);
+
+  // Toggle follow status for a user
+  const toggleFollow = async (userId: number) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to follow users",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      const currentlyFollowing = isFollowing[userId] || false;
       
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      // Invalidate queries to update UI
-      queryClient.invalidateQueries({ queryKey: ['/api/users/following'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/users/discover'] });
-      
-      // For profiles, we need to invalidate the specific user
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${data.userId}`] });
-      
-      // Update lists that might include users
-      queryClient.invalidateQueries({ queryKey: ['/api/workouts/community'] });
-    },
-    onError: (error) => {
+      if (currentlyFollowing) {
+        // Unfollow
+        await apiRequest("DELETE", `/api/users/${userId}/follow`);
+        
+        setIsFollowing(prev => ({
+          ...prev,
+          [userId]: false
+        }));
+        
+        setFollowerCounts(prev => ({
+          ...prev,
+          [userId]: Math.max(0, (prev[userId] || 0) - 1)
+        }));
+        
+        toast({
+          title: "Unfollowed",
+          description: "You are no longer following this user",
+        });
+      } else {
+        // Follow
+        await apiRequest("POST", `/api/users/${userId}/follow`);
+        
+        setIsFollowing(prev => ({
+          ...prev,
+          [userId]: true
+        }));
+        
+        setFollowerCounts(prev => ({
+          ...prev,
+          [userId]: (prev[userId] || 0) + 1
+        }));
+        
+        toast({
+          title: "Following",
+          description: "You are now following this user",
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling follow:", error);
       toast({
         title: "Error",
-        description: error.message,
-        variant: "destructive",
+        description: "Failed to update follow status",
+        variant: "destructive"
       });
     }
-  });
+  };
+
+  // Check if the current user is following a specific user
+  const checkFollowStatus = (userId: number): boolean => {
+    return isFollowing[userId] || false;
+  };
+
+  // Get the follower count for a specific user
+  const getFollowerCount = (userId: number): number => {
+    return followerCounts[userId] || 0;
+  };
   
-  // Unfollow user mutation
-  const unfollowUserMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      const response = await fetch(`/api/users/${userId}/unfollow`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to unfollow user");
-      }
-      
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      // Invalidate queries to update UI
-      queryClient.invalidateQueries({ queryKey: ['/api/users/following'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/users/discover'] });
-      
-      // For profiles, we need to invalidate the specific user
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${data.userId}`] });
-      
-      // Update lists that might include users
-      queryClient.invalidateQueries({ queryKey: ['/api/workouts/community'] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
-  const followUser = (userId: number, userName: string) => {
-    // Optimistically update the UI
-    if (!followedUsers.includes(userId)) {
-      setFollowedUsers(prev => [...prev, userId]);
-    }
+  // Refresh follow data for a specific user (useful after profile changes)
+  const refreshFollowData = async (userId: number) => {
+    if (!user) return;
     
-    // Call the API
-    followUserMutation.mutate(userId, {
-      onSuccess: (data) => {
-        toast({
-          title: `Following ${userName}`,
-          description: `You are now following ${userName}. You'll see their workouts in your feed.`,
-        });
-        
-        // Trigger immediate UI updates by invalidating relevant queries
-        queryClient.invalidateQueries({ queryKey: ['/api/users/discover'] });
-      },
-      onError: () => {
-        // Rollback optimistic update on error
-        setFollowedUsers(prev => prev.filter(id => id !== userId));
-      }
-    });
-  };
-
-  const unfollowUser = (userId: number, userName: string) => {
-    // Optimistically update the UI
-    if (followedUsers.includes(userId)) {
-      setFollowedUsers(prev => prev.filter(id => id !== userId));
+    try {
+      setIsLoading(true);
+      
+      // Check if current user is following the specified user
+      const statusResponse = await apiRequest("GET", `/api/users/${userId}/follow-status`);
+      const status = await statusResponse.json();
+      
+      // Get follower count for the specified user
+      const countResponse = await apiRequest("GET", `/api/users/${userId}/follower-count`);
+      const count = await countResponse.json();
+      
+      setIsFollowing(prev => ({
+        ...prev,
+        [userId]: status.isFollowing
+      }));
+      
+      setFollowerCounts(prev => ({
+        ...prev,
+        [userId]: count.count
+      }));
+    } catch (error) {
+      console.error("Error refreshing follow data:", error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Call the API
-    unfollowUserMutation.mutate(userId, {
-      onSuccess: (data) => {
-        toast({
-          title: `Unfollowed ${userName}`,
-          description: `You are no longer following ${userName}.`,
-        });
-        
-        // Trigger immediate UI updates by invalidating relevant queries
-        queryClient.invalidateQueries({ queryKey: ['/api/users/discover'] });
-      },
-      onError: () => {
-        // Rollback optimistic update on error
-        if (!followedUsers.includes(userId)) {
-          setFollowedUsers(prev => [...prev, userId]);
-        }
-      }
-    });
-  };
-
-  const isFollowing = (userId: number) => {
-    return followedUsers.includes(userId);
   };
 
   return (
-    <FollowContext.Provider value={{ 
-      followedUsers, 
-      followUser, 
-      unfollowUser, 
-      isFollowing,
-      isLoading,
-      error: error instanceof Error ? error : null
-    }}>
+    <FollowContext.Provider
+      value={{
+        isFollowing,
+        followerCounts,
+        isLoading,
+        toggleFollow,
+        checkFollowStatus,
+        getFollowerCount,
+        refreshFollowData
+      }}
+    >
       {children}
     </FollowContext.Provider>
   );
@@ -187,8 +195,8 @@ export function FollowProvider({ children }: { children: ReactNode }) {
 
 export function useFollow() {
   const context = useContext(FollowContext);
-  if (context === undefined) {
-    throw new Error('useFollow must be used within a FollowProvider');
+  if (!context) {
+    throw new Error("useFollow must be used within a FollowProvider");
   }
   return context;
 }

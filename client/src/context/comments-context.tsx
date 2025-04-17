@@ -2,14 +2,13 @@ import {
   createContext, 
   ReactNode, 
   useContext, 
-  useEffect, 
-  useState 
+  useState
 } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
-// Comment interface
+// Interface for a comment
 interface Comment {
   id: number;
   userId: number;
@@ -21,7 +20,7 @@ interface Comment {
   profilePicture?: string;
 }
 
-// Interface for CommentsContextType
+// Interface for the context type
 interface CommentsContextType {
   comments: Record<number, Comment[]>;
   isLoading: boolean;
@@ -32,7 +31,7 @@ interface CommentsContextType {
   loadCommentsForWorkout: (workoutId: number) => Promise<void>;
 }
 
-// Create context with a default value
+// Create the context with a default value
 const CommentsContext = createContext<CommentsContextType | null>(null);
 
 // Provider component
@@ -40,116 +39,129 @@ export function CommentsProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [comments, setComments] = useState<Record<number, Comment[]>>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadedWorkouts, setLoadedWorkouts] = useState<number[]>([]);
+  const [loadingWorkouts, setLoadingWorkouts] = useState<Record<number, boolean>>({});
+
+  // Get loading state
+  const isLoading = Object.values(loadingWorkouts).some(loading => loading);
 
   // Load comments for a specific workout
   const loadCommentsForWorkout = async (workoutId: number) => {
-    if (loadedWorkouts.includes(workoutId)) {
-      // Already loaded, no need to fetch again
-      return;
-    }
-    
+    // Skip if already loaded or loading
+    if (comments[workoutId] || loadingWorkouts[workoutId]) return;
+
     try {
-      setIsLoading(true);
+      setLoadingWorkouts(prev => ({
+        ...prev,
+        [workoutId]: true
+      }));
+
       const response = await apiRequest("GET", `/api/workouts/${workoutId}/comments`);
       const data = await response.json();
-      
+
       setComments(prev => ({
         ...prev,
         [workoutId]: data
       }));
-      
-      setLoadedWorkouts(prev => [...prev, workoutId]);
     } catch (error) {
       console.error(`Error loading comments for workout ${workoutId}:`, error);
     } finally {
-      setIsLoading(false);
+      setLoadingWorkouts(prev => ({
+        ...prev,
+        [workoutId]: false
+      }));
     }
   };
 
-  // Add a comment to a workout
+  // Add a new comment to a workout
   const addComment = async (workoutId: number, content: string) => {
-    try {
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to comment on workouts",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Create the new comment payload
-      const commentData = {
-        content,
-        workoutId
-      };
-      
-      // Send API request
-      const response = await apiRequest("POST", `/api/workouts/${workoutId}/comments`, commentData);
-      const newComment = await response.json();
-      
-      // Update comments state
-      setComments(prev => {
-        const workoutComments = prev[workoutId] || [];
-        return {
-          ...prev,
-          [workoutId]: [newComment, ...workoutComments]
-        };
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to comment on workouts",
+        variant: "destructive"
       });
-      
+      return;
+    }
+
+    if (!content.trim()) {
+      toast({
+        title: "Empty comment",
+        description: "Please enter a comment",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const response = await apiRequest("POST", `/api/workouts/${workoutId}/comments`, { content });
+      const newComment = await response.json();
+
+      // Add the username and profile picture to the comment
+      newComment.username = user.username;
+      newComment.profilePicture = user.profilePicture;
+
+      // Update comments state
+      setComments(prev => ({
+        ...prev,
+        [workoutId]: [...(prev[workoutId] || []), newComment]
+      }));
+
       toast({
         title: "Comment added",
-        description: "Your comment has been posted",
+        description: "Your comment has been added"
       });
     } catch (error) {
       console.error("Error adding comment:", error);
       toast({
-        title: "Error adding comment",
-        description: "Please try again later",
+        title: "Error",
+        description: "Failed to add comment",
         variant: "destructive"
       });
     }
   };
 
-  // Delete a comment
+  // Delete a comment from a workout
   const deleteComment = async (commentId: number, workoutId: number) => {
-    try {
-      // Send API request to delete
-      await apiRequest("DELETE", `/api/comments/${commentId}`);
-      
-      // Update comments state
-      setComments(prev => {
-        const workoutComments = prev[workoutId] || [];
-        return {
-          ...prev,
-          [workoutId]: workoutComments.filter(comment => comment.id !== commentId)
-        };
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to delete comments",
+        variant: "destructive"
       });
-      
+      return;
+    }
+
+    try {
+      await apiRequest("DELETE", `/api/comments/${commentId}`);
+
+      // Update comments state
+      setComments(prev => ({
+        ...prev,
+        [workoutId]: (prev[workoutId] || []).filter(comment => comment.id !== commentId)
+      }));
+
       toast({
         title: "Comment deleted",
-        description: "Your comment has been removed",
+        description: "Your comment has been removed"
       });
     } catch (error) {
       console.error("Error deleting comment:", error);
       toast({
-        title: "Error deleting comment",
-        description: "Please try again later",
+        title: "Error",
+        description: "Failed to delete comment",
         variant: "destructive"
       });
     }
   };
 
-  // Get comments for a workout
+  // Get all comments for a workout
   const getComments = (workoutId: number): Comment[] => {
     return comments[workoutId] || [];
   };
 
-  // Get comments count for a workout
+  // Get the count of comments for a workout
   const getCommentsCount = (workoutId: number): number => {
-    return (comments[workoutId] || []).length;
+    return comments[workoutId]?.length || 0;
   };
 
   return (

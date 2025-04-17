@@ -563,6 +563,26 @@ export default function UserProfile() {
                       </CardFooter>
                     </Card>
                   ))}
+                  
+                  {hasMore && (
+                    <div className="mt-8 flex justify-center">
+                      <Button
+                        onClick={loadMoreWorkouts}
+                        disabled={loadingMore}
+                        variant="outline"
+                        className="w-full md:w-auto"
+                      >
+                        {loadingMore ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading...
+                          </>
+                        ) : (
+                          "Load More Workouts"
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </TabsContent>
