@@ -86,11 +86,13 @@ export default function UserProfile() {
       
       return {
         ...user,
-        bio: "Fitness enthusiast passionate about strength training and healthy living.",
-        workoutsCount: 42,
-        followersCount: 158,
-        followingCount: 93,
-        isFollowing: false
+        // Use the values from the API response if they exist, or provide default values if not
+        bio: user.bio || "Fitness enthusiast passionate about strength training and healthy living.",
+        // These statistics now come from the API instead of being hardcoded
+        workoutsCount: user.workoutsCount || 0,
+        followersCount: user.followersCount || 0,
+        followingCount: user.followingCount || 0,
+        isFollowing: user.isFollowing || false
       };
     },
     enabled: !!parsedUserId,
@@ -101,16 +103,18 @@ export default function UserProfile() {
     queryKey: [`/api/workouts`, parsedUserId],
     queryFn: async () => {
       try {
-        // In a real app, this would fetch from a real endpoint with userId
-        // For now, we'll use the regular workout endpoint
-        const response = await fetch(`/api/workouts?userId=1`).then(res => res.json());
+        // Use the proper endpoint with the user ID
+        const response = await fetch(`/api/users/${parsedUserId}/workouts`).then(res => res.json());
         
-        // Add extra stats to workout data
-        const workoutsWithStats = response.map((workout: Workout) => ({
-          ...workout,
-          totalExercises: Math.floor(Math.random() * 8) + 1, // Mock data for demo
-          volume: Math.floor(Math.random() * 5000) + 500 // Mock data for demo
-        })) as WorkoutWithExtraStats[];
+        // Process workout data with real statistics if available
+        const workoutsWithStats = response.map((workout: Workout) => {
+          // If the workout already has these stats, use them, otherwise set defaults
+          return {
+            ...workout,
+            totalExercises: workout.totalExercises || 0,
+            volume: workout.volume || 0
+          };
+        }) as WorkoutWithExtraStats[];
         
         // Sort by date, newest first
         return workoutsWithStats.sort((a, b) => 
@@ -124,19 +128,20 @@ export default function UserProfile() {
     enabled: !!parsedUserId,
   });
   
-  // Query public goals
+  // Query public goals for this specific user
   const { data: userGoals = [], isLoading: goalsLoading } = useQuery({
-    queryKey: [`/api/goals/public`, parsedUserId],
+    queryKey: [`/api/users/${parsedUserId}/goals/public`],
     queryFn: async () => {
       try {
-        // In a real app, this would filter by userId
-        const response = await fetch('/api/goals/public').then(res => res.json());
+        // Fetch only public goals for this specific user
+        const response = await fetch(`/api/users/${parsedUserId}/goals/public`).then(res => res.json());
         return response;
       } catch (error) {
         console.error("Error fetching public goals:", error);
         return [];
       }
-    }
+    },
+    enabled: !!parsedUserId
   });
   
   // Using the follow context to maintain consistent follow state

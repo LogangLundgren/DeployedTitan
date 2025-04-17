@@ -588,6 +588,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get workouts for a specific user (for profile viewing)
+  app.get("/api/users/:id/workouts", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Get the user's basic workouts
+      const workouts = await storage.getWorkouts(userId);
+      
+      // Filter to only include public workouts if not the current user
+      let filteredWorkouts = workouts;
+      
+      // If authenticated and viewing another user's workouts, only show public ones
+      if (req.user && req.user.id !== userId) {
+        filteredWorkouts = workouts.filter(workout => workout.isPublic);
+      } else if (!req.user) {
+        // If not authenticated, only show public workouts
+        filteredWorkouts = workouts.filter(workout => workout.isPublic);
+      }
+      
+      // Get full details for each workout
+      const workoutsWithDetails = await Promise.all(
+        filteredWorkouts.map(async workout => {
+          const details = await storage.getWorkoutWithDetails(workout.id);
+          
+          if (!details) return null;
+          
+          // Calculate additional stats for each workout
+          const exercises = details.exercises || [];
+          const totalExercises = exercises.length;
+          let totalSets = 0;
+          let volume = 0;
+          
+          exercises.forEach(ex => {
+            // Count sets for each exercise
+            totalSets += ex.sets?.length || 0;
+            
+            // Calculate volume (weight × reps × sets)
+            ex.sets?.forEach(set => {
+              if (set.weight && set.reps) {
+                volume += set.weight * set.reps;
+              }
+            });
+          });
+          
+          return {
+            ...details,
+            totalExercises,
+            totalSets,
+            volume
+          };
+        })
+      );
+      
+      // Filter out any null results
+      const validWorkouts = workoutsWithDetails.filter(w => w !== null);
+      
+      res.status(200).json(validWorkouts);
+    } catch (error) {
+      console.error("Get user workouts error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Endpoint for community workouts (public workouts from all users)
   // No authentication required since these are public workouts
   app.get("/api/workouts/community", async (req, res) => {
