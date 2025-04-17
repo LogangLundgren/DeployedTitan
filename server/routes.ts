@@ -181,9 +181,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isFollowing = await storage.isFollowing(currentUserId, user.id);
             }
             
+            // Get accurate user statistics
+            const followers = await storage.getFollowers(user.id);
+            const followersCount = followers.length;
+            
+            const following = await storage.getFollowing(user.id);
+            const followingCount = following.length;
+            
+            const workouts = await storage.getWorkouts(user.id);
+            const workoutsCount = workouts.length;
+            
             return {
               ...userDataWithoutPassword,
               isFollowing,
+              followersCount,
+              followingCount,
+              workoutsCount
             };
           })
       );
@@ -325,22 +338,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if the current user follows this user
       let isFollowing = false;
-      let followerCount = 0;
       
-      // Get follower count regardless of authentication
+      // Get accurate user statistics
       const followers = await storage.getFollowers(userId);
-      followerCount = followers.length;
+      const followersCount = followers.length;
+      
+      const following = await storage.getFollowing(userId);
+      const followingCount = following.length;
+      
+      const workouts = await storage.getWorkouts(userId);
+      const workoutsCount = workouts.length;
       
       // Check follow status if authenticated
       if (req.user && req.user.id) {
         isFollowing = await storage.isFollowing(req.user.id, userId);
       }
       
-      // Return extended user info
+      // Return extended user info with accurate statistics
       res.status(200).json({
         ...userWithoutPassword,
         isFollowing,
-        followerCount
+        followersCount,
+        followingCount,
+        workoutsCount
       });
     } catch (error) {
       console.error("Get user error:", error);
