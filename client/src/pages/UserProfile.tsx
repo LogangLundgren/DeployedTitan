@@ -302,24 +302,19 @@ export default function UserProfile() {
     if (!userProfile) return;
     
     try {
-      // Toggle the follow state using the context
-      if (userIsFollowed) {
-        await unfollowUser(parsedUserId, userProfile.name);
-        setUserIsFollowed(false);
-        
-        // Decrement follower count when unfollowing
-        if (userProfile.followersCount && userProfile.followersCount > 0) {
-          userProfile.followersCount -= 1;
-        }
-      } else {
-        await followUser(parsedUserId, userProfile.name);
-        setUserIsFollowed(true);
-        
-        // Increment follower count when following
-        if (userProfile.followersCount !== undefined) {
-          userProfile.followersCount += 1;
-        }
+      // Update UI immediately for better user experience
+      const newFollowState = !userIsFollowed;
+      setUserIsFollowed(newFollowState);
+      
+      // Update follower count locally for immediate feedback
+      if (userProfile.followersCount !== undefined) {
+        userProfile.followersCount = newFollowState 
+          ? userProfile.followersCount + 1 
+          : Math.max(0, userProfile.followersCount - 1);
       }
+      
+      // Use the context's toggleFollow method which handles API call
+      toggleFollow(parsedUserId);
       
       // Refresh user stats to ensure counts are accurate
       try {
@@ -336,12 +331,21 @@ export default function UserProfile() {
         console.error("Failed to refresh stats:", error);
       }
     } catch (error) {
-      // If the follow/unfollow operation fails, reset the UI to the actual state
-      const statsResponse = await fetch(`/api/users/${parsedUserId}/stats`);
-      const stats = await statsResponse.json();
-      setUserIsFollowed(stats.isFollowing || false);
+      // If the operation fails, reset the UI to the previous state
+      setUserIsFollowed(!userIsFollowed);
       
-      // Toast notifications handled by the follow context
+      // If possible, get accurate state from server
+      try {
+        const statsResponse = await fetch(`/api/users/${parsedUserId}/stats`);
+        const stats = await statsResponse.json();
+        setUserIsFollowed(stats.isFollowing || false);
+        
+        if (userProfile) {
+          userProfile.followersCount = stats.followersCount || userProfile.followersCount;
+        }
+      } catch (e) {
+        console.error("Failed to refresh stats after error:", e);
+      }
     }
   };
   
