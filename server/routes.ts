@@ -1472,6 +1472,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+  
+  // Get public goals for a specific user (for profile viewing)
+  app.get("/api/users/:id/goals/public", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Check if the user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get all public goals for this specific user
+      const goals = await storage.getGoals(userId);
+      
+      // Filter to only include public goals
+      const publicGoals = goals.filter(goal => goal.isPublic);
+      
+      res.status(200).json(publicGoals);
+    } catch (error) {
+      console.error("Get user public goals error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
   app.get("/api/goals/:id", async (req, res) => {
     try {
