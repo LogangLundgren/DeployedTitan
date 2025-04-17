@@ -176,24 +176,62 @@ export default function UserProfile() {
   // Initialize follow state when userProfile data is loaded
   useEffect(() => {
     if (userProfile) {
-      const isCurrentlyFollowed = isFollowing(parsedUserId);
-      setUserIsFollowed(isCurrentlyFollowed);
+      // First check if the API told us whether we're following this user
+      if (typeof userProfile.isFollowing === 'boolean') {
+        setUserIsFollowed(userProfile.isFollowing);
+      } else {
+        // Fallback to context if API doesn't provide this info
+        const isCurrentlyFollowed = isFollowing(parsedUserId);
+        setUserIsFollowed(isCurrentlyFollowed);
+      }
     }
   }, [userProfile, parsedUserId, isFollowing]);
   
-  const handleFollowUser = () => {
+  const handleFollowUser = async () => {
     if (!userProfile) return;
     
-    // Toggle the follow state using the context
-    if (userIsFollowed) {
-      unfollowUser(parsedUserId, userProfile.name);
-      setUserIsFollowed(false);
-    } else {
-      followUser(parsedUserId, userProfile.name);
-      setUserIsFollowed(true);
+    try {
+      // Toggle the follow state using the context
+      if (userIsFollowed) {
+        await unfollowUser(parsedUserId, userProfile.name);
+        setUserIsFollowed(false);
+        
+        // Decrement follower count when unfollowing
+        if (userProfile.followersCount && userProfile.followersCount > 0) {
+          userProfile.followersCount -= 1;
+        }
+      } else {
+        await followUser(parsedUserId, userProfile.name);
+        setUserIsFollowed(true);
+        
+        // Increment follower count when following
+        if (userProfile.followersCount !== undefined) {
+          userProfile.followersCount += 1;
+        }
+      }
+      
+      // Refresh user stats to ensure counts are accurate
+      try {
+        const statsResponse = await fetch(`/api/users/${parsedUserId}/stats`);
+        const stats = await statsResponse.json();
+        
+        // Update with accurate counts from server
+        if (userProfile) {
+          userProfile.followersCount = stats.followersCount || userProfile.followersCount;
+          userProfile.followingCount = stats.followingCount || userProfile.followingCount;
+          userProfile.workoutsCount = stats.workoutsCount || userProfile.workoutsCount;
+        }
+      } catch (error) {
+        console.error("Failed to refresh stats:", error);
+      }
+    } catch (error) {
+      // If the follow/unfollow operation fails, reset the UI to the actual state
+      const statsResponse = await fetch(`/api/users/${parsedUserId}/stats`);
+      const stats = await statsResponse.json();
+      setUserIsFollowed(stats.isFollowing || false);
+      
+      // Toast notifications handled by the follow context
     }
-    
-    // Toast notifications now handled by the follow context
   };
   
   if (profileLoading) {
