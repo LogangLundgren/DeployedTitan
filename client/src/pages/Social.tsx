@@ -107,7 +107,7 @@ function formatTime(date: Date | string) {
 // Component for activity feed
 function ActivityFeed() {
   const { user } = useAuth();
-  const { followedUsers, followUser, unfollowUser, isFollowing } = useFollow();
+  const { isFollowing, toggleFollow, getFollowerCount } = useFollow();
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutWithDetails | null>(null);
   const [newComment, setNewComment] = useState<string>("");
   
@@ -127,7 +127,7 @@ function ActivityFeed() {
   const followUserMutation = useMutation({
     mutationFn: async (userId: number) => {
       // Determine action based on current following state
-      const currentlyFollowing = isFollowing(userId);
+      const currentlyFollowing = isFollowing ? isFollowing(userId) : false;
       const action = currentlyFollowing ? 'unfollow' : 'follow';
       
       // Call the appropriate API endpoint
@@ -153,12 +153,8 @@ function ActivityFeed() {
       const userObj = users.find((u: any) => u.id === result.userId);
       const userName = userObj?.name || "User";
       
-      // Update the follow context
-      if (result.isFollowing) {
-        followUser(result.userId, userName);
-      } else {
-        unfollowUser(result.userId, userName);
-      }
+      // Update the follow context - now using toggleFollow which handles both follow and unfollow
+      toggleFollow(result.userId);
       
       // Refresh the users data
       queryClient.invalidateQueries({ queryKey: ['/api/users/discover'] });
