@@ -137,23 +137,60 @@ export default function PersonalRecords({ userId }: PersonalRecordsProps) {
             maxWeight: 0,
             maxReps: 0,
             maxVolume: 0,
-            dateAchieved: typeof workout.date === 'string' ? workout.date : new Date(workout.date as any).toISOString(),
+            dateAchieved: (() => {
+              // Handle different date formats safely
+              try {
+                if (workout.date instanceof Date) {
+                  return workout.date.toISOString();
+                } else if (typeof workout.date === 'string') {
+                  // If it's already a string, ensure it's a valid date
+                  const date = new Date(workout.date);
+                  if (isNaN(date.getTime())) {
+                    console.warn("Invalid date string in PersonalRecords:", workout.date);
+                    return new Date().toISOString(); // Fallback to current date
+                  }
+                  return date.toISOString();
+                } else {
+                  // For any other case
+                  return new Date(String(workout.date)).toISOString();
+                }
+              } catch (e) {
+                console.error("Error parsing date in PersonalRecords:", e);
+                return new Date().toISOString(); // Fallback to current date
+              }
+            })(),
             workoutId: workout.id
+          };
+          
+          // Helper function to safely parse date
+          const parseSafeDate = () => {
+            try {
+              if (workout.date instanceof Date) {
+                return workout.date.toISOString();
+              } else if (typeof workout.date === 'string') {
+                return new Date(workout.date).toISOString();
+              } else {
+                return new Date(String(workout.date)).toISOString();
+              }
+            } catch (e) {
+              console.error("Error parsing date:", e);
+              return new Date().toISOString();
+            }
           };
           
           if (!currentRecord || maxWeight > currentRecord.maxWeight) {
             newRecord.maxWeight = maxWeight;
-            newRecord.dateAchieved = typeof workout.date === 'string' ? workout.date : new Date(workout.date as any).toISOString();
+            newRecord.dateAchieved = parseSafeDate();
           }
           
           if (!currentRecord || maxReps > currentRecord.maxReps) {
             newRecord.maxReps = maxReps;
-            newRecord.dateAchieved = typeof workout.date === 'string' ? workout.date : new Date(workout.date as any).toISOString();
+            newRecord.dateAchieved = parseSafeDate();
           }
           
           if (!currentRecord || maxVolume > currentRecord.maxVolume) {
             newRecord.maxVolume = maxVolume;
-            newRecord.dateAchieved = typeof workout.date === 'string' ? workout.date : new Date(workout.date as any).toISOString();
+            newRecord.dateAchieved = parseSafeDate();
           }
           
           personalRecords.set(exerciseId, newRecord);

@@ -84,6 +84,8 @@ export default function MonthlyComparison({ userId }: MonthlyComparisonProps) {
     const currentYearData = new Array(12).fill(0);
     const previousYearData = new Array(12).fill(0);
     
+    console.log(`Processing ${workouts.length} workouts for monthly comparison`);
+    
     workouts.forEach(workout => {
       // Handle different date formats safely
       let workoutDate: Date;
@@ -102,8 +104,16 @@ export default function MonthlyComparison({ userId }: MonthlyComparisonProps) {
         }
       }
       
+      // Verify we have a valid date
+      if (!workoutDate || isNaN(workoutDate.getTime())) {
+        console.error("Invalid date after parsing:", workout.date);
+        return; // Skip workouts with invalid dates
+      }
+      
       const workoutYear = workoutDate.getFullYear();
       const workoutMonth = workoutDate.getMonth();
+      
+      console.log(`Workout ID ${workout.id} date: ${workoutYear}-${workoutMonth+1}, comparing to ${currentYear} and ${previousYear}`);
       
       // Skip workouts older than previous year
       if (workoutYear < previousYear) return;
@@ -115,6 +125,10 @@ export default function MonthlyComparison({ userId }: MonthlyComparisonProps) {
       } else if (selectedMetric === 'sets') {
         // Count total sets across all exercises
         metricValue = workout.exercises.reduce((total, exercise) => {
+          if (!exercise.sets) {
+            console.warn(`Exercise in workout ${workout.id} missing sets array`);
+            return total;
+          }
           return total + exercise.sets.length;
         }, 0);
       } else if (selectedMetric === 'volume') {

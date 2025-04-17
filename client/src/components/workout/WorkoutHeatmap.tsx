@@ -88,14 +88,37 @@ export default function WorkoutHeatmap({ userId }: WorkoutHeatmapProps) {
     
     // Process each workout
     workouts.forEach(workout => {
-      const workoutDate = typeof workout.date === 'string' 
-        ? workout.date 
-        : format(new Date(workout.date), 'yyyy-MM-dd');
+      // Safely parse date from any format
+      let workoutDate: Date;
+      try {
+        if (workout.date instanceof Date) {
+          workoutDate = workout.date;
+        } else if (typeof workout.date === 'string') {
+          workoutDate = new Date(workout.date);
+        } else {
+          workoutDate = new Date(String(workout.date));
+        }
+        
+        // Verify we have a valid date
+        if (isNaN(workoutDate.getTime())) {
+          console.warn("Invalid date for workout ID:", workout.id, workout.date);
+          return; // Skip workouts with invalid dates
+        }
+      } catch (e) {
+        console.error("Error parsing workout date:", workout.date, e);
+        return; // Skip workouts with unparseable dates
+      }
+      
+      // Format as ISO date string for map lookup
+      const dateKey = format(workoutDate, 'yyyy-MM-dd');
       
       // Skip if workout date is not in our range
-      if (!dailyActivityMap.has(workoutDate)) return;
+      if (!dailyActivityMap.has(dateKey)) {
+        console.log(`Workout date ${dateKey} outside of date range`);
+        return;
+      }
       
-      const dayData = dailyActivityMap.get(workoutDate)!;
+      const dayData = dailyActivityMap.get(dateKey)!;
       
       // Increment workout count
       dayData.workouts += 1;
@@ -105,6 +128,11 @@ export default function WorkoutHeatmap({ userId }: WorkoutHeatmapProps) {
       let totalSets = 0;
       
       workout.exercises.forEach(exercise => {
+        if (!exercise.sets) {
+          console.warn(`Workout ID ${workout.id} missing sets array for exercise`);
+          return;
+        }
+        
         exercise.sets.forEach(set => {
           if (set.weight && set.reps) {
             totalVolume += set.weight * set.reps;
@@ -120,14 +148,16 @@ export default function WorkoutHeatmap({ userId }: WorkoutHeatmapProps) {
       dayData.volume += totalVolume;
       dayData.intensity = Math.max(dayData.intensity, intensity);
       
+      console.log(`Added workout ID ${workout.id} for date ${dateKey}: Volume=${totalVolume}, Sets=${totalSets}`);
+      
       // Create tooltip text
       dayData.tooltip = `${format(new Date(workoutDate), 'MMM d, yyyy')}\n`;
       dayData.tooltip += `Workouts: ${dayData.workouts}\n`;
       dayData.tooltip += `Volume: ${dayData.volume.toLocaleString()} lbs\n`;
       dayData.tooltip += `Intensity: ${Math.round(dayData.intensity)} lbs/set`;
       
-      // Update in map
-      dailyActivityMap.set(workoutDate, dayData);
+      // Update in map - use the string key (dateKey), not the Date object
+      dailyActivityMap.set(dateKey, dayData);
     });
     
     // Update value based on selected metric

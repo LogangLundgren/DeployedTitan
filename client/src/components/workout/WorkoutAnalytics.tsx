@@ -5,7 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, 
   Tooltip, Legend, ResponsiveContainer, Label
 } from "recharts";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 
 // Define the type for our filtered workout data
 interface WorkoutData {
@@ -35,19 +36,22 @@ export default function WorkoutAnalytics({ userId }: WorkoutAnalyticsProps) {
   // State for chart controls
   const [selectedExercise, setSelectedExercise] = useState<number | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('weight');
-  const [dateRange, setDateRange] = useState<number>(30); // Days
+  const [dateRange, setDateRange] = useState<number>(365); // Expanded default range to see more workouts
   const [chartData, setChartData] = useState<WorkoutData[]>([]);
+  const { toast } = useToast();
 
-  // Fetch recent workouts
-  const { data: recentWorkouts, isLoading: workoutsLoading } = useQuery<WorkoutWithDetails[]>({
-    queryKey: ['/api/workouts/recent'],
+  // Fetch all workouts instead of just recent ones to show more history
+  const { data: allWorkouts, isLoading: workoutsLoading } = useQuery<WorkoutWithDetails[]>({
+    queryKey: ['/api/workouts'],
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/workouts/recent?limit=50`);
-        if (!res.ok) throw new Error('Failed to fetch recent workouts');
-        return res.json();
+        const res = await fetch(`/api/workouts`);
+        if (!res.ok) throw new Error('Failed to fetch workouts');
+        const data = await res.json();
+        console.log("Fetched workout data:", data.length, "workouts");
+        return data;
       } catch (error) {
-        console.error('Error fetching recent workouts:', error);
+        console.error('Error fetching workouts:', error);
         return [];
       }
     }
@@ -71,67 +75,139 @@ export default function WorkoutAnalytics({ userId }: WorkoutAnalyticsProps) {
   // Set default selected exercise when data loads
   useEffect(() => {
     if (exercises && exercises.length > 0 && !selectedExercise) {
-      setSelectedExercise(exercises[0].id);
+      // Find the first exercise that exists in the workout data
+      if (allWorkouts && allWorkouts.length > 0) {
+        // Get all unique exercise IDs from workouts
+        const exerciseIdsInWorkouts = new Set<number>();
+        allWorkouts.forEach(workout => {
+          workout.exercises.forEach(ex => {
+            exerciseIdsInWorkouts.add(ex.exerciseDetails.id);
+          });
+        });
+        
+        // Find the first exercise that appears in workouts
+        const firstExerciseInWorkouts = exercises.find(ex => 
+          exerciseIdsInWorkouts.has(ex.id)
+        );
+        
+        if (firstExerciseInWorkouts) {
+          setSelectedExercise(firstExerciseInWorkouts.id);
+        } else {
+          // Fallback to first exercise if none found in workouts
+          setSelectedExercise(exercises[0].id);
+        }
+      } else {
+        setSelectedExercise(exercises[0].id);
+      }
     }
-  }, [exercises, selectedExercise]);
+  }, [exercises, allWorkouts, selectedExercise]);
+
+  // Helper function to safely parse dates
+  const parseWorkoutDate = (workoutDate: any): Date => {
+    if (workoutDate instanceof Date) {
+      return workoutDate;
+    }
+    
+    if (typeof workoutDate === 'string') {
+      // Try to parse as ISO date string
+      const parsedDate = parseISO(workoutDate);
+      if (isValid(parsedDate)) {
+        return parsedDate;
+      }
+      
+      // Try to parse as timestamp
+      const timestampDate = new Date(workoutDate);
+      if (isValid(timestampDate)) {
+        return timestampDate;
+      }
+    }
+    
+    // Fallback to current date if parsing fails
+    console.warn('Could not parse date:', workoutDate);
+    return new Date();
+  };
 
   // Process workout data for the selected exercise
   useEffect(() => {
-    if (recentWorkouts && selectedExercise) {
+    if (!allWorkouts || !selectedExercise) return;
+    
+    try {
       const filteredData: WorkoutData[] = [];
       
+      console.log(`Processing ${allWorkouts.length} workouts for exercise ID ${selectedExercise}`);
+      
       // Get all workouts that include the selected exercise
-      recentWorkouts.forEach(workout => {
+      allWorkouts.forEach(workout => {
+        if (!workout.exercises) {
+          console.warn("Workout missing exercises array:", workout.id);
+          return;
+        }
+        
         const exerciseEntry = workout.exercises.find(ex => 
-          ex.exerciseDetails.id === selectedExercise
+          ex.exerciseDetails?.id === selectedExercise
         );
         
-        if (exerciseEntry) {
+        if (exerciseEntry && exerciseEntry.sets) {
           // Calculate average weight and total reps for this exercise in this workout
           let totalWeight = 0;
           let totalReps = 0;
           let totalVolume = 0;
+          let validSetsCount = 0;
           
           exerciseEntry.sets.forEach(set => {
             if (set.weight && set.reps) {
               totalWeight += set.weight;
               totalReps += set.reps;
               totalVolume += set.weight * set.reps;
+              validSetsCount++;
             }
           });
           
-          const avgWeight = exerciseEntry.sets.length > 0 
-            ? totalWeight / exerciseEntry.sets.length 
-            : 0;
-          
-          // Convert workout.date (which is a timestamp from DB) to string format
-          let dateStr = '';
-          
-          if (typeof workout.date === 'string') {
-            dateStr = workout.date;
-          } else if (workout.date instanceof Date) {
-            dateStr = format(workout.date, 'yyyy-MM-dd');
-          } else {
-            // For any other type, convert to Date first then format
-            dateStr = format(new Date(String(workout.date)), 'yyyy-MM-dd');
+          // Only add to chart if we have valid sets
+          if (validSetsCount > 0) {
+            const avgWeight = totalWeight / validSetsCount;
+            
+            // Format the date consistently
+            const parsedDate = parseWorkoutDate(workout.date);
+            const dateStr = format(parsedDate, 'yyyy-MM-dd');
+            
+            filteredData.push({
+              date: dateStr,
+              weight: parseFloat(avgWeight.toFixed(1)),
+              reps: totalReps,
+              volume: totalVolume
+            });
           }
-          
-          filteredData.push({
-            date: dateStr,
-            weight: parseFloat(avgWeight.toFixed(1)),
-            reps: totalReps,
-            volume: totalVolume
-          });
         }
       });
+      
+      // Log the filtered data for debugging
+      console.log(`Found ${filteredData.length} workout entries for the selected exercise`);
       
       // Sort by date (oldest to newest)
       filteredData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       
+      // Apply date range filter if needed
+      const now = new Date();
+      const oldestAllowedDate = new Date();
+      oldestAllowedDate.setDate(now.getDate() - dateRange);
+      
+      const dateFilteredData = filteredData.filter(data => {
+        const dataDate = new Date(data.date);
+        return dataDate >= oldestAllowedDate;
+      });
+      
       // Update chart data
-      setChartData(filteredData);
+      setChartData(dateFilteredData);
+    } catch (error) {
+      console.error("Error processing workout data:", error);
+      toast({
+        title: "Error Processing Data",
+        description: "There was an issue preparing your workout data for the charts.",
+        variant: "destructive"
+      });
     }
-  }, [recentWorkouts, selectedExercise]);
+  }, [allWorkouts, selectedExercise, dateRange, toast]);
 
   // Get the current exercise name
   const currentExerciseName = exercises?.find(ex => ex.id === selectedExercise)?.name || 'Select Exercise';
@@ -188,6 +264,7 @@ export default function WorkoutAnalytics({ userId }: WorkoutAnalyticsProps) {
                 <SelectItem value="30">Last 30 days</SelectItem>
                 <SelectItem value="90">Last 90 days</SelectItem>
                 <SelectItem value="365">Last year</SelectItem>
+                <SelectItem value="1000">All time</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -277,8 +354,10 @@ export default function WorkoutAnalytics({ userId }: WorkoutAnalyticsProps) {
                 <p className="text-gray-400">
                   {exercisesLoading || workoutsLoading
                     ? "Loading data..."
+                    : allWorkouts && allWorkouts.length === 0
+                    ? "No workouts found. Log a workout to see analytics."
                     : selectedExercise 
-                      ? "No data available for selected exercise"
+                      ? "No data available for selected exercise in this date range"
                       : "Select an exercise to view progress"}
                 </p>
               </div>
