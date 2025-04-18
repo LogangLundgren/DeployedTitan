@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import WorkoutLogger from "@/pages/WorkoutLogger";
 import Templates from "@/pages/Templates";
 import TemplateDetail from "@/pages/TemplateDetail";
+import ExerciseLibrary from "@/pages/ExerciseLibrary";
 import Profile from "@/pages/Profile";
 import Goals from "@/pages/Goals";
 import Social from "@/pages/Social";
@@ -81,7 +82,9 @@ function Router() {
             {/* Protected routes */}
             <ProtectedRoute path="/" component={Dashboard} />
             <ProtectedRoute path="/workouts" component={WorkoutLogger} />
+            <ProtectedRoute path="/templates" component={Templates} />
             <ProtectedRoute path="/templates/:id" component={TemplateDetail} />
+            <ProtectedRoute path="/exercises" component={ExerciseLibrary} />
             <ProtectedRoute path="/profile" component={Profile} />
             <ProtectedRoute path="/goals" component={Goals} />
             <ProtectedRoute path="/social" component={Social} />

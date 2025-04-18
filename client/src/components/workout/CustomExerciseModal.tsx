@@ -58,9 +58,13 @@ const exerciseCategories = [
 
 interface CustomExerciseModalProps {
   onExerciseCreated?: () => void;
+  buttonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | null | undefined;
 }
 
-export default function CustomExerciseModal({ onExerciseCreated }: CustomExerciseModalProps) {
+export default function CustomExerciseModal({ 
+  onExerciseCreated,
+  buttonVariant = "outline" 
+}: CustomExerciseModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -133,7 +137,7 @@ export default function CustomExerciseModal({ onExerciseCreated }: CustomExercis
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant={buttonVariant}>
           <Plus className="mr-2 h-4 w-4" />
           Custom Exercise
         </Button>
