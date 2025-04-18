@@ -234,12 +234,6 @@ export default function WorkoutLogger() {
                   <div className="p-4 flex justify-between items-center border-b">
                     <h3 className="text-lg font-semibold">Your Workout Programs</h3>
                     <div className="flex gap-2">
-                      <CustomExerciseModal onExerciseCreated={() => {
-                        toast({
-                          title: "Exercise created",
-                          description: "Your custom exercise has been added to your library.",
-                        });
-                      }} />
                       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                         <DialogTrigger asChild>
                           <Button size="sm">

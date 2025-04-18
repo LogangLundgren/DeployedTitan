@@ -3431,8 +3431,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Delete custom exercise (only allow users to delete their own custom exercises)
-  app.delete("/api/exercises/custom/:id", requireAuth, async (req, res) => {
+  // Delete any exercise (custom or standard)
+  app.delete("/api/exercises/:id", requireAuth, async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
@@ -3444,21 +3444,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid exercise ID is required" });
       }
       
-      // Get the exercise to verify ownership
+      // Get the exercise to check if it exists
       const exercise = await storage.getExercise(exerciseId);
       
       if (!exercise) {
         return res.status(404).json({ message: "Exercise not found" });
-      }
-      
-      // Check if this is a custom exercise that belongs to the authenticated user
-      const exerciseUserId = exercise.userId || exercise.user_id;
-      const isCustomExercise = exercise.isCustom || false;
-      
-      if (exerciseUserId !== req.user.id || !isCustomExercise) {
-        return res.status(403).json({ 
-          message: "Access denied. You can only delete your own custom exercises."
-        });
       }
       
       // Delete the exercise
@@ -3469,6 +3459,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(204).end();
+    } catch (error) {
+      console.error("Delete exercise error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Keep backward compatibility for custom exercise deletion
+  app.delete("/api/exercises/custom/:id", requireAuth, async (req, res) => {
+    try {
+      // Redirect to the main delete endpoint
+      const exerciseId = parseInt(req.params.id);
+      
+      if (isNaN(exerciseId)) {
+        return res.status(400).json({ message: "Valid exercise ID is required" });
+      }
+      
+      // Forward to the main delete endpoint
+      const response = await fetch(`${req.protocol}://${req.get('host')}/api/exercises/${exerciseId}`, {
+        method: 'DELETE',
+        headers: {
+          'Cookie': req.headers.cookie || '',
+        }
+      });
+      
+      // Return the same status code
+      res.status(response.status).end();
     } catch (error) {
       console.error("Delete custom exercise error:", error);
       res.status(500).json({ message: "Internal server error" });
