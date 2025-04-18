@@ -7,6 +7,7 @@ import WorkoutHistory from "@/components/workout/WorkoutHistory";
 import TemplateSelector from "@/components/workout/TemplateSelector";
 import CustomExerciseModal from "@/components/workout/CustomExerciseModal";
 import EnhancedAnalytics from "@/components/workout/EnhancedAnalytics";
+import ExerciseLibrary from "./ExerciseLibrary";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
