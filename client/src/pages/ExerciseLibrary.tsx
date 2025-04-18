@@ -186,125 +186,79 @@ export default function ExerciseLibrary() {
         </div>
       )}
 
-      <Tabs defaultValue="standard" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="standard">Standard Exercises</TabsTrigger>
-          <TabsTrigger value="custom">My Custom Exercises</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="standard">
-          {isLoadingExercises ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin mr-2">
-                <Dumbbell size={24} />
-              </div>
-              <span>Loading exercises...</span>
+      <div className="mt-4">
+        {isLoadingExercises ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin mr-2">
+              <Dumbbell size={24} />
             </div>
-          ) : standardExercises.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {standardExercises.map((exercise) => (
-                <Card key={exercise.id}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">{exercise.name}</CardTitle>
-                    <CardDescription>
-                      {exercise.category}
-                      {exercise.subcategory && ` • ${exercise.subcategory}`}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-muted-foreground">
-                      Standard exercise
+            <span>Loading exercises...</span>
+          </div>
+        ) : exercises.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {exercises.filter(exercise => 
+              (searchQuery === '' || 
+                exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                exercise.category.toLowerCase().includes(searchQuery.toLowerCase())
+              ) &&
+              (filterCategory === 'all' || exercise.category === filterCategory)
+            ).map((exercise) => (
+              <Card key={exercise.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg">{exercise.name}</CardTitle>
+                      <CardDescription>
+                        {exercise.category}
+                        {exercise.subcategory && ` • ${exercise.subcategory}`}
+                      </CardDescription>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16 border border-dashed rounded-lg">
-              <Dumbbell className="mx-auto h-12 w-12 mb-4 text-muted-foreground" />
-              <h3 className="font-medium text-lg mb-2">No exercises found</h3>
-              <p className="text-muted-foreground mb-4">
-                {searchQuery || filterCategory !== 'all' 
-                  ? "Try adjusting your search filters" 
-                  : "Standard exercise library is empty"}
-              </p>
-              {(searchQuery || filterCategory !== 'all') && (
-                <Button variant="outline" onClick={resetFilters}>
-                  Clear Filters
-                </Button>
-              )}
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="custom">
-          {isLoadingExercises ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin mr-2">
-                <Dumbbell size={24} />
-              </div>
-              <span>Loading exercises...</span>
-            </div>
-          ) : customExercises.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {customExercises.map((exercise) => (
-                <Card key={exercise.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{exercise.name}</CardTitle>
-                        <CardDescription>
-                          {exercise.category}
-                          {exercise.subcategory && ` • ${exercise.subcategory}`}
-                        </CardDescription>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteClick(exercise)}
-                        className="h-8 w-8 text-destructive"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-muted-foreground">
-                      Custom exercise created by you
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16 border border-dashed rounded-lg">
-              <Dumbbell className="mx-auto h-12 w-12 mb-4 text-muted-foreground" />
-              <h3 className="font-medium text-lg mb-2">No custom exercises yet</h3>
-              <p className="text-muted-foreground mb-4">
-                {searchQuery || filterCategory !== 'all' 
-                  ? "Try adjusting your search filters" 
-                  : "Create custom exercises to build your personal library"}
-              </p>
-              {(searchQuery || filterCategory !== 'all') ? (
-                <Button variant="outline" onClick={resetFilters}>
-                  Clear Filters
-                </Button>
-              ) : (
-                <CustomExerciseModal 
-                  buttonVariant="default"
-                  onExerciseCreated={() => {
-                    toast({
-                      title: "Exercise created",
-                      description: "Your custom exercise has been added to your library.",
-                    });
-                    queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
-                  }} 
-                />
-              )}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteClick(exercise)}
+                      className="h-8 w-8 text-destructive"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground">
+                    {exercise.isCustom ? "Custom exercise" : "Standard exercise"}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16 border border-dashed rounded-lg">
+            <Dumbbell className="mx-auto h-12 w-12 mb-4 text-muted-foreground" />
+            <h3 className="font-medium text-lg mb-2">No exercises found</h3>
+            <p className="text-muted-foreground mb-4">
+              {searchQuery || filterCategory !== 'all' 
+                ? "Try adjusting your search filters" 
+                : "Your exercise library is empty"}
+            </p>
+            {(searchQuery || filterCategory !== 'all') ? (
+              <Button variant="outline" onClick={resetFilters}>
+                Clear Filters
+              </Button>
+            ) : (
+              <CustomExerciseModal 
+                buttonVariant="default"
+                onExerciseCreated={() => {
+                  toast({
+                    title: "Exercise created",
+                    description: "Your custom exercise has been added to your library.",
+                  });
+                  queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
+                }} 
+              />
+            )}
+          </div>
+        )}
+      </div>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
