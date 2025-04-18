@@ -623,11 +623,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         exercises = await storage.getExercises();
       }
       
-      // Filter to show standard exercises (no userId) and user's custom exercises
-      const filteredExercises = exercises.filter(exercise => 
-        exercise.userId === null || exercise.userId === undefined || 
-        (userId && exercise.userId === userId)
-      );
+      // Filter to show standard exercises (no userId/user_id) and user's custom exercises
+      // Handle both camelCase and snake_case property names
+      const filteredExercises = exercises.filter(exercise => {
+        const exerciseUserId = exercise.userId || exercise.user_id;
+        return exerciseUserId === null || exerciseUserId === undefined || 
+               (userId && exerciseUserId === userId);
+      });
       
       res.status(200).json(filteredExercises);
     } catch (error) {
