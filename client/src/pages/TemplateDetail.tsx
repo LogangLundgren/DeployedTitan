@@ -450,14 +450,28 @@ export default function TemplateDetail() {
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {allExercises?.map((exercise) => (
-                                      <SelectItem 
-                                        key={exercise.id} 
-                                        value={exercise.id.toString()}
-                                      >
-                                        {exercise.name} - {exercise.category}
-                                      </SelectItem>
-                                    ))}
+                                    {allExercises?.map((exercise) => {
+                                      // Check if this exercise is already in the template
+                                      const isAlreadyAdded = template?.exercises?.some(
+                                        e => e.exerciseId === exercise.id
+                                      );
+                                      
+                                      // Skip if already added to prevent duplicates
+                                      if (isAlreadyAdded) return null;
+                                      
+                                      // Add a label to show custom exercises
+                                      const isCustom = exercise.isCustom || exercise.userId;
+                                      
+                                      return (
+                                        <SelectItem 
+                                          key={exercise.id} 
+                                          value={exercise.id.toString()}
+                                        >
+                                          {exercise.name} - {exercise.category}
+                                          {isCustom && " (Custom)"}
+                                        </SelectItem>
+                                      );
+                                    })}
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
