@@ -41,7 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import Templates from "./Templates";
 import { useLocation, Link } from "wouter";
 
-type TabType = 'new' | 'history' | 'analytics';
+type TabType = 'new' | 'history' | 'analytics' | 'exercises';
 
 export default function WorkoutLogger() {
   const { toast } = useToast();
@@ -54,7 +54,7 @@ export default function WorkoutLogger() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
-    if (tabParam && ['new', 'history', 'analytics'].includes(tabParam)) {
+    if (tabParam && ['new', 'history', 'analytics', 'exercises'].includes(tabParam)) {
       setActiveTab(tabParam as TabType);
     } else if (tabParam === 'templates') {
       // Redirect templates tab to new (programs) tab
@@ -183,6 +183,20 @@ export default function WorkoutLogger() {
                     <path d="m19 9-5 5-4-4-3 3"/>
                   </svg>
                   Analytics
+                </div>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="exercises"
+                className="h-12 px-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none data-[state=active]:text-primary"
+              >
+                <div className="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 18h8"/>
+                    <path d="M3 22h18"/>
+                    <path d="M14 22a7 7 0 1 0 0-14h-4"/>
+                    <path d="M4 14.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Z"/>
+                  </svg>
+                  Exercises
                 </div>
               </TabsTrigger>
             </TabsList>
@@ -353,6 +367,31 @@ export default function WorkoutLogger() {
             
             <TabsContent value="analytics" className="p-0 m-0">
               <EnhancedAnalytics />
+            </TabsContent>
+            
+            <TabsContent value="exercises" className="p-0 m-0">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-gray-800">Exercise Library</h3>
+                  <CustomExerciseModal onExerciseCreated={() => {
+                    toast({
+                      title: "Exercise created",
+                      description: "Your custom exercise has been added to your library.",
+                    });
+                    queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
+                  }} />
+                </div>
+                
+                {/* Importing the ExerciseLibrary component */}
+                <div className="exercise-library-container">
+                  {/* We're reusing the component from the ExerciseLibrary page */}
+                  <div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {user && <ExerciseLibrary />}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </TabsContent>
           </CardContent>
         </Tabs>

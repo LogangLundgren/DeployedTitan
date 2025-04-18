@@ -82,7 +82,6 @@ function Router() {
             {/* Protected routes */}
             <ProtectedRoute path="/" component={Dashboard} />
             <ProtectedRoute path="/workouts" component={WorkoutLogger} />
-            <ProtectedRoute path="/templates" component={Templates} />
             <ProtectedRoute path="/templates/:id" component={TemplateDetail} />
             <ProtectedRoute path="/exercises" component={ExerciseLibrary} />
             <ProtectedRoute path="/profile" component={Profile} />
