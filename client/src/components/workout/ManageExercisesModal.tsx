@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Dumbbell, Trash2, AlertTriangle, ListFilter } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,8 +94,8 @@ export default function ManageExercisesModal({ exercises, onExerciseDeleted }: M
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Pencil className="mr-2 h-4 w-4" />
+          <Button variant="secondary" size="sm" className="flex items-center gap-2">
+            <ListFilter className="h-4 w-4" />
             Manage Exercises
           </Button>
         </DialogTrigger>

@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { CheckCircle2, Trash2, Plus, Dumbbell, Loader2, Edit, MoreVertical, Copy } from 'lucide-react';
+import { CheckCircle2, Trash2, Plus, Dumbbell, Loader2, Edit, MoreVertical, Copy, Pencil } from 'lucide-react';
 import CustomExerciseModal from '@/components/workout/CustomExerciseModal';
+import ManageExercisesModal from '@/components/workout/ManageExercisesModal';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -139,6 +140,18 @@ export default function Templates() {
     queryKey: ['/api/templates'],
     queryFn: async () => {
       const response = await fetch(`/api/templates`, {
+        credentials: 'include'
+      });
+      return await response.json();
+    },
+    enabled: !!user
+  });
+  
+  // Query to get exercises for the manage exercises modal
+  const { data: exercises = [] } = useQuery<Exercise[]>({
+    queryKey: ['/api/exercises'],
+    queryFn: async () => {
+      const response = await fetch(`/api/exercises`, {
         credentials: 'include'
       });
       return await response.json();
@@ -354,7 +367,18 @@ export default function Templates() {
                 title: "Exercise created",
                 description: "Your custom exercise has been added to your library.",
               });
+              queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
             }} />
+            <ManageExercisesModal 
+              exercises={exercises} 
+              onExerciseDeleted={() => {
+                toast({
+                  title: "Exercise deleted",
+                  description: "The custom exercise has been removed from your library.",
+                });
+                queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
+              }} 
+            />
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
