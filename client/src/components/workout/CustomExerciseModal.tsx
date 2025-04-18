@@ -38,26 +38,22 @@ import { Plus, Loader2 } from 'lucide-react';
 // Form validation schema
 const exerciseFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  category: z.string().min(1, 'Category is required'),
-  subcategory: z.string().optional()
+  category: z.string().min(1, 'Category is required')
 });
 
 // Form typed values
 type ExerciseFormValues = z.infer<typeof exerciseFormSchema>;
 
-// Exercise categories
+// Exercise categories matching the body parts in our system
 const exerciseCategories = [
-  'Chest',
+  'Arms',
   'Back',
+  'Chest',
+  'Core',
+  'Full Body',
   'Legs',
   'Shoulders',
-  'Arms',
-  'Core',
-  'Cardio',
-  'Full Body',
-  'Olympic',
-  'Functional',
-  'Other'
+  'Triceps'
 ];
 
 interface CustomExerciseModalProps {
@@ -75,8 +71,7 @@ export default function CustomExerciseModal({ onExerciseCreated }: CustomExercis
     resolver: zodResolver(exerciseFormSchema),
     defaultValues: {
       name: '',
-      category: '',
-      subcategory: ''
+      category: ''
     }
   });
 
@@ -191,27 +186,6 @@ export default function CustomExerciseModal({ onExerciseCreated }: CustomExercis
                   </Select>
                   <FormDescription>
                     The primary muscle group this exercise targets.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="subcategory"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subcategory (Optional)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="E.g., Compound, Isolation, etc." 
-                      {...field} 
-                      value={field.value || ''}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Optionally add a subcategory for more specific classification.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
