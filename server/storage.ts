@@ -49,6 +49,7 @@ export interface IStorage {
   getExercisesByCategory(category: string): Promise<Exercise[]>;
   getExercise(id: number): Promise<Exercise | undefined>;
   createExercise(exercise: InsertExercise): Promise<Exercise>;
+  deleteExercise(id: number): Promise<boolean>;
   
   // Workout operations
   getWorkouts(userId: number): Promise<Workout[]>;
@@ -486,6 +487,13 @@ export class MemStorage implements IStorage {
     };
     this.exercises.set(id, exercise);
     return exercise;
+  }
+  
+  async deleteExercise(id: number): Promise<boolean> {
+    if (!this.exercises.has(id)) {
+      return false;
+    }
+    return this.exercises.delete(id);
   }
   
   // Workout methods
@@ -3021,6 +3029,23 @@ export class DbStorage implements IStorage {
   async createExercise(exercise: InsertExercise): Promise<Exercise> {
     const result = await db.insert(exercises).values(exercise).returning();
     return result[0];
+  }
+  
+  async deleteExercise(id: number): Promise<boolean> {
+    try {
+      // Check if exercise exists
+      const exerciseExists = await this.getExercise(id);
+      if (!exerciseExists) {
+        return false;
+      }
+      
+      // Delete the exercise
+      const result = await db.delete(exercises).where(eq(exercises.id, id)).returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error("Delete exercise error:", error);
+      return false;
+    }
   }
   
   // Workout operations

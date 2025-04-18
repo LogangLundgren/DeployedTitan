@@ -3431,6 +3431,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Delete custom exercise (only allow users to delete their own custom exercises)
+  app.delete("/api/exercises/custom/:id", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const exerciseId = parseInt(req.params.id);
+      
+      if (isNaN(exerciseId)) {
+        return res.status(400).json({ message: "Valid exercise ID is required" });
+      }
+      
+      // Get the exercise to verify ownership
+      const exercise = await storage.getExercise(exerciseId);
+      
+      if (!exercise) {
+        return res.status(404).json({ message: "Exercise not found" });
+      }
+      
+      // Check if this is a custom exercise that belongs to the authenticated user
+      const exerciseUserId = exercise.userId || exercise.user_id;
+      const isCustomExercise = exercise.isCustom || false;
+      
+      if (exerciseUserId !== req.user.id || !isCustomExercise) {
+        return res.status(403).json({ 
+          message: "Access denied. You can only delete your own custom exercises."
+        });
+      }
+      
+      // Delete the exercise
+      const deleted = await storage.deleteExercise(exerciseId);
+      
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete exercise" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Delete custom exercise error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   app.post("/api/seed/workout-plans", async (req, res) => {
     try {
       // This endpoint is for development only
