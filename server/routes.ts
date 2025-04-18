@@ -614,6 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/exercises", async (req, res) => {
     try {
       const category = req.query.category as string;
+      const userId = req.user?.id; // Get user ID if authenticated
       let exercises;
       
       if (category) {
@@ -622,7 +623,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         exercises = await storage.getExercises();
       }
       
-      res.status(200).json(exercises);
+      // Filter to show standard exercises (no userId) and user's custom exercises
+      const filteredExercises = exercises.filter(exercise => 
+        exercise.userId === null || exercise.userId === undefined || 
+        (userId && exercise.userId === userId)
+      );
+      
+      res.status(200).json(filteredExercises);
     } catch (error) {
       console.error("Get exercises error:", error);
       res.status(500).json({ message: "Internal server error" });
