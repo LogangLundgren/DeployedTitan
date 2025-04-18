@@ -4,6 +4,7 @@ import { Link, useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { CheckCircle2, Trash2, Plus, Dumbbell, Loader2, Edit, MoreVertical, Copy } from 'lucide-react';
+import CustomExerciseModal from '@/components/workout/CustomExerciseModal';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -347,14 +348,21 @@ export default function Templates() {
               Create and manage reusable workout templates
             </p>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Template
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
+          <div className="flex gap-2">
+            <CustomExerciseModal onExerciseCreated={() => {
+              toast({
+                title: "Exercise created",
+                description: "Your custom exercise has been added to your library.",
+              });
+            }} />
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Template
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create Workout Template</DialogTitle>
                 <DialogDescription>

@@ -3386,31 +3386,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Development routes for testing/demo purposes
   // Custom Exercise route - allowing users to create their own exercises
-  app.post("/api/exercises/custom", async (req, res) => {
+  app.post("/api/exercises/custom", requireAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
       const exerciseData = insertExerciseSchema.safeParse(req.body);
       
       if (!exerciseData.success) {
         return res.status(400).json({ message: "Invalid exercise data", errors: exerciseData.error.errors });
       }
       
-      // Add isCustom flag to the exercise
+      // Add isCustom flag and ensure userId is the authenticated user
       const customExercise = {
         ...exerciseData.data,
+        userId: req.user.id, // Set userId to authenticated user
         isCustom: true,
       };
       
       const exercise = await storage.createExercise(customExercise);
       
       // Create notification for the user
-      if (exercise.userId) {
-        await storage.createNotification({
-          userId: exercise.userId,
-          title: "New Custom Exercise",
-          message: `You've created a new custom exercise: ${exercise.name}`,
-          type: "info"
-        });
-      }
+      await storage.createNotification({
+        userId: req.user.id,
+        title: "New Custom Exercise",
+        message: `You've created a new custom exercise: ${exercise.name}`,
+        type: "info"
+      });
       
       res.status(201).json(exercise);
     } catch (error) {
