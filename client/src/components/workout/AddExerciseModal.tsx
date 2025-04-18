@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Exercise } from "@shared/schema";
+import ManageExercisesModal from "./ManageExercisesModal";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface AddExerciseModalProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface AddExerciseModalProps {
 export default function AddExerciseModal({ isOpen, onClose, exercises, onAddExercise }: AddExerciseModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   
   const categories = Array.from(new Set(exercises.map(e => e.category)));
   
@@ -19,6 +22,11 @@ export default function AddExerciseModal({ isOpen, onClose, exercises, onAddExer
     const matchesCategory = selectedCategory ? exercise.category === selectedCategory : true;
     return matchesSearch && matchesCategory;
   });
+  
+  // Handle refreshing exercises after deletion
+  const handleExerciseDeleted = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
+  };
   
   if (!isOpen) return null;
   
@@ -156,19 +164,27 @@ export default function AddExerciseModal({ isOpen, onClose, exercises, onAddExer
           </div>
         </div>
         
-        <div className="border-t p-4 flex justify-end gap-3">
-          <button 
-            className="px-4 py-2 text-gray-400 hover:bg-gray-100 rounded-md"
-            onClick={onClose}
-          >
-            Cancel
-          </button>
-          <button 
-            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
-            onClick={onClose}
-          >
-            Close
-          </button>
+        <div className="border-t p-4 flex justify-between gap-3">
+          <div>
+            <ManageExercisesModal 
+              exercises={exercises} 
+              onExerciseDeleted={handleExerciseDeleted} 
+            />
+          </div>
+          <div className="flex gap-2">
+            <button 
+              className="px-4 py-2 text-gray-400 hover:bg-gray-100 rounded-md"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button 
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
