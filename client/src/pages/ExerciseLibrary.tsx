@@ -50,33 +50,15 @@ export default function ExerciseLibrary() {
     enabled: !!user
   });
 
-  // Filter standard exercises
-  const standardExercises = exercises.filter(exercise => 
-    !exercise.isCustom && 
-    (searchQuery === '' || 
-      exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      exercise.category.toLowerCase().includes(searchQuery.toLowerCase())
-    ) &&
-    (filterCategory === 'all' || exercise.category === filterCategory)
-  );
-
-  // Filter custom exercises (created by the user)
-  const customExercises = exercises.filter(exercise => 
-    (exercise.isCustom || exercise.userId === user?.id) && 
-    (searchQuery === '' || 
-      exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      exercise.category.toLowerCase().includes(searchQuery.toLowerCase())
-    ) &&
-    (filterCategory === 'all' || exercise.category === filterCategory)
-  );
+  // We no longer need to separate standard and custom exercises as we're showing them all together
 
   // Get unique categories for filtering
   const categories = [...new Set(exercises.map(exercise => exercise.category))].sort();
 
-  // Mutation for deleting a custom exercise
+  // Mutation for deleting any exercise
   const deleteExerciseMutation = useMutation({
     mutationFn: async (exerciseId: number) => {
-      const res = await apiRequest("DELETE", `/api/exercises/custom/${exerciseId}`);
+      const res = await apiRequest("DELETE", `/api/exercises/${exerciseId}`);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || "Failed to delete exercise");
@@ -86,7 +68,7 @@ export default function ExerciseLibrary() {
     onSuccess: () => {
       toast({
         title: "Exercise deleted",
-        description: "The custom exercise has been removed from your library.",
+        description: "The exercise has been removed from your library.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
       setIsDeleteDialogOpen(false);
