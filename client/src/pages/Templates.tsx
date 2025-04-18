@@ -363,86 +363,87 @@ export default function Templates() {
                 </Button>
               </DialogTrigger>
               <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Workout Template</DialogTitle>
-                <DialogDescription>
-                  Create a new workout template to reuse in future workouts.
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...createForm}>
-                <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
-                  <FormField
-                    control={createForm.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Push Day" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Brief description of this template..." 
-                            {...field} 
-                            value={field.value || ''}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value || ''}
-                        >
+                <DialogHeader>
+                  <DialogTitle>Create Workout Template</DialogTitle>
+                  <DialogDescription>
+                    Create a new workout template to reuse in future workouts.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...createForm}>
+                  <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
+                    <FormField
+                      control={createForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a category" />
-                            </SelectTrigger>
+                            <Input placeholder="e.g., Push Day" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Strength">Strength</SelectItem>
-                            <SelectItem value="Hypertrophy">Hypertrophy</SelectItem>
-                            <SelectItem value="Endurance">Endurance</SelectItem>
-                            <SelectItem value="HIIT">HIIT</SelectItem>
-                            <SelectItem value="Recovery">Recovery</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button 
-                      type="submit" 
-                      disabled={createTemplateMutation.isPending}
-                    >
-                      {createTemplateMutation.isPending && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <FormMessage />
+                        </FormItem>
                       )}
-                      Create Template
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+                    />
+                    <FormField
+                      control={createForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Brief description of this template..." 
+                              {...field} 
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={createForm.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Category</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value || ''}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Strength">Strength</SelectItem>
+                              <SelectItem value="Hypertrophy">Hypertrophy</SelectItem>
+                              <SelectItem value="Endurance">Endurance</SelectItem>
+                              <SelectItem value="HIIT">HIIT</SelectItem>
+                              <SelectItem value="Recovery">Recovery</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter>
+                      <Button 
+                        type="submit" 
+                        disabled={createTemplateMutation.isPending}
+                      >
+                        {createTemplateMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Create Template
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       )}
 
@@ -635,13 +636,13 @@ export default function Templates() {
         </div>
       )}
 
-      {/* Edit Template Dialog */}
+      {/* Edit template dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Template</DialogTitle>
             <DialogDescription>
-              Update your workout template details.
+              Make changes to your workout template.
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
@@ -683,7 +684,6 @@ export default function Templates() {
                     <FormLabel>Category</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      defaultValue={field.value || ''}
                       value={field.value || ''}
                     >
                       <FormControl>
@@ -719,7 +719,7 @@ export default function Templates() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete confirmation dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
