@@ -146,7 +146,6 @@ export default function AddExerciseModal({ isOpen, onClose, exercises, onAddExer
           <div className="border-t mt-4 pt-4">
             <CustomExerciseModal 
               onExerciseCreated={handleExerciseActionCompleted}
-              ref={customExerciseModalRef}
             />
           </div>
         </div>
