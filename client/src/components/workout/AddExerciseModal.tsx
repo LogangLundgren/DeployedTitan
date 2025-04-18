@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Exercise } from "@shared/schema";
 import ManageExercisesModal from "./ManageExercisesModal";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import CustomExerciseModal from "./CustomExerciseModal";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AddExerciseModalProps {
   isOpen: boolean;
@@ -23,8 +24,8 @@ export default function AddExerciseModal({ isOpen, onClose, exercises, onAddExer
     return matchesSearch && matchesCategory;
   });
   
-  // Handle refreshing exercises after deletion
-  const handleExerciseDeleted = () => {
+  // Handle refreshing exercises after creation or deletion
+  const handleExerciseActionCompleted = () => {
     queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
   };
   
@@ -143,24 +144,10 @@ export default function AddExerciseModal({ isOpen, onClose, exercises, onAddExer
           </div>
           
           <div className="border-t mt-4 pt-4">
-            <button className="w-full py-2 flex items-center justify-center gap-2 text-primary font-medium">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v8" />
-                <path d="M8 12h8" />
-              </svg>
-              Create Custom Exercise
-            </button>
+            <CustomExerciseModal 
+              onExerciseCreated={handleExerciseActionCompleted}
+              ref={customExerciseModalRef}
+            />
           </div>
         </div>
         
@@ -168,7 +155,7 @@ export default function AddExerciseModal({ isOpen, onClose, exercises, onAddExer
           <div>
             <ManageExercisesModal 
               exercises={exercises} 
-              onExerciseDeleted={handleExerciseDeleted} 
+              onExerciseDeleted={handleExerciseActionCompleted} 
             />
           </div>
           <div className="flex gap-2">
