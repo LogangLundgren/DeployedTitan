@@ -1454,15 +1454,43 @@ function PublicProfileView() {
 export default function Social() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [location, params] = useLocation();
+  const searchParams = new URLSearchParams(params);
+  const tabFromUrl = searchParams.get('tab');
+  const threadId = searchParams.get('thread');
+  
+  // Set initial activeTab based on URL or default to 'feed'
+  const [activeTab, setActiveTab] = useState<string>(tabFromUrl || 'feed');
+  
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    
+    // Update URL with new tab and preserve thread ID if present
+    const newParams = new URLSearchParams();
+    newParams.set('tab', value);
+    if (value === 'messages' && threadId) {
+      newParams.set('thread', threadId);
+    }
+    
+    // Update URL without triggering navigation
+    const newSearch = newParams.toString();
+    const newPath = location.includes('?') 
+      ? location.split('?')[0] + '?' + newSearch 
+      : location + '?' + newSearch;
+    
+    window.history.pushState({}, '', newPath);
+  };
   
   return (
     <main className="container py-6">
       <h1 className="text-3xl font-bold mb-8">Social</h1>
       
-      <Tabs defaultValue="feed" className="mb-6">
-        <TabsList className="mb-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
+        <TabsList className="mb-6 grid grid-cols-4">
           <TabsTrigger value="feed">Activity Feed</TabsTrigger>
           <TabsTrigger value="discover">Discover People</TabsTrigger>
+          <TabsTrigger value="messages">Messages</TabsTrigger>
           <TabsTrigger value="profile">My Public Profile</TabsTrigger>
         </TabsList>
         
@@ -1472,6 +1500,10 @@ export default function Social() {
         
         <TabsContent value="discover">
           <PeopleDiscover />
+        </TabsContent>
+        
+        <TabsContent value="messages">
+          <Messages />
         </TabsContent>
         
         <TabsContent value="profile">
