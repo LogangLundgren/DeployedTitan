@@ -165,6 +165,7 @@ function GoalsDisplay() {
 // User Feedback component
 function UserFeedbackForm() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [feedback, setFeedback] = useState("");
   const [subject, setSubject] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -182,19 +183,33 @@ function UserFeedbackForm() {
       return;
     }
     
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please log in to submit feedback.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      // In a real app, this would send the feedback to the server
-      // Example API call:
-      // await fetch('/api/feedback', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ subject, feedback }),
-      // });
+      // Send the feedback to the server using the user suggestions API
+      const response = await fetch('/api/user-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          subject: subject || "General Feedback",
+          content: feedback,
+          category: "Feature Request"
+        }),
+      });
       
-      // Simulate API delay for demo purposes
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        throw new Error('Failed to submit feedback');
+      }
       
       setSubmitted(true);
       setFeedback("");
