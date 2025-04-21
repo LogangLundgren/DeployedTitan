@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ export function ContactCoachButton({
 }: ContactCoachButtonProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const [message, setMessage] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -54,7 +54,7 @@ export function ContactCoachButton({
       });
       setMessage("");
       setOpen(false);
-      navigate(`/social?tab=messages&thread=${data.threadId}`);
+      setLocation(`/social?tab=messages&thread=${data.threadId}`);
     },
     onError: (error) => {
       toast({
@@ -75,7 +75,7 @@ export function ContactCoachButton({
   if (!user) {
     return (
       <Button
-        onClick={() => navigate("/auth")}
+        onClick={() => setLocation("/auth")}
         variant={variant}
         size={size}
         className={className}

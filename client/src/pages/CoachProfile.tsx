@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { ContactCoachButton } from '@/components/messages/ContactCoachButton';
 import { 
   ChevronLeft, 
   Star, 
@@ -27,15 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+// Dialog components removed as we now use ContactCoachButton
 
 interface User {
   id: number;
@@ -121,7 +114,6 @@ interface Review {
 export default function CoachProfile() {
   const params = useParams<{ id: string }>();
   const [location, setLocation] = useLocation();
-  const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const { toast } = useToast();
   const coachId = parseInt(params.id);
 
@@ -162,15 +154,7 @@ export default function CoachProfile() {
     enabled: !isNaN(coachId)
   });
 
-  const handleContactCoach = async () => {
-    // In a real app, this would send a message to the coach
-    toast({
-      title: "Message Sent",
-      description: "Your message has been sent to the coach. They will respond to you shortly.",
-      variant: "default",
-    });
-    setContactDialogOpen(false);
-  };
+  // Contact functionality now handled by ContactCoachButton component
 
   if (isLoading) {
     return (
@@ -514,13 +498,11 @@ export default function CoachProfile() {
                 <CardTitle className="text-lg">Contact {coach.user?.name || "Coach"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button 
-                  className="w-full" 
-                  onClick={() => setContactDialogOpen(true)}
-                >
-                  <MessageCircle className="mr-2 h-5 w-5" />
-                  Send Message
-                </Button>
+                <ContactCoachButton
+                  coachId={coach.id}
+                  coachName={coach.user?.name || "Coach"}
+                  className="w-full"
+                />
                 
                 {coach.isAvailableForHire ? (
                   <Badge className="w-full justify-center py-1.5" variant="outline">
@@ -571,44 +553,7 @@ export default function CoachProfile() {
         </div>
       </div>
 
-      {/* Contact Dialog */}
-      <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Contact {coach.user?.name || "Coach"}</DialogTitle>
-            <DialogDescription>
-              Send a message to {coach.user?.name || "this coach"} to discuss your fitness goals and how they can help you.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <textarea 
-              className="w-full min-h-[150px] p-3 border rounded-md"
-              placeholder="Enter your message..."
-            />
-            
-            <div className="flex flex-col gap-3 text-sm">
-              <div className="flex items-center">
-                <Mail className="mr-2 h-4 w-4 text-gray-500" />
-                <span>Response will be sent to your registered email</span>
-              </div>
-              <div className="flex items-center">
-                <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                <span>Typical response time: 24-48 hours</span>
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setContactDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleContactCoach}>
-              Send Message
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Contact functionality now handled by ContactCoachButton component */}
     </div>
   );
 }
