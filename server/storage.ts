@@ -4270,6 +4270,261 @@ export class DbStorage implements IStorage {
       return false;
     }
   }
+  
+  // Direct Messages Methods
+  
+  async createMessageThread(): Promise<MessageThread> {
+    try {
+      const [thread] = await db
+        .insert(messageThreads)
+        .values({})
+        .returning();
+      
+      return thread;
+    } catch (error) {
+      console.error("Error creating message thread:", error);
+      throw error;
+    }
+  }
+  
+  async addParticipantToThread(threadId: number, userId: number): Promise<MessageParticipant> {
+    try {
+      const [participant] = await db
+        .insert(messageParticipants)
+        .values({
+          threadId,
+          userId,
+          isRead: false
+        })
+        .returning();
+      
+      return participant;
+    } catch (error) {
+      console.error("Error adding participant to thread:", error);
+      throw error;
+    }
+  }
+  
+  async sendMessage(threadId: number, senderId: number, content: string): Promise<Message> {
+    try {
+      const [message] = await db
+        .insert(messages)
+        .values({
+          threadId,
+          senderId,
+          content
+        })
+        .returning();
+      
+      // Update thread updateAt timestamp
+      await db
+        .update(messageThreads)
+        .set({ 
+          updatedAt: new Date() 
+        })
+        .where(eq(messageThreads.id, threadId));
+      
+      // Mark as unread for all participants except sender
+      await db
+        .update(messageParticipants)
+        .set({ 
+          isRead: false 
+        })
+        .where(
+          and(
+            eq(messageParticipants.threadId, threadId),
+            ne(messageParticipants.userId, senderId)
+          )
+        );
+      
+      return message;
+    } catch (error) {
+      console.error("Error sending message:", error);
+      throw error;
+    }
+  }
+  
+  async getThreadsByUserId(userId: number): Promise<any[]> {
+    try {
+      // Get all threads where the user is a participant
+      const userThreads = await db
+        .select({
+          threadId: messageParticipants.threadId,
+          isRead: messageParticipants.isRead,
+          lastReadAt: messageParticipants.lastReadAt,
+          updatedAt: messageThreads.updatedAt
+        })
+        .from(messageParticipants)
+        .innerJoin(messageThreads, eq(messageParticipants.threadId, messageThreads.id))
+        .where(eq(messageParticipants.userId, userId))
+        .orderBy(desc(messageThreads.updatedAt));
+      
+      // For each thread, get participants and last message
+      const threadsWithDetails = await Promise.all(
+        userThreads.map(async (thread) => {
+          // Get all participants (excluding current user)
+          const participants = await db
+            .select({
+              userId: messageParticipants.userId,
+              username: users.username,
+              name: users.name
+            })
+            .from(messageParticipants)
+            .innerJoin(users, eq(messageParticipants.userId, users.id))
+            .where(
+              and(
+                eq(messageParticipants.threadId, thread.threadId),
+                ne(messageParticipants.userId, userId)
+              )
+            );
+          
+          // Get last message in thread
+          const [lastMessage] = await db
+            .select({
+              id: messages.id,
+              content: messages.content,
+              senderId: messages.senderId,
+              senderName: users.username,
+              createdAt: messages.createdAt
+            })
+            .from(messages)
+            .innerJoin(users, eq(messages.senderId, users.id))
+            .where(eq(messages.threadId, thread.threadId))
+            .orderBy(desc(messages.createdAt))
+            .limit(1);
+          
+          return {
+            threadId: thread.threadId,
+            participants,
+            lastMessage,
+            isRead: thread.isRead,
+            updatedAt: thread.updatedAt
+          };
+        })
+      );
+      
+      return threadsWithDetails;
+    } catch (error) {
+      console.error("Error getting threads by user ID:", error);
+      return [];
+    }
+  }
+  
+  async getThreadMessages(threadId: number, userId: number): Promise<any[]> {
+    try {
+      // First check if the user is a participant in this thread
+      const participant = await db
+        .select()
+        .from(messageParticipants)
+        .where(
+          and(
+            eq(messageParticipants.threadId, threadId),
+            eq(messageParticipants.userId, userId)
+          )
+        );
+      
+      if (participant.length === 0) {
+        throw new Error("User is not a participant in this thread");
+      }
+      
+      // Mark thread as read for this user
+      await db
+        .update(messageParticipants)
+        .set({ 
+          isRead: true,
+          lastReadAt: new Date()
+        })
+        .where(
+          and(
+            eq(messageParticipants.threadId, threadId),
+            eq(messageParticipants.userId, userId)
+          )
+        );
+      
+      // Get all messages with sender details
+      const messages = await db
+        .select({
+          id: messages.id,
+          senderId: messages.senderId,
+          content: messages.content,
+          createdAt: messages.createdAt,
+          senderName: users.username
+        })
+        .from(messages)
+        .innerJoin(users, eq(messages.senderId, users.id))
+        .where(eq(messages.threadId, threadId))
+        .orderBy(asc(messages.createdAt));
+      
+      return messages;
+    } catch (error) {
+      console.error("Error getting thread messages:", error);
+      return [];
+    }
+  }
+  
+  async getOrCreateThread(userId: number, otherUserId: number): Promise<number> {
+    try {
+      // Check if a thread already exists between these users
+      const existingThreads = await db
+        .select({
+          threadId: messageParticipants.threadId,
+          participantCount: sql`count(*)`.as('participant_count')
+        })
+        .from(messageParticipants)
+        .where(
+          or(
+            eq(messageParticipants.userId, userId),
+            eq(messageParticipants.userId, otherUserId)
+          )
+        )
+        .groupBy(messageParticipants.threadId)
+        .having(sql`count(*) = 2`);
+      
+      // Filter to find a thread where both users are participants
+      for (const threadInfo of existingThreads) {
+        const participants = await db
+          .select()
+          .from(messageParticipants)
+          .where(eq(messageParticipants.threadId, threadInfo.threadId));
+        
+        const userIds = new Set(participants.map(p => p.userId));
+        if (userIds.has(userId) && userIds.has(otherUserId)) {
+          return threadInfo.threadId;
+        }
+      }
+      
+      // If no thread exists, create a new one
+      const thread = await this.createMessageThread();
+      await this.addParticipantToThread(thread.id, userId);
+      await this.addParticipantToThread(thread.id, otherUserId);
+      
+      return thread.id;
+    } catch (error) {
+      console.error("Error getting or creating thread:", error);
+      throw error;
+    }
+  }
+  
+  async getUnreadMessageCount(userId: number): Promise<number> {
+    try {
+      const result = await db
+        .select({
+          count: sql`count(*)`.as('count')
+        })
+        .from(messageParticipants)
+        .where(
+          and(
+            eq(messageParticipants.userId, userId),
+            eq(messageParticipants.isRead, false)
+          )
+        );
+      
+      return parseInt(result[0].count.toString()) || 0;
+    } catch (error) {
+      console.error("Error getting unread message count:", error);
+      return 0;
+    }
+  }
 }
 
 // Use in-memory storage during development, database storage in production

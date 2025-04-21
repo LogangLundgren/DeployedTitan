@@ -551,3 +551,47 @@ export const insertUserSuggestionSchema = createInsertSchema(userSuggestions).pi
 
 export type UserSuggestion = typeof userSuggestions.$inferSelect;
 export type InsertUserSuggestion = z.infer<typeof insertUserSuggestionSchema>;
+
+// Direct messaging schema
+export const messageThreads = pgTable("message_threads", {
+  id: serial("id").primaryKey(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const messageParticipants = pgTable("message_participants", {
+  id: serial("id").primaryKey(),
+  threadId: integer("thread_id").references(() => messageThreads.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  isRead: boolean("is_read").default(false),
+  lastReadAt: timestamp("last_read_at"),
+});
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  threadId: integer("thread_id").references(() => messageThreads.id, { onDelete: "cascade" }).notNull(),
+  senderId: integer("sender_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMessageThreadSchema = createInsertSchema(messageThreads);
+export type MessageThread = typeof messageThreads.$inferSelect;
+export type InsertMessageThread = z.infer<typeof insertMessageThreadSchema>;
+
+export const insertMessageParticipantSchema = createInsertSchema(messageParticipants).pick({
+  threadId: true,
+  userId: true,
+  isRead: true,
+  lastReadAt: true,
+});
+export type MessageParticipant = typeof messageParticipants.$inferSelect;
+export type InsertMessageParticipant = z.infer<typeof insertMessageParticipantSchema>;
+
+export const insertMessageSchema = createInsertSchema(messages).pick({
+  threadId: true,
+  senderId: true,
+  content: true,
+});
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;

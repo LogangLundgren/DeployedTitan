@@ -4354,6 +4354,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Direct messaging routes
+  
+  // Get all message threads for the current user
+  app.get("/api/messages/threads", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const userId = req.session.userId;
+      const threads = await storage.getThreadsByUserId(userId);
+      res.json(threads);
+    } catch (error) {
+      console.error("Error fetching message threads:", error);
+      res.status(500).json({ message: "Failed to fetch message threads" });
+    }
+  });
+  
+  // Get message thread between the current user and another user, or create if doesn't exist
+  app.get("/api/messages/thread/:userId", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const currentUserId = req.session.userId;
+      const otherUserId = parseInt(req.params.userId);
+      
+      if (isNaN(otherUserId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Don't allow messaging yourself
+      if (currentUserId === otherUserId) {
+        return res.status(400).json({ message: "Cannot message yourself" });
+      }
+      
+      const threadId = await storage.getOrCreateThread(currentUserId, otherUserId);
+      res.json({ threadId });
+    } catch (error) {
+      console.error("Error getting or creating message thread:", error);
+      res.status(500).json({ message: "Failed to get or create message thread" });
+    }
+  });
+  
+  // Get messages in a thread
+  app.get("/api/messages/thread/:threadId/messages", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const userId = req.session.userId;
+      const threadId = parseInt(req.params.threadId);
+      
+      if (isNaN(threadId)) {
+        return res.status(400).json({ message: "Invalid thread ID" });
+      }
+      
+      const messages = await storage.getThreadMessages(threadId, userId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching thread messages:", error);
+      
+      if (error.message === "User is not a participant in this thread") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.status(500).json({ message: "Failed to fetch thread messages" });
+    }
+  });
+  
+  // Send a message
+  app.post("/api/messages/thread/:threadId/send", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const senderId = req.session.userId;
+      const threadId = parseInt(req.params.threadId);
+      const { content } = req.body;
+      
+      if (isNaN(threadId)) {
+        return res.status(400).json({ message: "Invalid thread ID" });
+      }
+      
+      if (!content || content.trim() === '') {
+        return res.status(400).json({ message: "Message content cannot be empty" });
+      }
+      
+      // Check if user is a participant in this thread
+      const participant = await db
+        .select()
+        .from(messageParticipants)
+        .where(
+          and(
+            eq(messageParticipants.threadId, threadId),
+            eq(messageParticipants.userId, senderId)
+          )
+        );
+        
+      if (participant.length === 0) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const message = await storage.sendMessage(threadId, senderId, content);
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+  
+  // Get unread message count
+  app.get("/api/messages/unread-count", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const userId = req.session.userId;
+      const count = await storage.getUnreadMessageCount(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching unread message count:", error);
+      res.status(500).json({ message: "Failed to fetch unread message count" });
+    }
+  });
+  
+  // Contact a coach (create a thread and send first message)
+  app.post("/api/coaches/:coachId/contact", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      const userId = req.session.userId;
+      const coachId = parseInt(req.params.coachId);
+      const { message } = req.body;
+      
+      if (isNaN(coachId)) {
+        return res.status(400).json({ message: "Invalid coach ID" });
+      }
+      
+      if (!message || message.trim() === '') {
+        return res.status(400).json({ message: "Message cannot be empty" });
+      }
+      
+      // Get the coach's user ID
+      const [coach] = await db
+        .select()
+        .from(coachProfiles)
+        .where(eq(coachProfiles.id, coachId));
+        
+      if (!coach) {
+        return res.status(404).json({ message: "Coach not found" });
+      }
+      
+      // Create or get a thread between the user and the coach
+      const threadId = await storage.getOrCreateThread(userId, coach.userId);
+      
+      // Send the message
+      const sentMessage = await storage.sendMessage(threadId, userId, message);
+      
+      res.status(201).json({ 
+        threadId,
+        message: sentMessage
+      });
+    } catch (error) {
+      console.error("Error contacting coach:", error);
+      res.status(500).json({ message: "Failed to contact coach" });
+    }
+  });
+  
   const httpServer = createServer(app);
 
   return httpServer;
