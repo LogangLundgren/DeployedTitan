@@ -4484,6 +4484,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Search for users to start a conversation with
+  app.get("/api/users/search", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const query = req.query.q as string;
+    const currentUserId = req.session.userId;
+    
+    if (!query || query.length < 2) {
+      return res.json([]);
+    }
+
+    try {
+      const users = await storage.searchUsers(query);
+      // Filter out the current user from results
+      const filteredUsers = users.filter(user => user.id !== currentUserId);
+      res.json(filteredUsers);
+    } catch (error) {
+      console.error("Error searching users:", error);
+      res.status(500).json({ message: "Failed to search users" });
+    }
+  });
+  
+  // Start a new conversation with a user
+  app.post("/api/messages/start-conversation", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const { userId, message } = req.body;
+    const currentUserId = req.session.userId;
+    
+    if (!userId || !message) {
+      return res.status(400).json({ message: "User ID and message are required" });
+    }
+
+    try {
+      // Check if thread already exists between these users
+      const threadId = await storage.getOrCreateThread(currentUserId, userId);
+      
+      // Send the message
+      const sentMessage = await storage.sendMessage(threadId, currentUserId, message);
+      
+      res.json({ threadId, message: sentMessage });
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      res.status(500).json({ message: "Failed to start conversation" });
+    }
+  });
+  
   // Contact a coach (create a thread and send first message)
   app.post("/api/coaches/:coachId/contact", async (req: Request, res: Response) => {
     if (!req.session.userId) {

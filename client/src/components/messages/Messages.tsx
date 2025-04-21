@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { UserSearchDialog } from "@/components/messages/UserSearchDialog";
 import {
   Card,
   CardContent,
@@ -171,6 +172,13 @@ export function Messages() {
         <div className="p-3 border-b">
           <h2 className="font-semibold">Messages</h2>
         </div>
+        
+        <div className="p-2">
+          <UserSearchDialog 
+            onThreadCreated={(threadId) => setActiveThread(threadId)} 
+          />
+        </div>
+        
         <ScrollArea className="flex-grow">
           {threads.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-4 text-center">
@@ -179,7 +187,7 @@ export function Messages() {
                 No conversations yet.
               </p>
               <p className="text-xs text-muted-foreground">
-                Start by messaging a user or coach.
+                Use the "New Message" button to start a conversation.
               </p>
             </div>
           ) : (
