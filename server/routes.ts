@@ -1,8 +1,10 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import Stripe from "stripe";
 import { hashPassword, verifyPassword, requireAuth, requireAuthWithUser, requireOwnership } from "./auth";
+import { eq, and, or, like, isNotNull } from "drizzle-orm";
 
 // Initialize Stripe with the secret key
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -4498,9 +4500,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const users = await storage.searchUsers(query);
-      // Filter out the current user from results
-      const filteredUsers = users.filter(user => user.id !== currentUserId);
+      // Fetch all users
+      const searchUsers = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          name: users.name
+        })
+        .from(users)
+        .where(
+          or(
+            like(users.username, `%${query}%`),
+            and(
+              isNotNull(users.name),
+              like(users.name, `%${query}%`)
+            )
+          )
+        );
+        
+      // Filter out the current user
+      const filteredUsers = Array.isArray(searchUsers) 
+        ? searchUsers.filter(user => user.id !== currentUserId)
+        : [];
+        
       res.json(filteredUsers);
     } catch (error) {
       console.error("Error searching users:", error);
