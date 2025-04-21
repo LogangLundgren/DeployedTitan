@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
-import { Link } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { useFollow } from "@/context/follow-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { Messages } from "@/components/messages/Messages";
 import { 
   Card,
   CardContent,
