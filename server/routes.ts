@@ -4500,20 +4500,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
+      // Import the users table from schema
+      const { users: usersTable } = await import("@shared/schema");
+      
       // Fetch all users
       const searchUsers = await db
         .select({
-          id: users.id,
-          username: users.username,
-          name: users.name
+          id: usersTable.id,
+          username: usersTable.username,
+          name: usersTable.name
         })
-        .from(users)
+        .from(usersTable)
         .where(
           or(
-            like(users.username, `%${query}%`),
+            like(usersTable.username, `%${query}%`),
             and(
-              isNotNull(users.name),
-              like(users.name, `%${query}%`)
+              isNotNull(usersTable.name),
+              like(usersTable.name, `%${query}%`)
             )
           )
         );

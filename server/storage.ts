@@ -4346,6 +4346,10 @@ export class DbStorage implements IStorage {
   
   async getThreadsByUserId(userId: number): Promise<any[]> {
     try {
+      // Import messaging tables from schema
+      const { messageThreads, messageParticipants, messages, users } = await import("@shared/schema");
+      const { eq, ne, and, desc } = await import("drizzle-orm");
+      
       // Get all threads where the user is a participant
       const userThreads = await db
         .select({
@@ -4412,6 +4416,10 @@ export class DbStorage implements IStorage {
   
   async getThreadMessages(threadId: number, userId: number): Promise<any[]> {
     try {
+      // Import messaging tables from schema
+      const { messageThreads, messageParticipants, messages, users } = await import("@shared/schema");
+      const { eq, and, asc } = await import("drizzle-orm");
+      
       // First check if the user is a participant in this thread
       const participant = await db
         .select()
@@ -4442,20 +4450,21 @@ export class DbStorage implements IStorage {
         );
       
       // Get all messages with sender details
-      const messages = await db
+      const messagesTable = messages; // Rename to avoid naming conflict
+      const messagesList = await db
         .select({
-          id: messages.id,
-          senderId: messages.senderId,
-          content: messages.content,
-          createdAt: messages.createdAt,
+          id: messagesTable.id,
+          senderId: messagesTable.senderId,
+          content: messagesTable.content,
+          createdAt: messagesTable.createdAt,
           senderName: users.username
         })
-        .from(messages)
-        .innerJoin(users, eq(messages.senderId, users.id))
-        .where(eq(messages.threadId, threadId))
-        .orderBy(asc(messages.createdAt));
+        .from(messagesTable)
+        .innerJoin(users, eq(messagesTable.senderId, users.id))
+        .where(eq(messagesTable.threadId, threadId))
+        .orderBy(asc(messagesTable.createdAt));
       
-      return messages;
+      return messagesList;
     } catch (error) {
       console.error("Error getting thread messages:", error);
       return [];
@@ -4464,6 +4473,11 @@ export class DbStorage implements IStorage {
   
   async getOrCreateThread(userId: number, otherUserId: number): Promise<number> {
     try {
+      // Import messaging tables from schema
+      const { messageThreads, messageParticipants, messages } = await import("@shared/schema");
+      const { eq, or } = await import("drizzle-orm");
+      const { sql } = await import("drizzle-orm/sql");
+      
       // Check if a thread already exists between these users
       const existingThreads = await db
         .select({
@@ -4507,6 +4521,11 @@ export class DbStorage implements IStorage {
   
   async getUnreadMessageCount(userId: number): Promise<number> {
     try {
+      // Import messaging tables from schema
+      const { messageParticipants } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const { sql } = await import("drizzle-orm/sql");
+      
       const result = await db
         .select({
           count: sql`count(*)`.as('count')
