@@ -815,49 +815,7 @@ export default function CreatePlan() {
                       </FormMessage>
                     </div>
 
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <FormLabel>Equipment</FormLabel>
-                        <Button 
-                          type="button" 
-                          variant="outline"
-                          size="sm"
-                          className="h-8"
-                          onClick={() => setAddEquipmentDialogOpen(true)}
-                        >
-                          <PlusCircle className="h-4 w-4 mr-1" />
-                          Add Equipment
-                        </Button>
-                      </div>
-                      {equipment.length > 0 ? (
-                        <ul className="space-y-2 mb-2">
-                          {equipment.map((item, index) => (
-                            <li key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                              <span>{item}</span>
-                              <Button 
-                                type="button" 
-                                variant="ghost" 
-                                size="sm"
-                                className="h-6 text-gray-500 hover:text-red-500"
-                                onClick={() => removeEquipment(index)}
-                              >
-                                Remove
-                              </Button>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <div className="bg-gray-50 p-4 rounded border border-gray-200 mb-2">
-                          <div className="flex items-center text-gray-500">
-                            <AlertCircle className="h-4 w-4 mr-2" />
-                            <span>No equipment added yet. Equipment is optional for your workout plan.</span>
-                          </div>
-                        </div>
-                      )}
-                      <FormMessage>
-                        {form.formState.errors.equipment?.message}
-                      </FormMessage>
-                    </div>
+                    {/* Equipment section removed as requested */}
                   </CardContent>
                   <CardFooter className="flex justify-between">
                     <Button 
@@ -1031,29 +989,7 @@ export default function CreatePlan() {
           </DialogContent>
         </Dialog>
         
-        {/* Add Equipment Dialog */}
-        <Dialog open={addEquipmentDialogOpen} onOpenChange={setAddEquipmentDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Equipment</DialogTitle>
-              <DialogDescription>
-                Enter an equipment item for your workout plan (optional).
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <Input 
-                placeholder="e.g. Barbell, Dumbbell, Kettlebell" 
-                value={newEquipment}
-                onChange={(e) => setNewEquipment(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddEquipment()}
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setAddEquipmentDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddEquipment}>Add Equipment</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Equipment Dialog removed as requested */}
       </div>
     </div>
   );
