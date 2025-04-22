@@ -316,20 +316,25 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState<number>(30); // Days
   const [chartData, setChartData] = useState<WorkoutData[]>([]);
 
-  // Fetch recent workouts
+  // Fetch recent workouts - these should be for the authenticated user only
   const { data: recentWorkouts, isLoading: workoutsLoading, refetch: refetchWorkouts } = useQuery<WorkoutWithDetails[]>({
     queryKey: ['/api/workouts/recent'],
     queryFn: async () => {
       try {
         const res = await fetch(`/api/workouts/recent?limit=10`);
-        if (!res.ok) throw new Error('Failed to fetch recent workouts');
+        if (!res.ok) {
+          console.log('Failed to fetch recent workouts. Status:', res.status);
+          return []; // Return empty array instead of throwing
+        }
         return res.json();
       } catch (error) {
         console.error('Error fetching recent workouts:', error);
-        return [];
+        return []; // Return empty array on error
       }
     },
-    enabled: !!user // Only run query if user is authenticated
+    enabled: !!user, // Only run query if user is authenticated
+    staleTime: 60000, // 1 minute cache
+    retry: false, // Don't retry on failure
   });
   
   // Listen for workout deletion events to refresh data

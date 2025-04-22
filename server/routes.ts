@@ -653,10 +653,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Exercise routes
-  app.get("/api/exercises", async (req, res) => {
+  app.get("/api/exercises", requireAuth, async (req, res) => {
     try {
       const category = req.query.category as string;
-      const userId = req.user?.id; // Get user ID if authenticated
+      // Get user ID from authenticated user
+      const userId = req.user.id; 
       let exercises;
       
       if (category) {
@@ -665,12 +666,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         exercises = await storage.getExercises();
       }
       
-      // Filter to show standard exercises (no userId/user_id) and user's custom exercises
-      // Handle both camelCase and snake_case property names
+      // Filter to show standard exercises (no userId) and user's custom exercises
       const filteredExercises = exercises.filter(exercise => {
+        // Handle both camelCase and snake_case property names
         const exerciseUserId = exercise.userId || exercise.user_id;
-        return exerciseUserId === null || exerciseUserId === undefined || 
-               (userId && exerciseUserId === userId);
+        
+        // Include all standard exercises (those without a userId) and the user's custom exercises
+        return exerciseUserId === null || exerciseUserId === undefined || exerciseUserId === userId;
       });
       
       res.status(200).json(filteredExercises);
@@ -1255,8 +1257,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/templates", requireAuth, async (req, res) => {
     try {
+      // Make sure we have a user ID
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
       // Clone the request body and add the authenticated user's ID
-      const requestBody = { ...req.body, userId: req.user?.id };
+      const requestBody = { ...req.body, userId: req.user.id };
       
       const templateData = insertTemplateSchema.safeParse(requestBody);
       
@@ -1517,12 +1524,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Valid template ID is required" });
       }
       
-      if (!req.user || !req.session.userId) {
+      if (!req.user || !req.user.id) {
         return res.status(401).json({ message: "Authentication required" });
       }
       
       const { isPublic } = req.body;
-      const userId = req.session.userId;
+      // Always use req.user.id for consistency instead of req.session.userId
+      const userId = req.user.id;
       
       // Get template with exercises
       const template = await storage.getTemplateWithExercises(templateId);
