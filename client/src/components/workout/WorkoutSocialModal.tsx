@@ -26,8 +26,11 @@ interface WorkoutSocialModalProps {
 }
 
 export default function WorkoutSocialModal({ workout, isOpen, onClose }: WorkoutSocialModalProps) {
-  const [caption, setCaption] = useState(workout.caption || "");
-  const [isPublic, setIsPublic] = useState(workout.isPublic || true);
+  // Debug workout object
+  console.log("Workout in social modal:", workout);
+  
+  const [caption, setCaption] = useState(workout?.caption || "");
+  const [isPublic, setIsPublic] = useState(workout?.isPublic || true);
   const [isComplete, setIsComplete] = useState(true);
   const [imageFiles, setImageFiles] = useState<FileList | null>(null);
   const { toast } = useToast();
@@ -36,6 +39,14 @@ export default function WorkoutSocialModal({ workout, isOpen, onClose }: Workout
   // Update the social aspects of the workout
   const updateWorkoutMutation = useMutation({
     mutationFn: async () => {
+      // Check if we have a valid workout ID
+      if (!workout?.id) {
+        console.error("No workout ID found in social modal");
+        throw new Error("No workout ID found. Cannot share workout.");
+      }
+      
+      console.log("Updating workout with ID:", workout.id);
+      
       // First, update the workout with caption and completion status
       const response = await apiRequest(
         "PATCH",
