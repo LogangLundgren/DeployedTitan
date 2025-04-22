@@ -877,7 +877,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: z.string().optional(),
         notes: z.string().nullable().optional(),
         caption: z.string().nullable().optional(),
-        mediaUrls: z.string().nullable().optional()
+        mediaUrls: z.string().nullable().optional(),
+        isPublic: z.boolean().optional(),
+        isComplete: z.boolean().optional()
       });
       
       const updateData = updateSchema.safeParse(req.body);

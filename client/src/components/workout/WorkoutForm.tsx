@@ -67,6 +67,8 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
   const userId = user?.id;
   
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [showSocialModal, setShowSocialModal] = useState(false);
+  const [savedWorkout, setSavedWorkout] = useState<Workout | null>(null);
   const [workoutName, setWorkoutName] = useState(workout?.name || "Monday Push Day");
   const [workoutDate, setWorkoutDate] = useState(
     workout?.date 
@@ -325,10 +327,12 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
         }
       }
       
-      // Navigate to history tab after saving
-      if (onWorkoutSaved) {
-        onWorkoutSaved();
-      }
+      // Set the saved workout and open the social sharing modal
+      setSavedWorkout(data);
+      setShowSocialModal(true);
+      
+      // Navigate to history tab after saving only if the user closes the social modal without sharing
+      // This is now handled in the social modal's onClose
     },
     onError: (error) => {
       toast({
@@ -564,6 +568,22 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
         exercises={availableExercises || []}
         onAddExercise={handleAddExercise}
       />
+      
+      {/* Social Sharing Modal */}
+      {savedWorkout && (
+        <WorkoutSocialModal 
+          workout={savedWorkout}
+          isOpen={showSocialModal}
+          onClose={() => {
+            setShowSocialModal(false);
+            setSavedWorkout(null);
+            // Now that the user has closed the social modal, proceed with the original navigation
+            if (onWorkoutSaved) {
+              onWorkoutSaved();
+            }
+          }}
+        />
+      )}
     </>
   );
 }

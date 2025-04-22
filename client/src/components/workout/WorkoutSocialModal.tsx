@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +31,7 @@ export default function WorkoutSocialModal({ workout, isOpen, onClose }: Workout
   const [isComplete, setIsComplete] = useState(true);
   const [imageFiles, setImageFiles] = useState<FileList | null>(null);
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   // Update the social aspects of the workout
   const updateWorkoutMutation = useMutation({
@@ -71,7 +71,7 @@ export default function WorkoutSocialModal({ workout, isOpen, onClose }: Workout
       // Close the modal and navigate to social feed if it was shared publicly
       onClose();
       if (isPublic) {
-        navigate("/social");
+        setLocation("/social");
       }
     },
     onError: (error) => {
