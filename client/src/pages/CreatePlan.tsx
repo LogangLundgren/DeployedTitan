@@ -289,7 +289,15 @@ export default function CreatePlan() {
           let errorMessage = `Failed to create workout plan (${planResponse.status})`;
           try {
             const errorData = await planResponse.json();
+            console.error('Detailed plan creation error:', errorData);
             errorMessage = errorData.message || errorMessage;
+            
+            // Add detailed error info if available
+            if (errorData.errors && Array.isArray(errorData.errors)) {
+              errorMessage += ': ' + errorData.errors.map((err: any) => 
+                `${err.path ? err.path.join('.') + ' - ' : ''}${err.message}`
+              ).join(', ');
+            }
           } catch (e) {
             console.error('Could not parse error response:', e);
           }

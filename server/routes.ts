@@ -2781,12 +2781,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create a custom validation schema with relaxed requirements
       const customWorkoutPlanSchema = insertWorkoutPlanSchema.extend({
-        description: z.string().min(4, { message: "Description must be at least 4 characters" })
+        description: z.string().min(4, { message: "Description must be at least 4 characters" }),
+        // Make sure equipment is properly handled
+        equipment: z.string().optional().default('[]')
       });
       
+      console.log("DEBUG: Raw workout plan data:", rawData);
       const workoutPlanData = customWorkoutPlanSchema.safeParse(rawData);
       
       if (!workoutPlanData.success) {
+        console.error("DEBUG: Workout plan validation failed:", workoutPlanData.error.errors);
         return res.status(400).json({ message: "Invalid workout plan data", errors: workoutPlanData.error.errors });
       }
       
