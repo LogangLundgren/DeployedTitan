@@ -467,8 +467,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get all users follower counts
-  app.get("/api/users/follower-counts", async (req: Request, res: Response) => {
+  // Get all users follower counts - IMPORTANT: This route MUST come before /api/users/:id
+  app.get("/api/follower-counts", async (req: Request, res: Response) => {
     try {
       // Since this is a publicly accessible endpoint for the UI
       // we don't need to enforce user authentication

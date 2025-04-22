@@ -52,8 +52,8 @@ export function FollowProvider({ children }: { children: ReactNode }) {
           }
         });
         
-        // Get follower counts
-        const countsResponse = await apiRequest("GET", "/api/users/follower-counts");
+        // Get follower counts - using new endpoint to avoid route conflict
+        const countsResponse = await apiRequest("GET", "/api/follower-counts");
         const counts = await countsResponse.json();
         
         counts.forEach((item: any) => {
