@@ -1745,9 +1745,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/goals", requireAuth, async (req, res) => {
     try {
-      // Modify the schema on the fly to parse date strings
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Modify the schema on the fly to parse date strings, omitting userId
       const goalSchema = z.object({
-        userId: z.number(),
         title: z.string(),
         description: z.string().optional(),
         targetValue: z.number(),
@@ -1767,7 +1770,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid goal data", errors: goalData.error.errors });
       }
       
-      const goal = await storage.createGoal(goalData.data);
+      // Add the authenticated user's ID to the goal data
+      const goalWithUserId = {
+        ...goalData.data,
+        userId: req.user.id // Use the authenticated user's ID
+      };
+      
+      const goal = await storage.createGoal(goalWithUserId);
       
       res.status(201).json(goal);
     } catch (error) {
@@ -1998,13 +2007,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/comments", requireAuth, async (req, res) => {
     try {
-      const commentData = insertCommentSchema.safeParse(req.body);
-      
-      if (!commentData.success) {
-        return res.status(400).json({ message: "Invalid comment data", errors: commentData.error.errors });
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
-      const comment = await storage.createComment(commentData.data);
+      // Make sure we're using a sanitized schema without userId
+      const commentBaseSchema = z.object({
+        workoutId: z.number(),
+        content: z.string(),
+        parentId: z.number().nullable().optional(),
+      });
+      
+      const commentDataRaw = commentBaseSchema.safeParse(req.body);
+      
+      if (!commentDataRaw.success) {
+        return res.status(400).json({ message: "Invalid comment data", errors: commentDataRaw.error.errors });
+      }
+      
+      // Add user ID from authenticated session
+      const commentData = {
+        ...commentDataRaw.data,
+        userId: req.user.id
+      };
+      
+      const comment = await storage.createComment(commentData);
       
       res.status(201).json(comment);
     } catch (error) {
@@ -2116,11 +2142,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/likes/toggle", requireAuth, async (req, res) => {
     try {
-      const { workoutId, userId } = req.body;
-      
-      if (!workoutId || !userId || isNaN(workoutId) || isNaN(userId)) {
-        return res.status(400).json({ message: "Valid workout ID and user ID are required" });
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ message: "Authentication required" });
       }
+      
+      const { workoutId } = req.body;
+      
+      if (!workoutId || isNaN(workoutId)) {
+        return res.status(400).json({ message: "Valid workout ID is required" });
+      }
+      
+      // Always use the authenticated user's ID for security
+      const userId = req.user.id;
       
       const result = await storage.toggleLike(workoutId, userId);
       

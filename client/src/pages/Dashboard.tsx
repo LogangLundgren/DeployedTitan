@@ -357,19 +357,25 @@ export default function Dashboard() {
     };
   }, [refetchWorkouts]);
 
-  // Fetch all exercises
+  // Fetch exercises (both standard and user-created) with auth
   const { data: exercises, isLoading: exercisesLoading } = useQuery<Exercise[]>({
     queryKey: ['/api/exercises'],
     queryFn: async () => {
       try {
         const res = await fetch('/api/exercises');
-        if (!res.ok) throw new Error('Failed to fetch exercises');
+        if (!res.ok) {
+          console.log('Failed to fetch exercises. Status:', res.status);
+          return []; // Return empty array instead of throwing
+        }
         return res.json();
       } catch (error) {
         console.error('Error fetching exercises:', error);
-        return [];
+        return []; // Return empty array on error
       }
-    }
+    },
+    enabled: !!user, // Only run query if user is authenticated
+    staleTime: 60000, // 1 minute cache
+    retry: false // Don't retry on failure
   });
   
   // Set default selected exercise when data loads
