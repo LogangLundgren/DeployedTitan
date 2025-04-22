@@ -2783,7 +2783,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customWorkoutPlanSchema = insertWorkoutPlanSchema.extend({
         description: z.string().min(4, { message: "Description must be at least 4 characters" }),
         // Make sure equipment is properly handled
-        equipment: z.string().optional().default('[]')
+        equipment: z.string().optional().default('[]'),
+        // Ensure we have a coachId or can fall back to the user ID
+        coachId: z.number().optional()
       });
       
       console.log("DEBUG: Raw workout plan data:", rawData);
@@ -2822,7 +2824,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const workoutPlan = await storage.createWorkoutPlan(workoutPlanData.data);
+      // Add coach ID if not provided in the request
+      const finalPlanData = {
+        ...workoutPlanData.data,
+        coachId: workoutPlanData.data.coachId || coach.id
+      };
+      
+      console.log("DEBUG: Final workout plan data with coachId:", finalPlanData);
+      
+      const workoutPlan = await storage.createWorkoutPlan(finalPlanData);
       
       res.status(201).json(workoutPlan);
     } catch (error) {

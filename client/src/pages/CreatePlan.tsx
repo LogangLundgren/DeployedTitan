@@ -492,8 +492,10 @@ export default function CreatePlan() {
 
     setIsSubmitting(true);
     
-    const planData = {
-      coachId: coachProfile?.id, // Will be handled on the server if null
+    // Make sure we have a coachId - use the authenticated user ID if no coach profile exists
+  // We'll ensure a coach profile is created on the server if needed
+  const planData = {
+      coachId: coachProfile?.id || user.id, // Use user ID if no coach profile yet
       title: values.title,
       description: values.description,
       price: values.price,
