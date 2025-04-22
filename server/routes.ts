@@ -467,6 +467,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get all users follower counts
+  app.get("/api/users/follower-counts", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const currentUserId = req.user?.id;
+      
+      if (!currentUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Get all active users
+      const users = await storage.getAllUsers();
+      
+      // Create an array of follower counts
+      const followerCounts = await Promise.all(
+        users.map(async (user) => {
+          const followers = await storage.getFollowers(user.id);
+          return {
+            userId: user.id,
+            count: followers.length
+          };
+        })
+      );
+      
+      res.json(followerCounts);
+    } catch (error) {
+      console.error("Error getting follower counts:", error);
+      res.status(500).json({ message: "Failed to get follower counts" });
+    }
+  });
+  
   // Get user followers
   app.get("/api/users/:id/followers", async (req, res) => {
     try {
