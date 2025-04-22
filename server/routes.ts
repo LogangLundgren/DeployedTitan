@@ -5,6 +5,8 @@ import { db } from "./db";
 import Stripe from "stripe";
 import { hashPassword, verifyPassword, requireAuth, requireAuthWithUser, requireOwnership } from "./auth";
 import { eq, and, or, like, isNotNull } from "drizzle-orm";
+import { handleBase64Upload, serveUploads } from "./fileUpload";
+import * as path from "path";
 
 // Initialize Stripe with the secret key
 if (!process.env.STRIPE_SECRET_KEY) {
