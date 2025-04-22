@@ -52,6 +52,7 @@ type MetricType = 'weight' | 'reps' | 'volume';
 function GoalsDisplay() {
   const { user } = useAuth();
   
+  // Get user's goals with proper user ID filtering
   const { data: goals = [], isLoading: goalsLoading } = useQuery({
     queryKey: ['/api/goals'],
     queryFn: () => fetch(`/api/goals`).then(res => {
@@ -60,7 +61,8 @@ function GoalsDisplay() {
       }
       return res.json();
     }),
-    enabled: !!user // Only run query if user is authenticated
+    enabled: !!user, // Only run query if user is authenticated
+    staleTime: 60000, // 1 minute cache to avoid excessive requests
   });
   
   // Helper function to calculate progress percentage
