@@ -71,13 +71,13 @@ function Router() {
   return (
     <div className="min-h-screen flex flex-col">
       <NotificationsProvider userId={userId}>
-        {!isAuthPage && <Header />}
-        {!isAuthPage && <Navigation />}
+        {/* Only show header, navigation, and footer when user is logged in and not on auth page */}
+        {!isAuthPage && user && <Header />}
+        {!isAuthPage && user && <Navigation />}
         <div className={!isAuthPage ? 'flex-1' : 'min-h-screen'}>
           <Switch>
             {/* Public routes */}
             <Route path="/auth" component={AuthPage} />
-            <Route path="/marketplace" component={Marketplace} />
             
             {/* Protected routes */}
             <ProtectedRoute path="/" component={Dashboard} />
@@ -87,6 +87,7 @@ function Router() {
             <ProtectedRoute path="/profile" component={Profile} />
             <ProtectedRoute path="/goals" component={Goals} />
             <ProtectedRoute path="/social" component={Social} />
+            <ProtectedRoute path="/marketplace" component={Marketplace} />
             <ProtectedRoute path="/workout-plans/:id" component={WorkoutPlanDetail} />
             <ProtectedRoute path="/purchased-plans/:id" component={PurchasedPlanDetail} />
             <ProtectedRoute path="/coaches/:id" component={CoachProfile} />
@@ -104,7 +105,7 @@ function Router() {
             <Route component={NotFound} />
           </Switch>
         </div>
-        {!isAuthPage && <Footer />}
+        {!isAuthPage && user && <Footer />}
         
         {/* Onboarding components */}
         {user && (
