@@ -257,6 +257,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
         };
         
         const workout = await apiRequest<Workout>('POST', '/api/workouts', workoutData);
+        console.log("New workout created:", workout);
         
         // Create workout exercises and sets
         for (const exercise of exercises) {
@@ -282,7 +283,10 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
           }
         }
         
-        return workout;
+        // Fetch the complete workout with details for both new and updated workouts
+        const completeWorkout = await apiRequest<WorkoutWithDetails>('GET', `/api/workouts/${workout.id}`);
+        console.log("Fetched complete workout:", completeWorkout);
+        return completeWorkout;
       }
     },
     onSuccess: async (data) => {
