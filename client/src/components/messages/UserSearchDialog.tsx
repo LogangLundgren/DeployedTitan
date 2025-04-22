@@ -64,12 +64,29 @@ export function UserSearchDialog({ onThreadCreated }: UserSearchDialogProps) {
     queryKey: ["/api/users/search", debouncedQuery],
     queryFn: async () => {
       try {
+        if (!debouncedQuery || debouncedQuery.length < 2) {
+          return [];
+        }
+        
+        console.log(`Searching for users with query: ${debouncedQuery}`);
         const res = await apiRequest("GET", `/api/users/search?q=${encodeURIComponent(debouncedQuery)}`);
+        
+        if (!res.ok) {
+          console.error(`Search request failed with status: ${res.status}`);
+          return [];
+        }
+        
         const data = await res.json();
         
-        // Check if the response is an array, if not, return an empty array
+        // Ensure we have a valid array of user objects
         if (Array.isArray(data)) {
-          return data;
+          console.log(`Found ${data.length} users matching query`);
+          return data.filter(user => 
+            user && 
+            typeof user === 'object' && 
+            'id' in user && 
+            'username' in user
+          );
         } else {
           console.error("Invalid response format:", data);
           return [];
@@ -80,6 +97,7 @@ export function UserSearchDialog({ onThreadCreated }: UserSearchDialogProps) {
       }
     },
     enabled: debouncedQuery.length > 1,
+    refetchOnWindowFocus: false,
   });
 
   // Start conversation mutation

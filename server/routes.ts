@@ -4571,40 +4571,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     if (!query || query.length < 2) {
+      // Always return an empty array for consistency
       return res.json([]);
     }
 
     try {
-      // Import the users table from schema
-      const { users: usersTable } = await import("@shared/schema");
+      // Get user data from storage which is more reliable
+      const allUsers = await storage.getAllUsers();
       
-      // Fetch all users
-      const searchUsers = await db
-        .select({
-          id: usersTable.id,
-          username: usersTable.username,
-          name: usersTable.name
-        })
-        .from(usersTable)
-        .where(
-          or(
-            like(usersTable.username, `%${query}%`),
-            and(
-              isNotNull(usersTable.name),
-              like(usersTable.name, `%${query}%`)
-            )
-          )
-        );
+      if (!Array.isArray(allUsers)) {
+        console.error("getAllUsers did not return an array:", allUsers);
+        return res.json([]); // Return empty array if result is invalid
+      }
+      
+      // Filter users based on the search query
+      const searchUsers = allUsers.filter(user => {
+        // Skip current user and deleted accounts
+        if (user.id === currentUserId || !user.username) {
+          return false;
+        }
         
-      // Filter out the current user
-      const filteredUsers = Array.isArray(searchUsers) 
-        ? searchUsers.filter(user => user.id !== currentUserId)
-        : [];
+        // Match by username or name
+        const usernameMatch = user.username.toLowerCase().includes(query.toLowerCase());
+        const nameMatch = user.name && user.name.toLowerCase().includes(query.toLowerCase());
         
-      res.json(filteredUsers);
+        return usernameMatch || nameMatch;
+      });
+      
+      // Map to only include necessary fields
+      const formattedUsers = searchUsers.map(user => ({
+        id: user.id,
+        username: user.username,
+        name: user.name
+      }));
+      
+      // Log the response for debugging
+      console.log(`Found ${formattedUsers.length} users matching query "${query}"`);
+      
+      res.json(formattedUsers);
     } catch (error) {
       console.error("Error searching users:", error);
-      res.status(500).json({ message: "Failed to search users" });
+      // Return empty array on error for consistent client behavior
+      res.json([]);
     }
   });
   
