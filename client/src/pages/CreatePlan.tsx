@@ -502,7 +502,7 @@ export default function CreatePlan() {
       durationWeeks: values.durationWeeks,
       difficultyLevel: values.difficultyLevel,
       category: values.category,
-      featuredImageUrl: values.featuredImageUrl || null,
+      featuredImageUrl: null, // Image URL field has been removed
       goals: values.goals,
       equipment: [], // Send empty equipment array as it's been removed
       // Preserve existing values for these fields in edit mode
@@ -742,29 +742,7 @@ export default function CreatePlan() {
                       />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="featuredImageUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Featured Image URL (optional)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                              <Input 
-                                className="pl-9" 
-                                placeholder="https://example.com/image.jpg" 
-                                {...field} 
-                              />
-                            </div>
-                          </FormControl>
-                          <FormDescription>
-                            An image that represents your workout plan
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {/* Featured image field removed as requested */}
 
                     <div>
                       <div className="flex items-center justify-between mb-2">

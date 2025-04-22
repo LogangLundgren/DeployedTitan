@@ -2801,33 +2801,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only coaches can create workout plans" });
       }
       
-      // Get coach profile or return default one if not found
-      let coach = await storage.getCoachProfile(req.user.id);
+      // Get coach profile by user ID
+      let coach = await storage.getCoachProfileByUser(req.user.id);
       
       // If coach profile doesn't exist, create a default coach profile
       if (!coach) {
-        coach = await storage.createCoachProfile({
-          userId: req.user.id,
-          title: "Coach",
-          biography: "",
-          experience: "",
-          specialties: "",
-          hourlyRate: 0,
-          isAvailableForHire: true,
-          rating: 0,
-          ratingsCount: 0,
-          isVerified: false
-        });
+        console.log(`Creating coach profile for user ID ${req.user.id} who is marked as a coach`);
+        
+        try {
+          coach = await storage.createCoachProfile({
+            userId: req.user.id,
+            title: "Coach",
+            biography: "Coach profile",
+            experience: "New coach",
+            specialties: "General fitness",
+            hourlyRate: 0,
+            isAvailableForHire: true
+          });
+          
+          console.log("Created coach profile successfully:", coach);
+        } catch (error) {
+          console.error("Error creating coach profile:", error);
+          return res.status(500).json({ message: "Failed to create coach profile" });
+        }
         
         if (!coach) {
           return res.status(500).json({ message: "Failed to create coach profile" });
         }
       }
       
-      // Add coach ID if not provided in the request
+      // Add coach ID from the coach profile
       const finalPlanData = {
         ...workoutPlanData.data,
-        coachId: workoutPlanData.data.coachId || coach.id
+        coachId: coach.id
       };
       
       console.log("DEBUG: Final workout plan data with coachId:", finalPlanData);
