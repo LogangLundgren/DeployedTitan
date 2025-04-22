@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { WorkoutWithExtraStats } from "@shared/schema";
 import { demoUsers } from "@/pages/Social";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLikes } from "@/context/likes-context";
 import WorkoutEditModal from "./WorkoutEditModal";
 import {
   Card,
@@ -38,8 +39,30 @@ interface WorkoutCardProps {
 export default function WorkoutCard({ workout, formatDate, formatTime }: WorkoutCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const { hasLiked, toggleLike, getLikesCount } = useLikes();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
   const isOwner = user && workout.userId === user.id;
+  
+  // Check if workout is liked by current user
+  const isLiked = hasLiked(workout.id);
+  const likesCount = getLikesCount(workout.id);
+  
+  // Fetch comment count
+  useEffect(() => {
+    const fetchCommentCount = async () => {
+      try {
+        const response = await apiRequest(`GET`, `/api/comments/${workout.id}`);
+        const comments = await response.json();
+        setCommentCount(comments.length);
+      } catch (error) {
+        console.error('Error fetching comments:', error);
+      }
+    };
+    
+    fetchCommentCount();
+  }, [workout.id]);
 
   // Format for display
   const userDisplayName = user && workout.userId === user.id 
@@ -170,19 +193,29 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
         </CardContent>
         <CardFooter className="pt-0 flex justify-between">
           <div className="flex space-x-4">
-            <Button variant="ghost" size="sm" className="h-8 px-2">
-              <Heart className="h-4 w-4 mr-1" />
-              Like
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={`h-8 px-2 ${isLiked ? 'text-red-500 hover:text-red-600' : ''}`}
+              onClick={() => toggleLike(workout.id)}
+            >
+              <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
+              {likesCount > 0 ? `${likesCount}` : 'Like'}
             </Button>
-            <Button variant="ghost" size="sm" className="h-8 px-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 px-2"
+              onClick={() => setLocation(`/workout/${workout.id}`)}
+            >
               <MessageCircle className="h-4 w-4 mr-1" />
-              Comment
+              {commentCount > 0 ? `${commentCount}` : 'Comment'}
             </Button>
           </div>
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => window.location.href = `/workout/${workout.id}`}
+            onClick={() => setLocation(`/workout/${workout.id}`)}
           >
             View Details
           </Button>
