@@ -106,9 +106,7 @@ export default function CreatePlan() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTemplates, setSelectedTemplates] = useState<number[]>([]);
   const [addGoalDialogOpen, setAddGoalDialogOpen] = useState(false);
-  const [addEquipmentDialogOpen, setAddEquipmentDialogOpen] = useState(false);
   const [newGoal, setNewGoal] = useState("");
-  const [newEquipment, setNewEquipment] = useState("");
   const [selectedTab, setSelectedTab] = useState("details");
   const [isEditMode, setIsEditMode] = useState(false);
   const [editPlanId, setEditPlanId] = useState<number | null>(null);
@@ -254,15 +252,7 @@ export default function CreatePlan() {
     setAddGoalDialogOpen(false);
   };
 
-  // Handle adding a new equipment item
-  const handleAddEquipment = () => {
-    if (newEquipment.trim() === "") return;
-    
-    const updatedEquipment = [...equipment, newEquipment.trim()];
-    form.setValue("equipment", updatedEquipment);
-    setNewEquipment("");
-    setAddEquipmentDialogOpen(false);
-  };
+  // Equipment-related functions removed as requested
 
   // Handle removing a goal
   const removeGoal = (index: number) => {
@@ -271,12 +261,7 @@ export default function CreatePlan() {
     form.setValue("goals", updatedGoals);
   };
 
-  // Handle removing an equipment item
-  const removeEquipment = (index: number) => {
-    const updatedEquipment = [...equipment];
-    updatedEquipment.splice(index, 1);
-    form.setValue("equipment", updatedEquipment);
-  };
+  // Equipment removal function removed as requested
 
   // Toggle template selection
   const toggleTemplateSelection = (templateId: number) => {
@@ -509,7 +494,7 @@ export default function CreatePlan() {
       category: values.category,
       featuredImageUrl: values.featuredImageUrl || null,
       goals: values.goals,
-      equipment: values.equipment,
+      equipment: [], // Send empty equipment array as it's been removed
       // Preserve existing values for these fields in edit mode
       isFeatured: isEditMode && planToEdit?.isFeatured ? planToEdit.isFeatured : false,
       isSoldOut: isEditMode && planToEdit?.isSoldOut ? planToEdit.isSoldOut : false,
