@@ -196,6 +196,14 @@ export interface TemplateWithExercises extends Template {
   })[];
 }
 
+export interface WorkoutWithExtraStats extends Workout {
+  totalExercises?: number;
+  volume?: number;
+  likesCount?: number;
+  commentsCount?: number;
+  isLikedByCurrentUser?: boolean;
+}
+
 // Notifications model
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),

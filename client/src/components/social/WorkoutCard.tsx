@@ -39,7 +39,7 @@ interface WorkoutCardProps {
 export default function WorkoutCard({ workout, formatDate, formatTime }: WorkoutCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [, navigate] = useLocation();
+  const [, setLocation] = useLocation();
   const { hasLiked, toggleLike, getLikesCount } = useLikes();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
@@ -206,7 +206,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
               variant="ghost" 
               size="sm" 
               className="h-8 px-2"
-              onClick={() => navigate(`/workouts/${workout.id}`)}
+              onClick={() => setLocation(`/workouts/${workout.id}`)}
             >
               <MessageCircle className="h-4 w-4 mr-1" />
               {commentCount > 0 ? `${commentCount}` : 'Comment'}
@@ -215,7 +215,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => navigate(`/workouts/${workout.id}`)}
+            onClick={() => setLocation(`/workouts/${workout.id}`)}
           >
             View Details
           </Button>
