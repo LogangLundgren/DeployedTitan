@@ -4552,13 +4552,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Search for users to start a conversation with
-  app.get("/api/users/search", async (req: Request, res: Response) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-
+  app.get("/api/users/search", requireAuth, async (req: Request, res: Response) => {
     const query = req.query.q as string;
-    const currentUserId = req.session.userId;
+    const currentUserId = req.user?.id;
     
     if (!query || query.length < 2) {
       return res.json([]);
