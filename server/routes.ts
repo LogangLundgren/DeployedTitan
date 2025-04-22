@@ -467,6 +467,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get the currently authenticated user's following list
+  app.get("/api/users/following", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user.id;
+      const following = await storage.getFollowing(userId);
+      
+      res.status(200).json(following);
+    } catch (error) {
+      console.error("Get user following error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Check if authenticated user is following a specific user
+  app.get("/api/users/:id/follow-status", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const followerId = req.user.id;
+      const followedId = parseInt(req.params.id);
+      
+      if (isNaN(followedId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const isFollowing = await storage.isFollowing(followerId, followedId);
+      
+      res.status(200).json({ isFollowing });
+    } catch (error) {
+      console.error("Check follow status error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get follower count for a specific user
+  app.get("/api/users/:id/follower-count", async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const followers = await storage.getFollowers(userId);
+      
+      res.status(200).json({ count: followers.length });
+    } catch (error) {
+      console.error("Get follower count error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Get all users follower counts - IMPORTANT: This route MUST come before /api/users/:id
   app.get("/api/follower-counts", async (req: Request, res: Response) => {
     try {
