@@ -2605,8 +2605,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Coach access required" });
       }
       
+      // First, get the coach profile to get the coach ID
+      const coachProfile = await storage.getCoachProfile(req.user.id);
+      
+      if (!coachProfile) {
+        console.log("Coach profile not found for user ID", req.user.id);
+        return res.status(200).json([]); // Return empty array if no coach profile
+      }
+      
+      console.log("Found coach profile for user", req.user.id, "with coach ID", coachProfile.id);
+      
       // Get all plans created by this coach (both published and unpublished)
-      const coachPlans = await storage.getWorkoutPlans(req.user.id, false);
+      const coachPlans = await storage.getWorkoutPlans(coachProfile.id, false);
+      
+      console.log("Found", coachPlans.length, "workout plans for coach ID", coachProfile.id);
       
       res.status(200).json(coachPlans);
     } catch (error) {
