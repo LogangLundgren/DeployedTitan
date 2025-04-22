@@ -30,7 +30,7 @@ interface RecentWorkoutsProps {
 export default function RecentWorkouts({ workouts, isLoading, onDelete }: RecentWorkoutsProps) {
   const [workoutToDelete, setWorkoutToDelete] = useState<WorkoutWithDetails | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const { deleteWorkout, isDeleting } = useWorkoutDelete();
   
@@ -137,7 +137,7 @@ export default function RecentWorkouts({ workouts, isLoading, onDelete }: Recent
                     className="cursor-pointer" 
                     onClick={(e) => {
                       e.stopPropagation();
-                      setLocation(`/workouts/${workout.id}`);
+                      navigate(`/workouts/${workout.id}`);
                     }}
                   >
                     <h4 className="font-semibold text-gray-800 group-hover:text-primary transition-colors">{workout.name}</h4>
@@ -173,7 +173,7 @@ export default function RecentWorkouts({ workouts, isLoading, onDelete }: Recent
                         <DropdownMenuItem 
                           onClick={(e) => {
                             e.stopPropagation();
-                            setLocation(`/workouts/${workout.id}`);
+                            navigate(`/workouts/${workout.id}`);
                           }}
                         >
                           <ExternalLink className="h-4 w-4 mr-2" />
@@ -237,8 +237,18 @@ export default function RecentWorkouts({ workouts, isLoading, onDelete }: Recent
                   </div>
                 </div>
                 
-                <div className="mt-4 text-xs text-right">
-                  <span className="text-primary group-hover:underline">View details →</span>
+                <div className="mt-4 text-right">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/workouts/${workout.id}`);
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View Details
+                  </Button>
                 </div>
               </div>
             </div>

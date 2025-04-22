@@ -1043,6 +1043,7 @@ function calculateProgress(current: number, target: number) {
 // Public Profile View component
 function PublicProfileView() {
   const { user } = useAuth(); // Get the authenticated user
+  const [, navigate] = useLocation();
   
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery({
@@ -1264,8 +1265,12 @@ function PublicProfileView() {
           )}
         </CardContent>
         <CardFooter>
-          <Button variant="outline" asChild className="w-full">
-            <Link href="/workouts">View All Workouts</Link>
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => navigate(`/users/${user?.id}`)}
+          >
+            View All Workouts
           </Button>
         </CardFooter>
       </Card>
