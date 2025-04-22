@@ -2801,8 +2801,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only coaches can create workout plans" });
       }
       
-      // Get coach profile by user ID
-      let coach = await storage.getCoachProfileByUser(req.user.id);
+      // Get coach profile by user ID (using the correct method)
+      let coach = await storage.getCoachProfile(req.user.id);
       
       // If coach profile doesn't exist, create a default coach profile
       if (!coach) {
