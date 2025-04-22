@@ -331,18 +331,19 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
         }
       }
       
-      // HARDCODED APPROACH TO FORCE THE MODAL TO APPEAR
+      // FORCED MODAL APPROACH WITH TIMEOUT
+      console.log("Starting social modal logic");
       if (data && data.id) {
         try {
-          console.log("Fetching workout details for social modal. Workout ID:", data.id);
+          console.log("Setting up workout for social modal. Workout ID:", data.id);
           
-          // Create a hardcoded workout object with the necessary fields, guaranteed to work
-          const workoutDetails = {
+          // Create a complete workout object with all fields explicitly defined
+          const workoutForModal = {
             id: data.id,
-            name: data.name || "My Workout",
-            date: data.date || new Date(),
-            notes: data.notes || "",
-            duration: data.duration || 0,
+            name: data.name || workoutName || "My Workout",
+            date: data.date || new Date(workoutDate),
+            notes: data.notes || workoutNotes || "",
+            duration: data.duration || duration || 0,
             userId: userId || 0,
             category: data.category || "Strength",
             isPublic: false,
@@ -351,17 +352,47 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
             isComplete: true
           };
           
-          console.log("Using workout details for social modal:", workoutDetails);
+          console.log("Prepared workout for social modal:", workoutForModal);
           
-          // Force the modal to appear
-          console.log("Setting workout in state and showing modal");
-          setSavedWorkout(workoutDetails);
-          setShowSocialModal(true);
+          // First set the workout data
+          setSavedWorkout(workoutForModal);
+          
+          // Using a timeout to ensure state updates have time to process
+          console.log("Using timeout to show social modal");
+          setTimeout(() => {
+            console.log("TIMEOUT EXECUTED - Setting modal state to true");
+            setShowSocialModal(true);
+          }, 300);
         } catch (error) {
           console.error("Error preparing workout details for social modal:", error);
         }
       } else {
         console.error("Missing workout data or ID for social modal", data);
+        
+        // Fallback approach - try with just workoutId if available
+        if (workoutId) {
+          console.log("Attempting fallback with workoutId:", workoutId);
+          const fallbackWorkout = {
+            id: workoutId,
+            name: workoutName || "My Workout",
+            date: new Date(workoutDate),
+            notes: workoutNotes || "",
+            duration: duration || 0,
+            userId: userId || 0,
+            category: "Strength",
+            isPublic: false,
+            caption: "",
+            mediaUrls: null,
+            isComplete: true
+          };
+          
+          setSavedWorkout(fallbackWorkout);
+          
+          setTimeout(() => {
+            console.log("FALLBACK TIMEOUT - Setting modal state to true");
+            setShowSocialModal(true);
+          }, 300);
+        }
       }
       
       // Navigate to history tab after saving only if the user closes the social modal without sharing
