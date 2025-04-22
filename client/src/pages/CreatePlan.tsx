@@ -195,7 +195,7 @@ export default function CreatePlan() {
       category: "",
       featuredImageUrl: "",
       goals: [],
-      equipment: []
+      equipment: [] // Equipment removed as requested
     },
   });
   
@@ -211,7 +211,7 @@ export default function CreatePlan() {
         category: planToEdit.category || "",
         featuredImageUrl: planToEdit.featuredImageUrl || "",
         goals: Array.isArray(planToEdit.goals) ? planToEdit.goals : [],
-        equipment: Array.isArray(planToEdit.equipment) ? planToEdit.equipment : []
+        equipment: [] // Always use empty array for equipment as it's been removed
       });
       
       // If we have templates in the plan, select them
@@ -240,7 +240,7 @@ export default function CreatePlan() {
   }, [isEditMode, planToEdit, form]);
 
   const goals = form.watch("goals");
-  const equipment = form.watch("equipment");
+  // Equipment watch removed
 
   // Handle adding a new goal
   const handleAddGoal = () => {
