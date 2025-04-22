@@ -2508,6 +2508,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Workout Plans routes
+  // Get coach's own workout plans (both published and unpublished)
+  app.get("/api/workout-plans/my-plans", requireAuth, async (req, res) => {
+    try {
+      if (!req.user || !req.user.isCoach) {
+        return res.status(403).json({ message: "Coach access required" });
+      }
+      
+      // Get all plans created by this coach (both published and unpublished)
+      const coachPlans = await storage.getWorkoutPlans(req.user.id, false);
+      
+      res.status(200).json(coachPlans);
+    } catch (error) {
+      console.error("Error getting coach plans:", error);
+      res.status(500).json({ message: "Failed to get coach plans" });
+    }
+  });
+
   app.get("/api/workout-plans", async (req, res) => {
     try {
       const coachId = req.query.coachId ? parseInt(req.query.coachId as string) : undefined;
