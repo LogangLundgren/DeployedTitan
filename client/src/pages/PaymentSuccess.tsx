@@ -26,8 +26,10 @@ export default function PaymentSuccess() {
 
   useEffect(() => {
     const confirmPayment = async () => {
-      if (!paymentIntent || !planId) {
-        setError('Missing payment information');
+      // For free plan purchases, there won't be a paymentIntent
+      // We just need to fetch the plan details
+      if (!planId) {
+        setError('Missing plan information');
         setIsProcessing(false);
         return;
       }
@@ -41,36 +43,39 @@ export default function PaymentSuccess() {
         const planData = await planResponse.json();
         setPlan(planData);
 
-        // Confirm the payment in our database
-        const confirmResponse = await fetch('/api/confirm-payment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            paymentIntentId: paymentIntent,
-            userId: 1, // In a real app, would come from auth context
-            planId: parseInt(planId),
-          })
-        });
+        // If we have a payment intent, it was a paid plan that needs confirmation
+        if (paymentIntent) {
+          // Confirm the payment in our database
+          const confirmResponse = await fetch('/api/confirm-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              paymentIntentId: paymentIntent,
+              planId: parseInt(planId)
+            })
+          });
 
-        if (!confirmResponse.ok) {
-          const errorData = await confirmResponse.json();
-          throw new Error(errorData.message || 'Failed to record purchase');
+          if (!confirmResponse.ok) {
+            const errorData = await confirmResponse.json();
+            throw new Error(errorData.message || 'Failed to record purchase');
+          }
         }
+        // If no payment intent, it was a free plan that was already processed
 
         setIsProcessing(false);
         toast({
-          title: 'Payment Successful!',
-          description: 'Your workout plan purchase has been completed.',
+          title: 'Success!',
+          description: `${planData.price === 0 ? 'Your free' : 'Your'} workout plan has been added to your account.`,
         });
       } catch (err: any) {
         console.error('Payment confirmation error:', err);
-        setError(err.message || 'An error occurred confirming your payment');
+        setError(err.message || 'An error occurred confirming your purchase');
         setIsProcessing(false);
         toast({
-          title: 'Error Confirming Payment',
-          description: 'There was a problem recording your purchase. Please contact support.',
+          title: 'Error Processing Your Order',
+          description: 'There was a problem completing your order. Please contact support.',
           variant: 'destructive',
         });
       }

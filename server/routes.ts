@@ -4587,8 +4587,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`CHECKOUT DEBUG - Found plan: ${plan.title}, price: ${plan.price}`);
       
-      // Create a payment intent
-      console.log("CHECKOUT DEBUG - Creating Stripe payment intent");
+      // If the plan is free, bypass Stripe and create a purchase directly
+      if (plan.price === 0) {
+        console.log("CHECKOUT DEBUG - Plan is free, bypassing Stripe payment");
+        
+        // Create a purchase record directly
+        const purchase = await storage.createPurchase({
+          userId: userId,
+          planId: parseInt(planId),
+          serviceId: null,
+          status: "completed",
+          amount: 0,
+          transactionId: `free-plan-${Date.now()}` // Use a special transaction ID format for free plans
+        });
+        
+        // Update the plan sales count
+        await storage.updateWorkoutPlan(plan.id, {
+          sales: (plan.sales || 0) + 1
+        });
+        
+        // Return success with special free plan indicator
+        return res.status(200).json({
+          success: true,
+          freeplan: true,
+          purchase,
+          planTitle: plan.title,
+          planPrice: 0
+        });
+      }
+      
+      // For paid plans, create a payment intent as before
+      console.log("CHECKOUT DEBUG - Creating Stripe payment intent for paid plan");
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(plan.price * 100), // Convert to cents
         currency: "usd",
@@ -4606,7 +4635,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientSecret: paymentIntent.client_secret,
         planTitle: plan.title,
         planPrice: plan.price,
-        paymentIntentId: paymentIntent.id 
+        paymentIntentId: paymentIntent.id,
+        freeplan: false
       });
     } catch (error: any) {
       console.error("Error initializing plan checkout:", error);

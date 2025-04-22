@@ -67,9 +67,17 @@ export default function PlanCheckout() {
           throw new Error(data.message || 'Failed to initialize checkout');
         }
         
+        // Check if this is a free plan which bypasses Stripe
+        if (data.freeplan === true) {
+          console.log("Free plan detected, skipping Stripe checkout");
+          // Redirect directly to payment success page with the plan ID
+          setLocation(`/payment-success?planId=${planId}`);
+          return;
+        }
+        
         console.log("Checkout initialized, redirecting with client secret");
         
-        // Redirect to the checkout page with the client secret
+        // Redirect to the checkout page with the client secret for paid plans
         setLocation(`/checkout?planId=${planId}&clientSecret=${data.clientSecret}`);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'An unexpected error occurred';
