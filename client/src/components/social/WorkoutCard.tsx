@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { WorkoutWithExtraStats, demoUsers } from "@/pages/Social";
+import { WorkoutWithExtraStats } from "@shared/schema";
+import { demoUsers } from "@/pages/Social";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";

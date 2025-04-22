@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { WorkoutWithDetails } from "@shared/schema";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Workout } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -12,43 +12,32 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Loader2 } from "lucide-react";
 
 interface WorkoutEditModalProps {
-  workout: WorkoutWithDetails | null;
+  workout: Workout;
   isOpen: boolean;
   onClose: () => void;
 }
 
 export default function WorkoutEditModal({ workout, isOpen, onClose }: WorkoutEditModalProps) {
   const { toast } = useToast();
-  const [caption, setCaption] = useState(workout?.notes || "");
-  const [name, setName] = useState(workout?.name || "");
-  const [isPublic, setIsPublic] = useState(workout?.isPublic || false);
-
-  // Reset form when workout changes
-  useEffect(() => {
-    if (workout) {
-      setCaption(workout.notes || "");
-      setName(workout.name || "");
-      setIsPublic(workout.isPublic || false);
-    }
-  }, [workout]);
-
+  const [name, setName] = useState(workout.name);
+  const [caption, setCaption] = useState(workout.caption || "");
+  const [notes, setNotes] = useState(workout.notes || "");
+  
   const updateWorkoutMutation = useMutation({
     mutationFn: async () => {
-      if (!workout) return null;
-
       const response = await apiRequest(
-        "PUT",
+        "PATCH",
         `/api/workouts/${workout.id}`,
         {
           name,
-          notes: caption,
-          isPublic
+          caption,
+          notes
         }
       );
 
@@ -62,12 +51,12 @@ export default function WorkoutEditModal({ workout, isOpen, onClose }: WorkoutEd
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['/api/workouts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/workouts/community'] });
-
+      
       toast({
         title: "Workout updated",
         description: "Your workout has been updated successfully"
       });
-
+      
       onClose();
     },
     onError: (error) => {
@@ -87,63 +76,70 @@ export default function WorkoutEditModal({ workout, isOpen, onClose }: WorkoutEd
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Edit Workout Post</DialogTitle>
-            <DialogDescription>
-              Update your workout details and social sharing options
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="workout-name">Workout Name</Label>
-              <Input
-                id="workout-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter workout name"
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="caption">Caption</Label>
-              <Textarea
-                id="caption"
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="Add a caption to your workout..."
-                rows={4}
-              />
-              <p className="text-sm text-muted-foreground">
-                This caption will appear on your social feed posts.
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="public"
-                checked={isPublic}
-                onCheckedChange={setIsPublic}
-              />
-              <Label htmlFor="public">Make this workout public</Label>
-            </div>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Edit Workout</DialogTitle>
+          <DialogDescription>
+            Update your workout details and caption.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Workout Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           </div>
           
-          <DialogFooter className="sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
+          <div className="space-y-2">
+            <Label htmlFor="caption">Caption</Label>
+            <Textarea
+              id="caption"
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Add a caption to your workout..."
+              className="resize-none"
+              rows={3}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              value={notes || ""}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any additional notes..."
+              className="resize-none"
+              rows={3}
+            />
+          </div>
+          
+          <DialogFooter className="mt-6">
+            <Button 
+              type="button" 
+              variant="outline" 
               onClick={onClose}
+              disabled={updateWorkoutMutation.isPending}
             >
               Cancel
             </Button>
-            <Button
+            <Button 
               type="submit"
               disabled={updateWorkoutMutation.isPending}
             >
-              {updateWorkoutMutation.isPending ? "Saving..." : "Save Changes"}
+              {updateWorkoutMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </DialogFooter>
         </form>

@@ -851,6 +851,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // PATCH endpoint specifically for social updates (caption, mediaUrls)
+  app.patch("/api/workouts/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Valid workout ID is required" });
+      }
+      
+      // Check if the workout belongs to the current user
+      const existingWorkout = await storage.getWorkout(id);
+      if (!existingWorkout) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      
+      // Ensure the workout belongs to the authenticated user
+      if (existingWorkout.userId !== req.user?.id) {
+        return res.status(403).json({ 
+          message: "Access denied. You can only modify your own workouts." 
+        });
+      }
+      
+      const updateSchema = z.object({
+        name: z.string().optional(),
+        notes: z.string().nullable().optional(),
+        caption: z.string().nullable().optional(),
+        mediaUrls: z.string().nullable().optional()
+      });
+      
+      const updateData = updateSchema.safeParse(req.body);
+      
+      if (!updateData.success) {
+        return res.status(400).json({ message: "Invalid update data", errors: updateData.error.errors });
+      }
+      
+      const updatePayload: Partial<Workout> = {
+        ...updateData.data
+      };
+      
+      const updatedWorkout = await storage.updateWorkout(id, updatePayload);
+      
+      if (!updatedWorkout) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      
+      res.status(200).json(updatedWorkout);
+    } catch (error) {
+      console.error("Update workout caption error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.put("/api/workouts/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -877,7 +929,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         date: z.coerce.date().optional(),
         notes: z.string().optional(),
         duration: z.number().optional(),
-        category: z.string().optional()
+        category: z.string().optional(),
+        caption: z.string().nullable().optional(),
+        mediaUrls: z.string().nullable().optional(),
+        isComplete: z.boolean().optional()
       });
       
       const updateData = updateSchema.safeParse(req.body);
