@@ -331,11 +331,23 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
         }
       }
       
-      // Set the saved workout and open the social sharing modal
-      console.log("Setting saved workout for social modal:", data);
+      // Get the workout details directly before showing the social modal
       if (data && data.id) {
-        setSavedWorkout(data);
-        setShowSocialModal(true);
+        try {
+          console.log("Fetching workout details for social modal. Workout ID:", data.id);
+          // Directly fetch the complete workout details 
+          const workoutDetails = await apiRequest<WorkoutWithDetails>('GET', `/api/workouts/${data.id}`);
+          console.log("Successfully fetched workout details for social modal:", workoutDetails);
+          
+          if (workoutDetails && workoutDetails.id) {
+            setSavedWorkout(workoutDetails);
+            setShowSocialModal(true);
+          } else {
+            console.error("No workout details returned from API");
+          }
+        } catch (error) {
+          console.error("Error fetching workout details for social modal:", error);
+        }
       } else {
         console.error("Missing workout data or ID for social modal");
       }
