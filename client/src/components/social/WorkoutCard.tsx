@@ -169,6 +169,36 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
             <p className="text-muted-foreground mt-1">
               {workout.caption || workout.notes || "Completed a workout"}
             </p>
+            
+            {/* Display workout image if available */}
+            {workout.mediaUrls && (
+              <div className="mt-3">
+                {(() => {
+                  try {
+                    const mediaUrls = JSON.parse(workout.mediaUrls as string);
+                    if (Array.isArray(mediaUrls) && mediaUrls.length > 0) {
+                      return (
+                        <div className="rounded-md overflow-hidden mt-2">
+                          <img 
+                            src={mediaUrls[0]} 
+                            alt="Workout media" 
+                            className="w-full h-auto max-h-80 object-cover"
+                            onError={(e) => {
+                              console.error('Image failed to load:', mediaUrls[0]);
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      );
+                    }
+                    return null;
+                  } catch (error) {
+                    console.error('Error parsing mediaUrls:', error);
+                    return null;
+                  }
+                })()}
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-3 gap-4 mt-4 text-center">
             <div>

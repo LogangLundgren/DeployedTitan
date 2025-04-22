@@ -228,8 +228,39 @@ export default function WorkoutDetail() {
         </CardHeader>
         
         <CardContent>
+          {/* Caption */}
           {workout.caption && (
             <p className="text-muted-foreground mb-6">{workout.caption}</p>
+          )}
+          
+          {/* Display workout image if available */}
+          {workout.mediaUrls && (
+            <div className="mb-6">
+              {(() => {
+                try {
+                  const mediaUrls = JSON.parse(workout.mediaUrls as string);
+                  if (Array.isArray(mediaUrls) && mediaUrls.length > 0) {
+                    return (
+                      <div className="rounded-md overflow-hidden">
+                        <img 
+                          src={mediaUrls[0]} 
+                          alt="Workout media" 
+                          className="w-full h-auto max-h-[400px] object-contain bg-muted/30"
+                          onError={(e) => {
+                            console.error('Image failed to load:', mediaUrls[0]);
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    );
+                  }
+                  return null;
+                } catch (error) {
+                  console.error('Error parsing mediaUrls:', error);
+                  return null;
+                }
+              })()}
+            </div>
           )}
           
           <div className="grid grid-cols-3 gap-4 mb-6 text-center">
