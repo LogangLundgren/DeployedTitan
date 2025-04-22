@@ -823,7 +823,7 @@ export default function CreatePlan() {
                         <div className="bg-gray-50 p-4 rounded border border-gray-200 mb-2">
                           <div className="flex items-center text-gray-500">
                             <AlertCircle className="h-4 w-4 mr-2" />
-                            <span>No goals added yet. Add at least one goal for your plan.</span>
+                            <span>No goals added yet. Goals are optional for your workout plan.</span>
                           </div>
                         </div>
                       )}
@@ -834,7 +834,7 @@ export default function CreatePlan() {
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <FormLabel>Required Equipment</FormLabel>
+                        <FormLabel>Equipment</FormLabel>
                         <Button 
                           type="button" 
                           variant="outline"
@@ -867,7 +867,7 @@ export default function CreatePlan() {
                         <div className="bg-gray-50 p-4 rounded border border-gray-200 mb-2">
                           <div className="flex items-center text-gray-500">
                             <AlertCircle className="h-4 w-4 mr-2" />
-                            <span>No equipment added yet. Add at least one piece of equipment.</span>
+                            <span>No equipment added yet. Equipment is optional for your workout plan.</span>
                           </div>
                         </div>
                       )}
@@ -1031,7 +1031,7 @@ export default function CreatePlan() {
             <DialogHeader>
               <DialogTitle>Add a Goal</DialogTitle>
               <DialogDescription>
-                Enter a goal that users can achieve with your workout plan.
+                Enter a goal that users can achieve with your workout plan (optional).
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
@@ -1055,7 +1055,7 @@ export default function CreatePlan() {
             <DialogHeader>
               <DialogTitle>Add Equipment</DialogTitle>
               <DialogDescription>
-                Enter an equipment item required for your workout plan.
+                Enter an equipment item for your workout plan (optional).
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
