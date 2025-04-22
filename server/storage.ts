@@ -4273,8 +4273,11 @@ export class DbStorage implements IStorage {
   
   // Direct Messages Methods
   
-  async createMessageThread(): Promise<MessageThread> {
+  async createMessageThread(): Promise<any> {
     try {
+      // Import message-related tables and types
+      const { messageThreads } = await import("@shared/schema");
+      
       const [thread] = await db
         .insert(messageThreads)
         .values({})
@@ -4287,8 +4290,11 @@ export class DbStorage implements IStorage {
     }
   }
   
-  async addParticipantToThread(threadId: number, userId: number): Promise<MessageParticipant> {
+  async addParticipantToThread(threadId: number, userId: number): Promise<any> {
     try {
+      // Import message-related tables and types
+      const { messageParticipants } = await import("@shared/schema");
+      
       const [participant] = await db
         .insert(messageParticipants)
         .values({
@@ -4305,8 +4311,12 @@ export class DbStorage implements IStorage {
     }
   }
   
-  async sendMessage(threadId: number, senderId: number, content: string): Promise<Message> {
+  async sendMessage(threadId: number, senderId: number, content: string): Promise<any> {
     try {
+      // Import message-related tables and types
+      const { messageThreads, messageParticipants, messages } = await import("@shared/schema");
+      const { eq, ne, and } = await import("drizzle-orm");
+      
       const [message] = await db
         .insert(messages)
         .values({
