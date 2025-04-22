@@ -1,0 +1,195 @@
+import { useState } from "react";
+import { Link } from "wouter";
+import { WorkoutWithExtraStats, demoUsers } from "@/pages/Social";
+import { useAuth } from "@/hooks/use-auth";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import WorkoutEditModal from "./WorkoutEditModal";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Heart, MessageCircle, MoreVertical, Edit, Trash2 } from "lucide-react";
+
+interface WorkoutCardProps {
+  workout: WorkoutWithExtraStats;
+  formatDate: (date: Date | string) => string;
+  formatTime: (date: Date | string) => string;
+}
+
+export default function WorkoutCard({ workout, formatDate, formatTime }: WorkoutCardProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const isOwner = user && workout.userId === user.id;
+
+  // Format for display
+  const userDisplayName = user && workout.userId === user.id 
+    ? "You" 
+    : demoUsers.find(u => u.id === workout.userId)?.name || "User " + workout.userId;
+
+  // Delete workout mutation
+  const deleteWorkoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest(
+        "DELETE",
+        `/api/workouts/${workout.id}`,
+        {}
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete workout");
+      }
+
+      return await response.json();
+    },
+    onSuccess: () => {
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['/api/workouts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workouts/community'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+
+      toast({
+        title: "Workout deleted",
+        description: "Your workout has been deleted successfully"
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting workout:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete workout. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleDelete = () => {
+    if (confirm("Are you sure you want to delete this workout?")) {
+      deleteWorkoutMutation.mutate();
+    }
+  };
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Avatar>
+                <AvatarImage src={""} />
+                <AvatarFallback>
+                  {user && workout.userId === user.id ? "ME" : "U" + workout.userId}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="font-medium">{userDisplayName}</div>
+                <div className="text-sm text-muted-foreground">
+                  {formatDate(workout.date)} at {formatTime(workout.date)}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="outline">{workout.category || "Workout"}</Badge>
+              
+              {isOwner && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                      <span className="sr-only">More options</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      className="text-destructive" 
+                      onClick={handleDelete}
+                      disabled={deleteWorkoutMutation.isPending}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {deleteWorkoutMutation.isPending ? "Deleting..." : "Delete"}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-3">
+          <div className="mb-2">
+            <Link href={`/workout/${workout.id}`}>
+              <a className="text-lg font-medium hover:underline">{workout.name}</a>
+            </Link>
+            <p className="text-muted-foreground">
+              {workout.notes || "Completed a workout"}
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mt-4 text-center">
+            <div>
+              <div className="text-xl font-semibold">
+                {workout.duration} min
+              </div>
+              <div className="text-xs text-muted-foreground">Duration</div>
+            </div>
+            <div>
+              <div className="text-xl font-semibold">
+                {typeof workout.totalExercises === 'number' ? workout.totalExercises : '0'}
+              </div>
+              <div className="text-xs text-muted-foreground">Exercises</div>
+            </div>
+            <div>
+              <div className="text-xl font-semibold">
+                {typeof workout.volume === 'number' ? `${workout.volume} lbs` : '0 lbs'}
+              </div>
+              <div className="text-xs text-muted-foreground">Volume</div>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="pt-0 flex justify-between">
+          <div className="flex space-x-4">
+            <Button variant="ghost" size="sm" className="h-8 px-2">
+              <Heart className="h-4 w-4 mr-1" />
+              Like
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8 px-2">
+              <MessageCircle className="h-4 w-4 mr-1" />
+              Comment
+            </Button>
+          </div>
+          <Link href={`/workout/${workout.id}`}>
+            <Button variant="outline" size="sm">View Details</Button>
+          </Link>
+        </CardFooter>
+      </Card>
+
+      {/* Edit Modal */}
+      <WorkoutEditModal
+        workout={workout}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+      />
+    </>
+  );
+}

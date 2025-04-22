@@ -53,13 +53,13 @@ import { format } from "date-fns";
 import type { User, Workout, WorkoutWithDetails, Goal } from "@shared/schema";
 
 // Extended workout type with stats for the social feed
-interface WorkoutWithExtraStats extends Workout {
+export interface WorkoutWithExtraStats extends Workout {
   totalExercises?: number;
   volume?: number;
 }
 
 // Comment type
-interface WorkoutComment {
+export interface WorkoutComment {
   id: number;
   userId: number;
   username: string;
@@ -68,7 +68,7 @@ interface WorkoutComment {
 }
 
 // Demo data (in a real app, this would come from the API)
-const demoUsers = [
+export const demoUsers = [
   { id: 2, username: "JessicaFitPro", name: "Jessica Chen", profilePicture: "" },
   { id: 3, username: "StrengthCoach", name: "Mike Johnson", profilePicture: "" },
   { id: 4, username: "RunnerGirl", name: "Sarah Williams", profilePicture: "" },

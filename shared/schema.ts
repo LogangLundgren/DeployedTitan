@@ -67,6 +67,9 @@ export const workouts = pgTable("workouts", {
   userId: integer("user_id").references(() => users.id).notNull(),
   category: text("category"),
   isPublic: boolean("is_public").default(false),
+  caption: text("caption"),  // Instagram-style caption for social sharing
+  mediaUrls: text("media_urls"), // JSON string array for future photo/video URLs
+  isComplete: boolean("is_complete").default(false),
 });
 
 export const insertWorkoutSchema = createInsertSchema(workouts).pick({
@@ -77,6 +80,9 @@ export const insertWorkoutSchema = createInsertSchema(workouts).pick({
   userId: true,
   category: true,
   isPublic: true,
+  caption: true,
+  mediaUrls: true,
+  isComplete: true,
 });
 
 export const workoutExercises = pgTable("workout_exercises", {
