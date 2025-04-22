@@ -803,6 +803,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/:id/workouts", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 5;
       
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Invalid user ID" });
@@ -859,7 +861,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter out any null results
       const validWorkouts = workoutsWithDetails.filter(w => w !== null);
       
-      res.status(200).json(validWorkouts);
+      // Sort workouts by date - newest first
+      const sortedWorkouts = validWorkouts.sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+      const paginatedWorkouts = sortedWorkouts.slice(startIndex, endIndex);
+      
+      res.status(200).json(paginatedWorkouts);
     } catch (error) {
       console.error("Get user workouts error:", error);
       res.status(500).json({ message: "Internal server error" });
