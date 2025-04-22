@@ -15,8 +15,8 @@ if (!fs.existsSync(uploadsDir)) {
 function generateUniqueFileName(originalName: string): string {
   const fileExt = path.extname(originalName);
   const timestamp = Date.now();
-  const uuid = uuidv4().slice(0, 8);
-  return `${timestamp}-${uuid}${fileExt}`;
+  const randomId = crypto.randomBytes(4).toString('hex');
+  return `${timestamp}-${randomId}${fileExt}`;
 }
 
 /**

@@ -124,29 +124,46 @@ export default function WorkoutSocialModal({ workout, isOpen, onClose }: Workout
       console.log("Updating workout with ID:", workout.id);
       
       // Upload images first if we have any
-      let mediaUrls = null;
-      
       if (selectedImages.length > 0) {
         setIsUploading(true);
         try {
-          // Simulate upload progress (in a real app, this would come from the upload API)
-          for (let i = 0; i <= 100; i += 10) {
-            setUploadProgress(i);
-            if (i < 100) {
-              await new Promise(resolve => setTimeout(resolve, 100));
+          // Show progress starting
+          setUploadProgress(10);
+          
+          // Prepare upload data - convert images to uploadable format
+          const uploadedFiles = selectedImages.map(image => {
+            return {
+              fileName: image.file.name,
+              fileType: image.file.type,
+              fileSize: image.file.size,
+              fileUrl: image.preview,
+              mimeType: image.file.type
+            };
+          });
+          
+          setUploadProgress(30);
+          
+          // Upload the images directly to our server endpoint
+          const uploadResponse = await apiRequest(
+            "POST",
+            "/api/media/upload",
+            {
+              uploadedFiles,
+              workoutId: workout.id,
+              caption
             }
+          );
+          
+          setUploadProgress(80);
+          
+          if (!uploadResponse.ok) {
+            throw new Error("Failed to upload images");
           }
           
-          // Upload the images
-          // In a production app, this would be a real API call to upload files
-          // For now, we'll just simulate it
-          const imageUrls = selectedImages.map((image, index) => ({
-            url: image.preview,
-            id: `temp-id-${index}`
-          }));
+          setUploadProgress(100);
           
-          mediaUrls = JSON.stringify(imageUrls.map(img => img.url));
-          
+          // The upload endpoint also updates the workout with the media URLs
+          // We just need to update the remaining fields
         } catch (error) {
           console.error("Error uploading images:", error);
           throw new Error("Failed to upload images");
@@ -160,8 +177,7 @@ export default function WorkoutSocialModal({ workout, isOpen, onClose }: Workout
         {
           caption,
           isPublic,
-          isComplete,
-          mediaUrls
+          isComplete
         }
       );
 

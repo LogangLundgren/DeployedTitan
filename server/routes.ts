@@ -4964,6 +4964,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Setup media upload endpoint
+  app.post("/api/media/upload", requireAuth, handleBase64Upload, async (req, res) => {
+    try {
+      // Ensure userId is set from session
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      if (!req.body.uploadedFiles || !req.body.uploadedFiles.length) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+      
+      const { workoutId, workoutExerciseId, caption } = req.body;
+      
+      // Validate IDs if provided
+      if (workoutId && isNaN(parseInt(workoutId))) {
+        return res.status(400).json({ message: "Invalid workout ID" });
+      }
+      
+      if (workoutExerciseId && isNaN(parseInt(workoutExerciseId))) {
+        return res.status(400).json({ message: "Invalid workout exercise ID" });
+      }
+      
+      // Parse IDs
+      const parsedWorkoutId = workoutId ? parseInt(workoutId) : null;
+      const parsedExerciseId = workoutExerciseId ? parseInt(workoutExerciseId) : null;
+      
+      // Validate workout ownership if a workout ID is provided
+      if (parsedWorkoutId) {
+        const workout = await storage.getWorkout(parsedWorkoutId);
+        if (!workout) {
+          return res.status(404).json({ message: "Workout not found" });
+        }
+        
+        if (workout.userId !== userId) {
+          return res.status(403).json({ message: "You can only add media to your own workouts" });
+        }
+        
+        // Update workout with media URLs if workout ID provided
+        if (req.body.uploadedFiles.length > 0) {
+          // Convert the array of file URLs to a JSON string
+          const mediaUrls = JSON.stringify(req.body.uploadedFiles.map(file => file.fileUrl));
+          
+          await storage.updateWorkout(parsedWorkoutId, {
+            mediaUrls,
+            caption: caption || null
+          });
+        }
+      }
+      
+      res.status(201).json({
+        message: "Files uploaded successfully",
+        mediaFiles: req.body.uploadedFiles
+      });
+    } catch (error) {
+      console.error("Media upload error:", error);
+      res.status(500).json({ message: "Error uploading media" });
+    }
+  });
+  
+  // Serve uploaded files
+  app.get("/uploads/*", serveUploads);
+  
   const httpServer = createServer(app);
 
   return httpServer;
