@@ -4424,13 +4424,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Direct messaging routes
   
   // Get all message threads for the current user
-  app.get("/api/messages/threads", async (req: Request, res: Response) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
+  app.get("/api/messages/threads", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.session.userId;
+      const userId = req.user?.id;
       const threads = await storage.getThreadsByUserId(userId);
       res.json(threads);
     } catch (error) {
@@ -4440,13 +4436,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get message thread between the current user and another user, or create if doesn't exist
-  app.get("/api/messages/thread/:userId", async (req: Request, res: Response) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
+  app.get("/api/messages/thread/:userId", requireAuth, async (req: Request, res: Response) => {
     try {
-      const currentUserId = req.session.userId;
+      const currentUserId = req.user?.id;
       const otherUserId = parseInt(req.params.userId);
       
       if (isNaN(otherUserId)) {
@@ -4467,13 +4459,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get messages in a thread
-  app.get("/api/messages/thread/:threadId/messages", async (req: Request, res: Response) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
+  app.get("/api/messages/thread/:threadId/messages", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.session.userId;
+      const userId = req.user?.id;
       const threadId = parseInt(req.params.threadId);
       
       if (isNaN(threadId)) {
@@ -4494,13 +4482,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Send a message
-  app.post("/api/messages/thread/:threadId/send", async (req: Request, res: Response) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
+  app.post("/api/messages/thread/:threadId/send", requireAuth, async (req: Request, res: Response) => {
     try {
-      const senderId = req.session.userId;
+      const senderId = req.user?.id;
       const threadId = parseInt(req.params.threadId);
       const { content } = req.body;
       
@@ -4536,13 +4520,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get unread message count
-  app.get("/api/messages/unread-count", async (req: Request, res: Response) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
+  app.get("/api/messages/unread-count", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.session.userId;
+      const userId = req.user?.id;
       const count = await storage.getUnreadMessageCount(userId);
       res.json({ count });
     } catch (error) {
@@ -4595,13 +4575,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Start a new conversation with a user
-  app.post("/api/messages/start-conversation", async (req: Request, res: Response) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-
+  app.post("/api/messages/start-conversation", requireAuth, async (req: Request, res: Response) => {
     const { userId, message } = req.body;
-    const currentUserId = req.session.userId;
+    const currentUserId = req.user?.id;
     
     if (!userId || !message) {
       return res.status(400).json({ message: "User ID and message are required" });
@@ -4622,13 +4598,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Contact a coach (create a thread and send first message)
-  app.post("/api/coaches/:coachId/contact", async (req: Request, res: Response) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
+  app.post("/api/coaches/:coachId/contact", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.session.userId;
+      const userId = req.user?.id;
       const coachId = parseInt(req.params.coachId);
       const { message } = req.body;
       
