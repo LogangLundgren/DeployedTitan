@@ -391,8 +391,8 @@ export const workoutPlans = pgTable("workout_plans", {
   difficultyLevel: text("difficulty_level").notNull(), // beginner, intermediate, advanced
   category: text("category").notNull(), // strength, endurance, fat loss, etc.
   featuredImageUrl: text("featured_image_url"),
-  goals: text("goals").notNull(), // JSON array of goals this plan addresses
-  equipment: text("equipment"), // JSON array of required equipment
+  goals: text("goals").default('[]'), // JSON array of goals this plan addresses
+  equipment: text("equipment").default('[]'), // JSON array of required equipment
   isFeatured: boolean("is_featured").default(false),
   isSoldOut: boolean("is_sold_out").default(false),
   isPublished: boolean("is_published").default(false),

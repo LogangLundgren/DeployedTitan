@@ -91,14 +91,14 @@ interface CoachProfile {
 // Form schema
 const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters" }),
-  description: z.string().min(20, { message: "Description must be at least 20 characters" }),
+  description: z.string().min(4, { message: "Description must be at least 4 characters" }),
   price: z.coerce.number().min(0, { message: "Price cannot be negative" }),
   durationWeeks: z.coerce.number().min(1, { message: "Duration must be at least 1 week" }).max(52, { message: "Duration cannot exceed 52 weeks" }),
   difficultyLevel: z.string().min(1, { message: "Please select a difficulty level" }),
   category: z.string().min(1, { message: "Please select a category" }),
   featuredImageUrl: z.string().optional(),
-  goals: z.array(z.string()).min(1, { message: "Please add at least one goal" }),
-  equipment: z.array(z.string()).min(1, { message: "Please add at least one equipment item" })
+  goals: z.array(z.string()).optional().default([]), // Goals are now optional
+  equipment: z.array(z.string()).optional().default([]) // Equipment is now optional
 });
 
 export default function CreatePlan() {
@@ -1004,8 +1004,7 @@ export default function CreatePlan() {
                       disabled={isSubmitting || 
                         createPlanMutation.isPending || 
                         updatePlanMutation.isPending || 
-                        templates.length === 0 || 
-                        selectedTemplates.length === 0}
+                        templates.length === 0}
                       className="gap-2"
                     >
                       {isSubmitting || createPlanMutation.isPending || updatePlanMutation.isPending ? (

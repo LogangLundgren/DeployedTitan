@@ -2779,7 +2779,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         equipment: typeof req.body.equipment === 'string' ? req.body.equipment : JSON.stringify(req.body.equipment || [])
       };
       
-      const workoutPlanData = insertWorkoutPlanSchema.safeParse(rawData);
+      // Create a custom validation schema with relaxed requirements
+      const customWorkoutPlanSchema = insertWorkoutPlanSchema.extend({
+        description: z.string().min(4, { message: "Description must be at least 4 characters" })
+      });
+      
+      const workoutPlanData = customWorkoutPlanSchema.safeParse(rawData);
       
       if (!workoutPlanData.success) {
         return res.status(400).json({ message: "Invalid workout plan data", errors: workoutPlanData.error.errors });
@@ -2819,7 +2824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updateSchema = z.object({
         title: z.string().optional(),
-        description: z.string().optional(),
+        description: z.string().min(4, { message: "Description must be at least 4 characters" }).optional(),
         price: z.number().optional(),
         durationWeeks: z.number().optional(),
         difficultyLevel: z.string().optional(),
