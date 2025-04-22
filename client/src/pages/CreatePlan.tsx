@@ -493,31 +493,14 @@ export default function CreatePlan() {
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (selectedTemplates.length === 0) {
-      toast({
-        title: "No Templates Selected",
-        description: "Please select at least one template to include in your workout plan.",
-        variant: "destructive",
-      });
-      setSelectedTab("templates");
-      return;
-    }
+    // Templates are no longer required, removed validation check here
 
-    // Check if coach profile exists before submitting
-    if (!coachProfile || !coachProfile.id) {
-      toast({
-        title: "Coach Profile Required",
-        description: "You need a valid coach profile before you can create workout plans.",
-        variant: "destructive",
-      });
-      setLocation('/become-coach');
-      return;
-    }
+    // Coach profile will be auto-created on the server if needed
 
     setIsSubmitting(true);
     
     const planData = {
-      coachId: coachProfile.id,
+      coachId: coachProfile?.id, // Will be handled on the server if null
       title: values.title,
       description: values.description,
       price: values.price,
@@ -935,7 +918,7 @@ export default function CreatePlan() {
                       <>
                         <div className="mb-4">
                           <p className="text-sm text-gray-500">
-                            Select the templates you want to include in your plan. These will be organized by week and day.
+                            Templates are optional. If you select templates for your plan, they will be organized by week and day.
                           </p>
                         </div>
                         
@@ -983,8 +966,8 @@ export default function CreatePlan() {
                             <ListChecks className="h-5 w-5 text-blue-500 mr-3 mt-0.5" />
                             <div className="text-sm text-blue-700">
                               <p className="font-medium mb-1">Selected Templates: {selectedTemplates.length}</p>
-                              <p className="mb-1">Templates will be organized in order, with up to 7 workouts per week.</p>
-                              <p>Recommended: Select at least {form.watch("durationWeeks")} templates for a {form.watch("durationWeeks")}-week plan.</p>
+                              <p className="mb-1">Templates are optional but recommended for comprehensive plans.</p>
+                              <p>If selected, templates will be organized in order, with up to 7 workouts per week.</p>
                             </div>
                           </div>
                         </div>
@@ -1003,8 +986,7 @@ export default function CreatePlan() {
                       type="submit" 
                       disabled={isSubmitting || 
                         createPlanMutation.isPending || 
-                        updatePlanMutation.isPending || 
-                        templates.length === 0}
+                        updatePlanMutation.isPending}
                       className="gap-2"
                     >
                       {isSubmitting || createPlanMutation.isPending || updatePlanMutation.isPending ? (
