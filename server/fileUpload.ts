@@ -1,108 +1,102 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as crypto from 'crypto';
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from "express";
+import * as path from "path";
+import * as fs from "fs";
+import * as crypto from "crypto";
 
 // Create uploads directory if it doesn't exist
-const uploadDir = path.resolve(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Generate a unique filename to prevent collisions
+/**
+ * Generate a unique filename with the original extension
+ */
 function generateUniqueFileName(originalName: string): string {
+  const fileExt = path.extname(originalName);
   const timestamp = Date.now();
-  const randomString = crypto.randomBytes(8).toString('hex');
-  const extension = path.extname(originalName);
-  const safeName = path.basename(originalName, extension)
-    .replace(/[^a-z0-9]/gi, '_')
-    .toLowerCase();
-  
-  return `${safeName}_${timestamp}_${randomString}${extension}`;
+  const uuid = uuidv4().slice(0, 8);
+  return `${timestamp}-${uuid}${fileExt}`;
 }
 
-// Simple middleware to handle base64 file uploads
+/**
+ * Middleware to handle base64 image uploads
+ * This function processes base64 image data sent from the client
+ * and saves it to the filesystem
+ */
 export async function handleBase64Upload(req: Request, res: Response, next: NextFunction) {
   try {
-    if (!req.body.media || !Array.isArray(req.body.media)) {
+    // Continue if no files to upload
+    if (!req.body.uploadedFiles || !Array.isArray(req.body.uploadedFiles)) {
       return next();
     }
-
-    const uploadedFiles: {
-      originalName: string;
-      fileName: string;
-      filePath: string;
-      fileUrl: string;
-      fileType: string;
-      fileSize: number;
-      mimeType: string;
-    }[] = [];
-
-    // Process each media item
-    for (const item of req.body.media) {
-      if (!item.data || !item.name || !item.type) {
+    
+    const savedFiles = [];
+    
+    for (const file of req.body.uploadedFiles) {
+      if (!file.fileUrl || !file.fileName) {
         continue;
       }
-
-      // Extract base64 data
-      const matches = item.data.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+      
+      // Extract the base64 data
+      const matches = file.fileUrl.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+      
       if (!matches || matches.length !== 3) {
         continue;
       }
-
-      const mimeType = matches[1];
-      const buffer = Buffer.from(matches[2], 'base64');
-      const fileSize = buffer.length;
-      const originalName = item.name;
-      const fileName = generateUniqueFileName(originalName);
-      const filePath = path.join(uploadDir, fileName);
       
-      // Determine file type (image or video)
-      const fileType = mimeType.startsWith('image/') ? 'image' : 
-                      mimeType.startsWith('video/') ? 'video' : 'other';
-
-      // Only save if it's an image or video
-      if (fileType === 'image' || fileType === 'video') {
-        // Save the file
-        await fs.promises.writeFile(filePath, buffer);
-        
-        // Create a public URL for the file
-        const fileUrl = `/uploads/${fileName}`;
-        
-        uploadedFiles.push({
-          originalName,
-          fileName,
-          filePath,
-          fileUrl,
-          fileType,
-          fileSize,
-          mimeType
-        });
-      }
+      const mimeType = matches[1];
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Generate a unique filename to prevent collisions
+      const fileName = generateUniqueFileName(file.fileName);
+      const filePath = path.join(uploadsDir, fileName);
+      
+      // Write the file to disk
+      fs.writeFileSync(filePath, buffer);
+      
+      // Replace the base64 data with the file URL
+      const fileUrl = `/uploads/${fileName}`;
+      
+      // Add the saved file info to the array
+      savedFiles.push({
+        originalName: file.fileName,
+        fileName,
+        fileUrl,
+        fileType: file.fileType,
+        fileSize: buffer.length,
+        mimeType
+      });
     }
-
-    // Attach the files to the request object
-    req.body.uploadedFiles = uploadedFiles;
+    
+    // Replace the uploaded files with the saved file info
+    req.body.uploadedFiles = savedFiles;
+    
     next();
   } catch (error) {
-    console.error('Error processing uploads:', error);
-    return res.status(500).json({ message: 'Error processing file uploads' });
+    console.error("Error processing file upload:", error);
+    res.status(500).json({ message: "File upload failed" });
   }
 }
 
-// Middleware to serve static uploaded files
+/**
+ * Middleware to serve uploaded files
+ */
 export function serveUploads(req: Request, res: Response, next: NextFunction) {
-  const filePath = req.path.replace('/uploads/', '');
-  const fullPath = path.join(uploadDir, filePath);
-  
-  // Security check to prevent directory traversal
-  if (!fullPath.startsWith(uploadDir)) {
-    return res.status(403).json({ message: 'Access denied' });
-  }
-  
-  res.sendFile(fullPath, (err) => {
-    if (err) {
-      res.status(404).json({ message: 'File not found' });
+  try {
+    const filePath = req.path.replace("/uploads/", "");
+    const fullPath = path.join(uploadsDir, filePath);
+    
+    // Check if the file exists
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).send("File not found");
     }
-  });
+    
+    // Send the file
+    res.sendFile(fullPath);
+  } catch (error) {
+    console.error("Error serving file:", error);
+    res.status(500).send("Error serving file");
+  }
 }
