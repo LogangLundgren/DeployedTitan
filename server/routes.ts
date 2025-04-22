@@ -3664,22 +3664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/workout-plans", async (req, res) => {
-    try {
-      const planData = insertWorkoutPlanSchema.safeParse(req.body);
-      
-      if (!planData.success) {
-        return res.status(400).json({ message: "Invalid workout plan data", errors: planData.error.errors });
-      }
-      
-      const plan = await storage.createWorkoutPlan(planData.data);
-      
-      res.status(201).json(plan);
-    } catch (error) {
-      console.error("Create workout plan error:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
+  // Duplicate route removed - using the requireAuth version above instead
   
   // Purchases endpoints
   app.get("/api/purchases", async (req, res) => {
