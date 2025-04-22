@@ -2442,6 +2442,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get current user's coach profile with stats
+  app.get("/api/coach-profile", requireAuth, async (req, res) => {
+    try {
+      if (!req.user || !req.user.isCoach) {
+        return res.status(403).json({ message: "Coach access required" });
+      }
+      
+      // Check if the coach profile exists
+      const userId = req.user.id;
+      const coachProfile = await storage.getCoachProfile(userId);
+      
+      // Return a default coach profile if none exists yet
+      if (!coachProfile) {
+        // If the user is a coach but doesn't have a coach profile yet, return an empty profile with zero stats
+        // This can happen when a user first registers as a coach but hasn't created a coach profile
+        return res.status(200).json({
+          id: 0,
+          userId: req.user.id,
+          title: "Coach",
+          experience: "",
+          specialties: "",
+          biography: "",
+          isVerified: false,
+          isAvailableForHire: true,
+          hourlyRate: null,
+          rating: 0,
+          ratingsCount: 0,
+          clientsCount: 0,
+          plansCount: 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+      
+      // Get plans count and total plan ratings
+      const coachPlans = await storage.getWorkoutPlans(req.user.id, false);
+      const plansCount = coachPlans?.length || 0;
+      
+      // Get accurate ratings data
+      let totalRating = 0;
+      let ratingsCount = 0;
+      
+      coachPlans.forEach(plan => {
+        if (plan.rating !== null && plan.ratingsCount && plan.ratingsCount > 0) {
+          totalRating += plan.rating * plan.ratingsCount;
+          ratingsCount += plan.ratingsCount;
+        }
+      });
+      
+      const averageRating = ratingsCount > 0 ? totalRating / ratingsCount : 0;
+      
+      // Get client count from purchases
+      const purchases = await storage.getPurchases();
+      const coachPurchases = purchases.filter(purchase => {
+        // Find purchases for plans created by this coach
+        if (!purchase.planId) return false;
+        const plan = coachPlans.find(p => p.id === purchase.planId);
+        return !!plan;
+      });
+      const uniqueClientIds = new Set(coachPurchases.map(p => p.userId));
+      const clientCount = uniqueClientIds.size;
+      
+      // Return profile with accurate statistics
+      const profileWithStats = {
+        ...coachProfile,
+        clientsCount: clientCount,
+        plansCount: plansCount,
+        rating: averageRating,
+        ratingsCount: ratingsCount
+      };
+      
+      res.status(200).json(profileWithStats);
+    } catch (error) {
+      console.error("Error getting coach profile:", error);
+      res.status(500).json({ message: "Failed to get coach profile" });
+    }
+  });
+
   app.post("/api/coach-profiles", async (req, res) => {
     try {
       const coachProfileData = insertCoachProfileSchema.safeParse(req.body);
