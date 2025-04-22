@@ -141,10 +141,10 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
         <CardContent className="pb-3">
           <div className="mb-2">
             <Link href={`/workout/${workout.id}`}>
-              <a className="text-lg font-medium hover:underline">{workout.name}</a>
+              <span className="text-lg font-medium hover:underline cursor-pointer">{workout.name}</span>
             </Link>
-            <p className="text-muted-foreground">
-              {workout.notes || "Completed a workout"}
+            <p className="text-muted-foreground mt-1">
+              {workout.caption || workout.notes || "Completed a workout"}
             </p>
           </div>
           <div className="grid grid-cols-3 gap-4 mt-4 text-center">
@@ -179,9 +179,13 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
               Comment
             </Button>
           </div>
-          <Link href={`/workout/${workout.id}`}>
-            <Button variant="outline" size="sm">View Details</Button>
-          </Link>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.location.href = `/workout/${workout.id}`}
+          >
+            View Details
+          </Button>
         </CardFooter>
       </Card>
 

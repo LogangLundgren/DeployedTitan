@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import ExerciseCard from "./ExerciseCard";
 import AddExerciseModal from "./AddExerciseModal";
 import WorkoutSummary from "./WorkoutSummary";
+import WorkoutSocialModal from "./WorkoutSocialModal";
 import { Button } from "@/components/ui/button";
 import { Plus, Save } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
