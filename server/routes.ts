@@ -2494,13 +2494,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const averageRating = ratingsCount > 0 ? totalRating / ratingsCount : 0;
       
       // Get client count from purchases
-      const purchases = await storage.getPurchases();
-      const coachPurchases = purchases.filter(purchase => {
+      // Since getPurchases requires a userId, get all users first and then collect all their purchases
+      const allUsers = await storage.getAllUsers();
+      let allPurchases: any[] = [];
+      
+      // Collect purchases from all users
+      for (const user of allUsers) {
+        const userPurchases = await storage.getPurchases(user.id);
+        allPurchases = [...allPurchases, ...userPurchases];
+      }
+      
+      // Filter purchases for this coach's plans
+      const coachPurchases = allPurchases.filter(purchase => {
         // Find purchases for plans created by this coach
         if (!purchase.planId) return false;
         const plan = coachPlans.find(p => p.id === purchase.planId);
         return !!plan;
       });
+      
+      // Get unique client count
       const uniqueClientIds = new Set(coachPurchases.map(p => p.userId));
       const clientCount = uniqueClientIds.size;
       
