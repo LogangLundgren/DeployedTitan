@@ -4064,16 +4064,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/confirm-payment", async (req, res) => {
+  app.post("/api/confirm-payment", requireAuth, async (req, res) => {
     try {
-      const { paymentIntentId, planId, userId, serviceId } = req.body;
+      const { paymentIntentId, planId, serviceId } = req.body;
+      
+      // Get userId from authentication session
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
       
       if (!paymentIntentId) {
         return res.status(400).json({ message: "Payment intent ID is required" });
-      }
-      
-      if (!userId) {
-        return res.status(400).json({ message: "User ID is required" });
       }
       
       // Retrieve the payment intent to check its status
@@ -4088,13 +4091,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create a purchase record in our database
       const purchase = await storage.createPurchase({
-        userId: parseInt(userId),
+        userId: userId,
         planId: planId ? parseInt(planId) : null,
         serviceId: serviceId ? parseInt(serviceId) : null,
         status: "completed",
         amount: paymentIntent.amount / 100, // Convert back from cents
-        transactionId: paymentIntentId,
-        purchaseDate: new Date()
+        transactionId: paymentIntentId
       });
       
       // If this is a plan purchase, update the plan sales count
@@ -4155,7 +4157,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "completed",
         amount: paymentIntent.amount / 100, // Convert back from cents
         transactionId: paymentIntentId,
-        purchaseDate: new Date(),
         planId: null,
         serviceId: null
       });

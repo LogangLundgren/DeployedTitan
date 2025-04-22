@@ -54,7 +54,8 @@ export default function PaymentSuccess() {
             body: JSON.stringify({
               paymentIntentId: paymentIntent,
               planId: parseInt(planId)
-            })
+            }),
+            credentials: 'include' // Include cookies for authentication
           });
 
           if (!confirmResponse.ok) {
