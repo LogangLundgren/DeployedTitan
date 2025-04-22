@@ -328,8 +328,13 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       }
       
       // Set the saved workout and open the social sharing modal
-      setSavedWorkout(data);
-      setShowSocialModal(true);
+      console.log("Setting saved workout for social modal:", data);
+      if (data && data.id) {
+        setSavedWorkout(data);
+        setShowSocialModal(true);
+      } else {
+        console.error("Missing workout data or ID for social modal");
+      }
       
       // Navigate to history tab after saving only if the user closes the social modal without sharing
       // This is now handled in the social modal's onClose
