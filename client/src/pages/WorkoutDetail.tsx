@@ -49,12 +49,20 @@ interface WorkoutComment {
 
 export default function WorkoutDetail() {
   const { id } = useParams();
-  const workoutId = parseInt(id);
+  const workoutId = id ? parseInt(id) : 0;
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { hasLiked, toggleLike, getLikesCount } = useLikes();
   const [commentText, setCommentText] = useState("");
+  
+  // Redirect to social feed if no valid ID
+  useEffect(() => {
+    if (!id || isNaN(workoutId) || workoutId <= 0) {
+      console.log("Missing or invalid workout ID, redirecting to social feed");
+      setLocation('/social');
+    }
+  }, [id, workoutId, setLocation]);
 
   // Check if workout is liked by current user
   const isLiked = hasLiked(workoutId);
@@ -243,7 +251,7 @@ export default function WorkoutDetail() {
                     return (
                       <div className="rounded-md overflow-hidden">
                         <img 
-                          src={mediaUrls[0]} 
+                          src={mediaUrls[0].startsWith('/uploads') ? window.location.origin + mediaUrls[0] : mediaUrls[0]} 
                           alt="Workout media" 
                           className="w-full h-auto max-h-[400px] object-contain bg-muted/30"
                           onError={(e) => {

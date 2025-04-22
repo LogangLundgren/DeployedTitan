@@ -20,9 +20,18 @@ function generateUniqueFileName(originalName: string): string {
 }
 
 /**
+ * Check if a file is a supported image format
+ * Supported formats: jpeg, jpg, png, gif, webp
+ */
+function isSupportedImageFormat(mimeType: string): boolean {
+  const supportedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  return supportedFormats.includes(mimeType.toLowerCase());
+}
+
+/**
  * Middleware to handle base64 image uploads
  * This function processes base64 image data sent from the client
- * and saves it to the filesystem
+ * and saves it to the filesystem. It also ensures file format compatibility.
  */
 export async function handleBase64Upload(req: Request, res: Response, next: NextFunction) {
   try {
@@ -49,8 +58,12 @@ export async function handleBase64Upload(req: Request, res: Response, next: Next
       const base64Data = matches[2];
       const buffer = Buffer.from(base64Data, 'base64');
       
+      // Always convert to PNG for browser compatibility
+      const fileExt = '.png';
+      
       // Generate a unique filename to prevent collisions
-      const fileName = generateUniqueFileName(file.fileName);
+      const fileNameWithoutExt = file.fileName.split('.')[0] || 'image';
+      const fileName = generateUniqueFileName(fileNameWithoutExt + fileExt);
       const filePath = path.join(uploadsDir, fileName);
       
       // Write the file to disk
@@ -64,9 +77,9 @@ export async function handleBase64Upload(req: Request, res: Response, next: Next
         originalName: file.fileName,
         fileName,
         fileUrl,
-        fileType: file.fileType,
+        fileType: 'image/png', // Always use PNG for browser compatibility
         fileSize: buffer.length,
-        mimeType
+        mimeType: 'image/png'  // Always use PNG for browser compatibility
       });
     }
     

@@ -180,7 +180,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
                       return (
                         <div className="rounded-md overflow-hidden mt-2">
                           <img 
-                            src={mediaUrls[0]} 
+                            src={mediaUrls[0].startsWith('/uploads') ? window.location.origin + mediaUrls[0] : mediaUrls[0]} 
                             alt="Workout media" 
                             className="w-full h-auto max-h-80 object-cover"
                             onError={(e) => {
