@@ -39,7 +39,7 @@ interface WorkoutCardProps {
 export default function WorkoutCard({ workout, formatDate, formatTime }: WorkoutCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   const { hasLiked, toggleLike, getLikesCount } = useLikes();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
@@ -163,7 +163,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
         </CardHeader>
         <CardContent className="pb-3">
           <div className="mb-2">
-            <Link href={`/workout/${workout.id}`}>
+            <Link href={`/workouts/${workout.id}`}>
               <span className="text-lg font-medium hover:underline cursor-pointer">{workout.name}</span>
             </Link>
             <p className="text-muted-foreground mt-1">
@@ -206,7 +206,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
               variant="ghost" 
               size="sm" 
               className="h-8 px-2"
-              onClick={() => setLocation(`/workout/${workout.id}`)}
+              onClick={() => navigate(`/workouts/${workout.id}`)}
             >
               <MessageCircle className="h-4 w-4 mr-1" />
               {commentCount > 0 ? `${commentCount}` : 'Comment'}
@@ -215,7 +215,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => setLocation(`/workout/${workout.id}`)}
+            onClick={() => navigate(`/workouts/${workout.id}`)}
           >
             View Details
           </Button>
