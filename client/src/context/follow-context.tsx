@@ -5,7 +5,7 @@ import {
   useState,
   useEffect
 } from "react";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -28,7 +28,7 @@ export function FollowProvider({ children }: { children: ReactNode }) {
   const [followerCounts, setFollowerCounts] = useState<Record<number, number>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load user's follow data on mount
+  // Load user's follow data on mount and poll for changes every 30 seconds
   useEffect(() => {
     if (!user) return;
     
@@ -71,7 +71,14 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       }
     };
     
+    // Load immediately
     loadFollowData();
+    
+    // Refresh follow data periodically to ensure it's up to date
+    const intervalId = setInterval(loadFollowData, 30000);
+    
+    // Clean up interval on unmount
+    return () => clearInterval(intervalId);
   }, [user]);
 
   // Toggle follow status for a user
@@ -119,6 +126,9 @@ export function FollowProvider({ children }: { children: ReactNode }) {
           ...prev,
           [userId]: (prev[userId] || 0) + 1
         }));
+        
+        // Invalidate community workouts to refresh the feed with posts from this user
+        queryClient.invalidateQueries({ queryKey: ['/api/workouts/community'] });
         
         toast({
           title: "Following",

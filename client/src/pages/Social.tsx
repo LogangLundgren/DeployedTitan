@@ -180,7 +180,10 @@ function ActivityFeed() {
         console.error("Error fetching community workouts:", error);
         return [];
       }
-    }
+    },
+    // Reduce stale time to ensure frequent refreshes
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 60000, // Refetch every minute
   });
 
   // Query user's goals instead of public goals
@@ -959,24 +962,17 @@ function PeopleDiscover() {
   
   // Initialize users with isFollowing data from the context
   useEffect(() => {
-    if (users.length > 0) {
-      // Create a shallow copy with updated isFollowing flags but don't trigger 
-      // an infinite update loop by comparing with current state
+    if (users.length > 0 && Object.keys(isFollowing).length > 0) {
+      // Create a shallow copy with updated isFollowing flags from the follow context
       const updatedUsers = users.map(user => ({
         ...user,
         isFollowing: isFollowing[user.id] || false
       }));
       
-      // Only update state if there's an actual change
-      const hasChanges = updatedUsers.some((user, idx) => 
-        user.isFollowing !== users[idx].isFollowing
-      );
-      
-      if (hasChanges) {
-        setUsers(updatedUsers);
-      }
+      // Always update to ensure the UI is in sync with the context
+      setUsers(updatedUsers);
     }
-  }, [users, isFollowing]);
+  }, [users, isFollowing]); // This will run when either users or isFollowing changes
   
   // We'll use our FollowContext directly instead of duplicating the logic
   const handleFollowUser = (userId: number) => {
