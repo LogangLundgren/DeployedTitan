@@ -4536,6 +4536,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const query = req.query.q as string;
     const currentUserId = req.user?.id;
     
+    if (!currentUserId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
     if (!query || query.length < 2) {
       return res.json([]);
     }
@@ -4579,6 +4583,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { userId, message } = req.body;
     const currentUserId = req.user?.id;
     
+    if (!currentUserId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
     if (!userId || !message) {
       return res.status(400).json({ message: "User ID and message are required" });
     }
@@ -4603,6 +4611,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       const coachId = parseInt(req.params.coachId);
       const { message } = req.body;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
       
       if (isNaN(coachId)) {
         return res.status(400).json({ message: "Invalid coach ID" });

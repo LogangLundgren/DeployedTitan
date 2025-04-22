@@ -59,11 +59,26 @@ export function UserSearchDialog({ onThreadCreated }: UserSearchDialogProps) {
   const {
     data: users = [],
     isLoading,
+    error
   } = useQuery<User[]>({
     queryKey: ["/api/users/search", debouncedQuery],
-    queryFn: () => 
-      apiRequest("GET", `/api/users/search?q=${encodeURIComponent(debouncedQuery)}`)
-        .then(res => res.json()),
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", `/api/users/search?q=${encodeURIComponent(debouncedQuery)}`);
+        const data = await res.json();
+        
+        // Check if the response is an array, if not, return an empty array
+        if (Array.isArray(data)) {
+          return data;
+        } else {
+          console.error("Invalid response format:", data);
+          return [];
+        }
+      } catch (err) {
+        console.error("Error searching users:", err);
+        return [];
+      }
+    },
     enabled: debouncedQuery.length > 1,
   });
 
