@@ -834,9 +834,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid workout data", errors: workoutData.error.errors });
       }
       
+      // Set isPublic to true by default if not specified
+      if (workoutData.data.isPublic === undefined) {
+        workoutData.data.isPublic = true;
+      }
+      
       const workout = await storage.createWorkout(workoutData.data);
       
-      res.status(201).json(workout);
+      // Get complete workout with details to return to client
+      const workoutWithDetails = await storage.getWorkoutWithDetails(workout.id);
+      
+      res.status(201).json(workoutWithDetails || workout);
     } catch (error) {
       console.error("Create workout error:", error);
       res.status(500).json({ message: "Internal server error" });
