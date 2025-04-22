@@ -101,11 +101,16 @@ export default function WorkoutDetail() {
   // Add comment mutation
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
+      if (!user?.id) {
+        throw new Error("You must be logged in to comment");
+      }
+      
       const response = await apiRequest(
         "POST", 
         "/api/comments", 
         { 
           workoutId,
+          userId: user.id,
           content
         }
       );
