@@ -48,7 +48,10 @@ import {
   PlanTemplate,
   Purchase,
   Review,
-  UserSuggestion
+  UserSuggestion,
+  messageParticipants,
+  messageThreads,
+  messages
 } from "@shared/schema";
 import { z } from "zod";
 
