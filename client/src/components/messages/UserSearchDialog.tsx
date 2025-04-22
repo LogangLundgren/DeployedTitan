@@ -45,6 +45,7 @@ export function UserSearchDialog({ onThreadCreated }: UserSearchDialogProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showFollowing, setShowFollowing] = useState(true);
   const debouncedQuery = useDebounce(searchQuery, 300);
   const { toast } = useToast();
 
@@ -54,11 +55,46 @@ export function UserSearchDialog({ onThreadCreated }: UserSearchDialogProps) {
       message: "",
     },
   });
+  
+  // Get users that the current user is following
+  const {
+    data: followingUsers = [],
+    isLoading: isLoadingFollowing
+  } = useQuery<User[]>({
+    queryKey: ["/api/users/following"],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", `/api/users/following`);
+        
+        if (!res.ok) {
+          console.error(`Failed to fetch following users: ${res.status}`);
+          return [];
+        }
+        
+        const data = await res.json();
+        
+        if (Array.isArray(data)) {
+          return data.map(user => ({
+            id: user.id,
+            username: user.username,
+            name: user.name || null
+          }));
+        } else {
+          return [];
+        }
+      } catch (err) {
+        console.error("Error fetching following users:", err);
+        return [];
+      }
+    },
+    enabled: open && showFollowing,
+    refetchOnWindowFocus: false,
+  });
 
   // Search for users
   const {
-    data: users = [],
-    isLoading,
+    data: searchResults = [],
+    isLoading: isSearching,
     error
   } = useQuery<User[]>({
     queryKey: ["/api/users/search", debouncedQuery],
@@ -96,9 +132,13 @@ export function UserSearchDialog({ onThreadCreated }: UserSearchDialogProps) {
         return [];
       }
     },
-    enabled: debouncedQuery.length > 1,
+    enabled: debouncedQuery.length > 1 && !showFollowing,
     refetchOnWindowFocus: false,
   });
+  
+  // Determine which users to display
+  const users = showFollowing ? followingUsers : searchResults;
+  const isLoading = showFollowing ? isLoadingFollowing : isSearching;
 
   // Start conversation mutation
   const startConversationMutation = useMutation({
@@ -168,16 +208,40 @@ export function UserSearchDialog({ onThreadCreated }: UserSearchDialogProps) {
 
         {!selectedUser ? (
           <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by username or name"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
+            {/* Tab switching between following and search */}
+            <div className="flex border rounded-md overflow-hidden">
+              <button
+                className={`flex-1 py-2 text-sm font-medium ${
+                  showFollowing ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'
+                }`}
+                onClick={() => setShowFollowing(true)}
+              >
+                People You Follow
+              </button>
+              <button
+                className={`flex-1 py-2 text-sm font-medium ${
+                  !showFollowing ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'
+                }`}
+                onClick={() => setShowFollowing(false)}
+              >
+                Search
+              </button>
             </div>
             
+            {/* Only show search box when in search mode */}
+            {!showFollowing && (
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by username or name"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            )}
+            
+            {/* User list */}
             <div className="border rounded-md divide-y max-h-[300px] overflow-y-auto">
               {isLoading ? (
                 <div className="flex justify-center py-4">
@@ -185,9 +249,12 @@ export function UserSearchDialog({ onThreadCreated }: UserSearchDialogProps) {
                 </div>
               ) : users.length === 0 ? (
                 <div className="py-4 text-center text-sm text-muted-foreground">
-                  {debouncedQuery.length > 1
-                    ? "No users found"
-                    : "Start typing to search for users"}
+                  {showFollowing 
+                    ? "You're not following anyone yet"
+                    : debouncedQuery.length > 1
+                      ? "No users found" 
+                      : "Start typing to search for users"
+                  }
                 </div>
               ) : (
                 users.map((user) => (
