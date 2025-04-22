@@ -2770,7 +2770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/workout-plans", async (req, res) => {
+  app.post("/api/workout-plans", requireAuth, async (req, res) => {
     try {
       // Prepare data for validation - parse JSON strings if provided
       const rawData = {
@@ -2790,10 +2790,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid workout plan data", errors: workoutPlanData.error.errors });
       }
       
-      // Check if coach exists
-      const coach = await storage.getCoachProfileById(workoutPlanData.data.coachId);
+      // Check if the user is a coach (should be marked as coach in the user table)
+      if (!req.user || !req.user.isCoach) {
+        return res.status(403).json({ message: "Only coaches can create workout plans" });
+      }
+      
+      // Get coach profile or return default one if not found
+      let coach = await storage.getCoachProfile(req.user.id);
+      
+      // If coach profile doesn't exist, create a default coach profile
       if (!coach) {
-        return res.status(404).json({ message: "Coach profile not found" });
+        coach = await storage.createCoachProfile({
+          userId: req.user.id,
+          title: "Coach",
+          biography: "",
+          experience: "",
+          specialties: "",
+          hourlyRate: 0,
+          isAvailableForHire: true,
+          rating: 0,
+          ratingsCount: 0,
+          isVerified: false
+        });
+        
+        if (!coach) {
+          return res.status(500).json({ message: "Failed to create coach profile" });
+        }
       }
       
       const workoutPlan = await storage.createWorkoutPlan(workoutPlanData.data);
