@@ -25,6 +25,7 @@ import CreatePlan from "@/pages/CreatePlan";
 import Checkout from "@/pages/Checkout";
 import PlanCheckout from "@/pages/PlanCheckout";
 import PaymentSuccess from "@/pages/PaymentSuccess";
+import WorkoutDetail from "@/pages/WorkoutDetail";
 import AuthPage from "@/pages/auth-page";
 import Header from "./components/layout/Header";
 import Navigation from "./components/layout/Navigation";
@@ -95,6 +96,7 @@ function Router() {
             <ProtectedRoute path="/my-plans" component={MyPlans} />
             <ProtectedRoute path="/become-coach" component={BecomeCoach} />
             <ProtectedRoute path="/create-plan" component={CreatePlan} />
+            <ProtectedRoute path="/workout/:id" component={WorkoutDetail} />
             <ProtectedRoute path="/plan-checkout" component={PlanCheckout} />
             <ProtectedRoute path="/checkout" component={Checkout} />
             <ProtectedRoute path="/payment-success" component={PaymentSuccess} />
