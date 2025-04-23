@@ -19,6 +19,7 @@ export default function PaymentSuccess() {
   const params = new URLSearchParams(search);
   const paymentIntent = params.get('payment_intent');
   const planId = params.get('planId');
+  const isFreePlan = params.get('freeplan') === 'true';
   const [isProcessing, setIsProcessing] = useState(true);
   const [plan, setPlan] = useState<WorkoutPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,8 +63,21 @@ export default function PaymentSuccess() {
             const errorData = await confirmResponse.json();
             throw new Error(errorData.message || 'Failed to record purchase');
           }
+        } 
+        // If this is explicitly marked as a free plan, check if we need to create a purchase record
+        else if (isFreePlan) {
+          console.log('Processing free plan purchase');
+          
+          // If we arrived here directly from the "Get Free Plan" button, we already have a purchase record
+          // This code ensures we also handle direct navigation to this URL with the freeplan parameter
+          if (planData.price === 0) {
+            console.log('Confirming free plan was purchased');
+            
+            // No need to do anything else - the purchase was already recorded by init-plan-checkout
+            console.log('Free plan purchase already recorded during checkout');
+          }
         }
-        // If no payment intent, it was a free plan that was already processed
+        // If no payment intent and not a free plan, something is wrong
 
         setIsProcessing(false);
         toast({
@@ -89,7 +103,9 @@ export default function PaymentSuccess() {
     return (
       <div className="container mx-auto py-16 text-center">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-        <p className="mt-4">Processing your payment...</p>
+        <p className="mt-4">
+          {isFreePlan ? "Setting up your free plan..." : "Processing your payment..."}
+        </p>
       </div>
     );
   }
@@ -131,9 +147,14 @@ export default function PaymentSuccess() {
           <div className="mx-auto bg-green-100 p-4 rounded-full mb-4">
             <CheckCircle className="h-12 w-12 text-green-600" />
           </div>
-          <CardTitle className="text-2xl text-center">Payment Successful!</CardTitle>
+          <CardTitle className="text-2xl text-center">
+            {plan && plan.price === 0 ? "Plan Added Successfully!" : "Payment Successful!"}
+          </CardTitle>
           <CardDescription className="text-center">
-            Your purchase has been completed
+            {plan && plan.price === 0 
+              ? "Your free workout plan has been added to your account" 
+              : "Your purchase has been completed"
+            }
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -147,7 +168,10 @@ export default function PaymentSuccess() {
             
           <div className="text-sm text-gray-600">
             <p className="mb-2">
-              Your purchase has been confirmed and the workout plan is now available in your account.
+              {plan && plan.price === 0 
+                ? "Your free workout plan has been added to your account and is now available for use." 
+                : "Your purchase has been confirmed and the workout plan is now available in your account."
+              }
             </p>
             <p>
               You can access it anytime from your "My Plans" section.

@@ -217,8 +217,9 @@ export default function WorkoutPlanDetail() {
           throw new Error(data.message || 'Failed to process free plan purchase');
         }
         
-        // Redirect directly to success page
-        setLocation(`/payment-success?planId=${plan.id}`);
+        // For free plans, redirect to the success page without going through checkout
+        // Add ?freeplan=true to distinguish it from regular stripe payments
+        setLocation(`/payment-success?planId=${plan.id}&freeplan=true`);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'An unexpected error occurred';
         console.error('Error processing free plan:', errorMsg);
