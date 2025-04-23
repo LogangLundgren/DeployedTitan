@@ -13,9 +13,7 @@ export function useWorkoutDelete() {
     try {
       setIsDeleting(true);
       
-      await apiRequest(`/api/workouts/${workout.id}`, {
-        method: 'DELETE'
-      });
+      await apiRequest('DELETE', `/api/workouts/${workout.id}`);
       
       toast({
         title: "Workout deleted",
