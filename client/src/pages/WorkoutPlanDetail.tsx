@@ -16,7 +16,9 @@ import {
   Trash,
   Plus,
   Edit,
-  Eye
+  Eye,
+  GitFork,
+  Users
 } from 'lucide-react';
 import { 
   Accordion,
@@ -24,6 +26,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { PlanForkModal } from '@/components/workout/PlanForkModal';
 import {
   Tabs,
   TabsContent,
@@ -167,6 +170,7 @@ export default function WorkoutPlanDetail() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [addTemplateDialogOpen, setAddTemplateDialogOpen] = useState(false);
+  const [forkModalOpen, setForkModalOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const planId = parseInt(params.id);
@@ -694,6 +698,17 @@ export default function WorkoutPlanDetail() {
                       Add Workout Template
                     </Button>
                     
+                    {user.isCoach && (
+                      <Button 
+                        className="w-full mb-2" 
+                        variant="outline"
+                        onClick={() => setForkModalOpen(true)}
+                      >
+                        <GitFork className="mr-2 h-5 w-5" />
+                        Fork for Client
+                      </Button>
+                    )}
+                    
                     <Button 
                       className="w-full" 
                       variant="destructive"
@@ -904,6 +919,20 @@ export default function WorkoutPlanDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Fork Plan Modal */}
+      <PlanForkModal 
+        isOpen={forkModalOpen}
+        onClose={() => setForkModalOpen(false)}
+        planId={planId}
+        onSuccess={() => {
+          toast({
+            title: "Success",
+            description: "Plan forked successfully for client",
+          });
+          queryClient.invalidateQueries({ queryKey: ['/api/coach/client-plans'] });
+        }}
+      />
     </div>
   );
 }
