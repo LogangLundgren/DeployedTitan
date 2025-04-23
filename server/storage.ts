@@ -2483,20 +2483,37 @@ export class DbStorage implements IStorage {
       
       console.log("Creating workout plan with raw SQL");
       
-      const result = await db.execute`
+      // Use the pg pool directly to avoid Drizzle ORM issues
+      const sql = `
         INSERT INTO workout_plans (
           coach_id, title, description, price, duration_weeks, 
           difficulty_level, category, featured_image_url, goals, equipment,
           is_featured, is_sold_out, is_published, created_at, updated_at
         ) VALUES (
-          ${plan.coachId}, ${plan.title}, ${plan.description}, ${plan.price}, ${plan.durationWeeks},
-          ${plan.difficultyLevel}, ${plan.category}, ${plan.featuredImageUrl}, ${goals}, ${equipment},
-          ${plan.isFeatured || false}, ${plan.isSoldOut || false}, ${plan.isPublished || false}, 
-          NOW(), NOW()
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW()
         ) RETURNING *
       `;
       
-      // The result from db.execute is different from insert().values().returning()
+      const values = [
+        plan.coachId, 
+        plan.title, 
+        plan.description, 
+        plan.price, 
+        plan.durationWeeks,
+        plan.difficultyLevel, 
+        plan.category, 
+        plan.featuredImageUrl, 
+        goals, 
+        equipment,
+        plan.isFeatured || false, 
+        plan.isSoldOut || false, 
+        plan.isPublished || false
+      ];
+      
+      // Import the pool from db.ts
+      const { pool } = await import('./db');
+      const result = await pool.query(sql, values);
+      
       // We need to extract the first row
       if (result && result.rows && result.rows.length > 0) {
         // Convert snake_case column names to camelCase for consistency with the rest of the app
@@ -2569,19 +2586,36 @@ export class DbStorage implements IStorage {
       
       console.log("Creating forked plan with raw SQL");
       
-      const result = await db.execute`
+      // Use the pg pool directly to avoid Drizzle ORM issues
+      const sql = `
         INSERT INTO workout_plans (
           coach_id, title, description, price, duration_weeks, 
           difficulty_level, category, featured_image_url, goals, equipment,
           is_featured, is_sold_out, is_published, created_at, updated_at
         ) VALUES (
-          ${forkedPlan.coachId}, ${forkedPlan.title}, ${forkedPlan.description}, 
-          ${forkedPlan.price}, ${forkedPlan.durationWeeks}, ${forkedPlan.difficultyLevel}, 
-          ${forkedPlan.category}, ${forkedPlan.featuredImageUrl}, ${goals}, ${equipment},
-          ${forkedPlan.isFeatured}, ${forkedPlan.isSoldOut}, ${forkedPlan.isPublished}, 
-          NOW(), NOW()
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW()
         ) RETURNING *
       `;
+      
+      const values = [
+        forkedPlan.coachId, 
+        forkedPlan.title, 
+        forkedPlan.description, 
+        forkedPlan.price, 
+        forkedPlan.durationWeeks,
+        forkedPlan.difficultyLevel, 
+        forkedPlan.category, 
+        forkedPlan.featuredImageUrl, 
+        goals, 
+        equipment,
+        forkedPlan.isFeatured, 
+        forkedPlan.isSoldOut, 
+        forkedPlan.isPublished
+      ];
+      
+      // Import the pool from db.ts
+      const { pool } = await import('./db');
+      const result = await pool.query(sql, values);
       
       // Convert the result to a WorkoutPlan object
       if (!result || !result.rows || result.rows.length === 0) {
@@ -2613,14 +2647,19 @@ export class DbStorage implements IStorage {
       // This avoids issues if those columns don't exist yet
       try {
         // After successfully creating the plan, try to set the fork-specific fields
-        await db.execute`
+        // Use the pool directly to avoid Drizzle ORM issues
+        const updateSql = `
           UPDATE workout_plans 
           SET 
             is_forked = true,
-            client_id = ${clientId},
-            parent_plan_id = ${originalPlanId}
-          WHERE id = ${newPlan[0].id}
+            client_id = $1,
+            parent_plan_id = $2
+          WHERE id = $3
         `;
+        
+        const updateValues = [clientId, originalPlanId, newPlan[0].id];
+        const { pool } = await import('./db');
+        await pool.query(updateSql, updateValues);
         
         // Update our local plan object with these values for the return value
         newPlan[0].isForked = true;
