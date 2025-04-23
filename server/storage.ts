@@ -1525,6 +1525,86 @@ export class MemStorage implements IStorage {
     return this.workoutPlans.delete(id);
   }
   
+  async forkWorkoutPlan(originalPlanId: number, clientId: number, userId: number): Promise<WorkoutPlan | undefined> {
+    try {
+      // Get the original plan
+      const originalPlan = await this.getWorkoutPlan(originalPlanId);
+      if (!originalPlan) return undefined;
+      
+      // Create a new forked plan
+      const forkedPlan: InsertWorkoutPlan = {
+        coachId: originalPlan.coachId, // Keep the same coach
+        title: `${originalPlan.title} (Custom for client)`,
+        description: originalPlan.description,
+        price: 0, // Forked plans should be free as they're personalized
+        durationWeeks: originalPlan.durationWeeks,
+        difficultyLevel: originalPlan.difficultyLevel,
+        category: originalPlan.category,
+        featuredImageUrl: originalPlan.featuredImageUrl,
+        goals: originalPlan.goals,
+        equipment: originalPlan.equipment,
+        isFeatured: false,
+        isSoldOut: false,
+        isPublished: true, // Make it immediately available
+        parentPlanId: originalPlanId, // Link to parent plan
+        clientId: clientId, // Assign to specific client
+        isForked: true
+      };
+      
+      // Create the forked plan
+      const newPlan = await this.createWorkoutPlan(forkedPlan);
+      
+      // Now copy all templates from the original plan
+      const planTemplates = Array.from(this.planTemplates.values())
+        .filter(template => template.planId === originalPlanId);
+      
+      // Create new entries in plan_templates for each template
+      for (const template of planTemplates) {
+        const id = this.planTemplateCurrentId++;
+        const newPlanTemplate: PlanTemplate = {
+          id,
+          planId: newPlan.id,
+          templateId: template.templateId,
+          weekNumber: template.weekNumber,
+          dayNumber: template.dayNumber,
+          order: template.order,
+          notes: template.notes
+        };
+        this.planTemplates.set(id, newPlanTemplate);
+      }
+      
+      // Get the client user details for notification
+      const client = await this.getUser(clientId);
+      if (client) {
+        // Notify the client about the custom plan
+        await this.createNotification({
+          userId: clientId,
+          title: "Custom Workout Plan",
+          message: `Your coach has created a customized workout plan for you: ${newPlan.title}`,
+          type: "plan",
+          link: `/workout-plans/${newPlan.id}`
+        });
+      }
+      
+      return newPlan;
+    } catch (error) {
+      console.error("Error forking workout plan:", error);
+      return undefined;
+    }
+  }
+  
+  async getClientForkedPlans(coachId: number): Promise<WorkoutPlan[]> {
+    try {
+      // Get all workout plans for this coach that are marked as forked and have a clientId
+      return Array.from(this.workoutPlans.values())
+        .filter(plan => plan.coachId === coachId && plan.isForked === true && plan.clientId !== null)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (error) {
+      console.error("Error getting client forked plans:", error);
+      return [];
+    }
+  }
+  
   async getFeaturedWorkoutPlans(limit?: number): Promise<WorkoutPlan[]> {
     let plans = Array.from(this.workoutPlans.values())
       .filter(plan => plan.isFeatured && !plan.isSoldOut)

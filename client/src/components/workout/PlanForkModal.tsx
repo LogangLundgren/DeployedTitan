@@ -60,7 +60,7 @@ export function PlanForkModal({ isOpen, onClose, planId, onSuccess }: PlanForkMo
   } = useQuery({
     queryKey: ["/api/workout-plans", planId],
     enabled: isOpen && !!planId,
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setTitle(`${data.title} (Client Custom)`);
       setDescription(data.description || "");
     }
