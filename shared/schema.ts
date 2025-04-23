@@ -396,6 +396,11 @@ export const workoutPlans = pgTable("workout_plans", {
   isFeatured: boolean("is_featured").default(false),
   isSoldOut: boolean("is_sold_out").default(false),
   isPublished: boolean("is_published").default(false),
+  // New fields for forking feature
+  parentPlanId: integer("parent_plan_id").references(() => workoutPlans.id),
+  clientId: integer("client_id").references(() => users.id), // If this is a forked plan for a specific client
+  isForked: boolean("is_forked").default(false),
+  // Original fields
   rating: real("rating"),
   ratingsCount: integer("ratings_count").default(0),
   sales: integer("sales").default(0),
@@ -417,6 +422,9 @@ export const insertWorkoutPlanSchema = createInsertSchema(workoutPlans).pick({
   isFeatured: true,
   isSoldOut: true,
   isPublished: true,
+  parentPlanId: true,
+  clientId: true,
+  isForked: true,
 });
 
 export type WorkoutPlan = typeof workoutPlans.$inferSelect;
