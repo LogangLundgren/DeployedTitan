@@ -2287,6 +2287,127 @@ export class DbStorage implements IStorage {
     }
   }
   
+  async forkWorkoutPlan(originalPlanId: number, clientId: number, coachId: number): Promise<WorkoutPlan | undefined> {
+    try {
+      // Get the original plan
+      const originalPlan = await this.getWorkoutPlan(originalPlanId);
+      if (!originalPlan) {
+        throw new Error(`Original plan with ID ${originalPlanId} not found`);
+      }
+      
+      // Create a new forked plan
+      const forkedPlan: InsertWorkoutPlan = {
+        coachId: originalPlan.coachId, // Keep the same coach
+        title: `${originalPlan.title} (Custom for client)`,
+        description: originalPlan.description,
+        price: 0, // Forked plans should be free as they're personalized
+        durationWeeks: originalPlan.durationWeeks,
+        difficultyLevel: originalPlan.difficultyLevel,
+        category: originalPlan.category,
+        featuredImageUrl: originalPlan.featuredImageUrl,
+        goals: originalPlan.goals,
+        equipment: originalPlan.equipment,
+        isFeatured: false,
+        isSoldOut: false,
+        isPublished: true, // Make it immediately available
+        parentPlanId: originalPlanId, // Link to parent plan
+        clientId: clientId, // Assign to specific client
+        isForked: true
+      };
+      
+      // Create the forked plan
+      const newPlan = await this.createWorkoutPlan(forkedPlan);
+      
+      // Now copy all templates from the original plan
+      const planTemplates = await this.getPlanTemplates(originalPlanId);
+      
+      // Create new entries in plan_templates table for each template
+      for (const template of planTemplates) {
+        await db.insert(planTemplates).values({
+          planId: newPlan.id,
+          templateId: template.templateId,
+          weekNumber: template.weekNumber,
+          dayNumber: template.dayNumber,
+          order: template.order,
+          notes: template.notes
+        });
+      }
+      
+      // Get the client user details for notification
+      const client = await this.getUser(clientId);
+      if (client) {
+        // Notify the client about the custom plan
+        await this.createNotification({
+          userId: clientId,
+          title: "Custom Workout Plan",
+          message: `Your coach has created a customized workout plan for you: ${newPlan.title}`,
+          type: "plan",
+          link: `/workout-plans/${newPlan.id}`
+        });
+      }
+      
+      // Create a "purchase" record so the client can access the plan
+      await this.createPurchase({
+        userId: clientId,
+        planId: newPlan.id,
+        amount: 0, // Free for the client
+        transactionId: `forked-${Date.now()}`,
+        status: "completed"
+      });
+      
+      return newPlan;
+    } catch (error) {
+      console.error("Error forking workout plan:", error);
+      throw error;
+    }
+  }
+  
+  async getClientForkedPlans(coachId: number): Promise<WorkoutPlan[]> {
+    try {
+      // First get the coach profile to get the actual coach ID
+      const coachProfile = await this.getCoachProfileByUserId(coachId);
+      if (!coachProfile) {
+        throw new Error("Coach profile not found");
+      }
+      
+      // Now get all forked plans created by this coach
+      const plans = await db
+        .select()
+        .from(workoutPlans)
+        .where(
+          and(
+            eq(workoutPlans.coachId, coachProfile.id),
+            eq(workoutPlans.isForked, true),
+            isNotNull(workoutPlans.clientId)
+          )
+        );
+      
+      return plans;
+    } catch (error) {
+      console.error("Error getting client forked plans:", error);
+      return [];
+    }
+  }
+  
+  async getClientForkedPlan(planId: number): Promise<WorkoutPlan | undefined> {
+    try {
+      const [plan] = await db
+        .select()
+        .from(workoutPlans)
+        .where(
+          and(
+            eq(workoutPlans.id, planId),
+            eq(workoutPlans.isForked, true)
+          )
+        );
+      
+      return plan;
+    } catch (error) {
+      console.error(`Error getting forked plan with ID ${planId}:`, error);
+      return undefined;
+    }
+  }
+  
   async updateWorkoutPlan(id: number, planUpdate: Partial<WorkoutPlan>): Promise<WorkoutPlan | undefined> {
     try {
       console.log("Updating workout plan with ID:", id);

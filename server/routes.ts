@@ -3152,6 +3152,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Fork a workout plan for a specific client
+  app.post("/api/workout-plans/:id/fork", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Check if the user is a coach
+      if (!req.user.isCoach) {
+        return res.status(403).json({ message: "Only coaches can fork workout plans" });
+      }
+      
+      const planId = parseInt(req.params.id);
+      const { clientId } = req.body;
+      
+      if (!clientId) {
+        return res.status(400).json({ message: "Client ID is required" });
+      }
+      
+      // Get the coach profile using the authenticated user
+      const coachProfile = await storage.getCoachProfile(req.user.id);
+      if (!coachProfile) {
+        return res.status(404).json({ message: "Coach profile not found" });
+      }
+      
+      // Check if the plan exists 
+      const originalPlan = await storage.getWorkoutPlan(planId);
+      if (!originalPlan) {
+        return res.status(404).json({ message: "Workout plan not found" });
+      }
+      
+      // Check if the coach owns the plan
+      if (originalPlan.coachId !== coachProfile.id) {
+        return res.status(403).json({ message: "You can only fork your own workout plans" });
+      }
+      
+      // Fork the workout plan
+      const forkedPlan = await storage.forkWorkoutPlan(planId, clientId, req.user.id);
+      
+      if (!forkedPlan) {
+        return res.status(500).json({ message: "Failed to fork workout plan" });
+      }
+      
+      res.status(201).json(forkedPlan);
+    } catch (error) {
+      console.error("Error forking workout plan:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Get all forked plans for clients (for coaches)
+  app.get("/api/coach/client-plans", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Check if the user is a coach
+      if (!req.user.isCoach) {
+        return res.status(403).json({ message: "Only coaches can view client plans" });
+      }
+      
+      const clientPlans = await storage.getClientForkedPlans(req.user.id);
+      
+      // Get client details and add to response
+      const plansWithClientDetails = await Promise.all(
+        clientPlans.map(async (plan) => {
+          let client = null;
+          if (plan.clientId) {
+            client = await storage.getUser(plan.clientId);
+          }
+          
+          return {
+            ...plan,
+            client: client ? {
+              id: client.id,
+              username: client.username,
+              name: client.name
+            } : null
+          };
+        })
+      );
+      
+      res.json(plansWithClientDetails);
+    } catch (error) {
+      console.error("Error getting client plans:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Plan Template routes
   app.get("/api/workout-plans/:planId/templates", async (req, res) => {
     try {
