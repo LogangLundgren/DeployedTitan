@@ -2476,7 +2476,13 @@ export class DbStorage implements IStorage {
   
   async createWorkoutPlan(plan: InsertWorkoutPlan): Promise<WorkoutPlan> {
     try {
-      const result = await db.insert(workoutPlans).values(plan).returning();
+      // Filter out any fields that might not exist in the database
+      // This handles cases where the schema was updated but the database wasn't migrated
+      const { parentPlanId, ...corePlanData } = plan as any;
+      
+      console.log("Creating workout plan with filtered data:", corePlanData);
+      
+      const result = await db.insert(workoutPlans).values(corePlanData).returning();
       return result[0];
     } catch (error) {
       console.error("Error creating workout plan:", error);
@@ -2484,7 +2490,7 @@ export class DbStorage implements IStorage {
     }
   }
   
-  async forkWorkoutPlan(originalPlanId: number, clientId: number, coachId: number): Promise<WorkoutPlan | undefined> {
+  async forkWorkoutPlan(originalPlanId: number, clientId: number, coachId: number, customTitle?: string, customNotes?: string): Promise<WorkoutPlan | undefined> {
     try {
       // Get the original plan
       const originalPlan = await this.getWorkoutPlan(originalPlanId);
@@ -2495,9 +2501,10 @@ export class DbStorage implements IStorage {
       console.log("Original plan to fork:", originalPlan);
       
       // Create a new forked plan - ONLY include the fields that definitely exist in the database
+      // We must exclude any fields that might not exist in older database versions
       const forkedPlan = {
         coachId: originalPlan.coachId, // Keep the same coach
-        title: `${originalPlan.title} (Custom for client)`,
+        title: customTitle || `${originalPlan.title} (Custom for client)`,
         description: originalPlan.description,
         price: 0, // Forked plans should be free as they're personalized
         durationWeeks: originalPlan.durationWeeks,
