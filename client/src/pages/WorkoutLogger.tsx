@@ -177,13 +177,18 @@ function PurchasedWorkoutPlans({ onWorkoutCreated }: { onWorkoutCreated: (workou
       
       toast({
         title: "Workout Created",
-        description: "Your workout has been created successfully.",
+        description: "Now you can log weights and reps for your workout.",
+        variant: "default"
       });
       
       setIsCreateFromPlanOpen(false);
       setSelectedPlan(null);
       
+      // First switch to the New Workout tab 
+      updateActiveTab('new');
+      
       // Notify parent component that a workout was created
+      // This will set currentWorkout and isWorkoutStarted to true
       onWorkoutCreated(workout);
       
     } catch (error) {
