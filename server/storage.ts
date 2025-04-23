@@ -150,6 +150,8 @@ export interface IStorage {
   getFeaturedWorkoutPlans(limit?: number): Promise<WorkoutPlan[]>;
   searchWorkoutPlans(query: string, category?: string, limit?: number): Promise<WorkoutPlan[]>;
   getPurchasedWorkoutPlans(userId: number): Promise<WorkoutPlan[]>;
+  forkWorkoutPlan(planId: number, clientId: number, userId: number): Promise<WorkoutPlan | undefined>;
+  getClientForkedPlans(coachId: number): Promise<WorkoutPlan[]>;
   
   // Workout Plan Day operations
   getWorkoutPlanDays(planId: number): Promise<WorkoutPlanDay[]>;
