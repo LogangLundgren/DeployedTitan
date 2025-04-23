@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users, UserPlus, Edit, Dumbbell } from "lucide-react";
 import { Link } from "wouter";
-import { Helmet } from "react-helmet";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
@@ -55,10 +54,6 @@ export default function ClientPlans() {
 
   return (
     <div className="container py-8">
-      <Helmet>
-        <title>Client Workout Plans | Titan Fitness</title>
-      </Helmet>
-      
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Client Workout Plans</h1>

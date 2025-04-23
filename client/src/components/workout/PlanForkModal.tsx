@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import {
   Dialog,
   DialogContent,
@@ -15,67 +18,92 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-
-interface User {
-  id: number;
-  username: string;
-  name?: string;
-}
+import { Textarea } from "@/components/ui/textarea";
+import { AlertCircle, Loader2, GitFork } from "lucide-react";
 
 interface PlanForkModalProps {
   isOpen: boolean;
   onClose: () => void;
-  planId: number;
-  onSuccess: () => void;
+  planId: string | number;
+  onSuccess?: () => void;
 }
 
-export function PlanForkModal({
-  isOpen,
-  onClose,
-  planId,
-  onSuccess
-}: PlanForkModalProps) {
-  const [clients, setClients] = useState<User[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(true);
+interface Client {
+  id: number;
+  username: string;
+  name: string | null;
+}
+
+export function PlanForkModal({ isOpen, onClose, planId, onSuccess }: PlanForkModalProps) {
   const { toast } = useToast();
+  const [clientId, setClientId] = useState<string>("");
+  const [title, setTitle] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
 
-  useEffect(() => {
-    // Fetch clients (we'll use users who have purchased the coach's plans)
-    const fetchClients = async () => {
-      try {
-        setIsFetching(true);
-        const response = await fetch("/api/users");
-        if (!response.ok) {
-          throw new Error("Failed to fetch clients");
-        }
-        const data = await response.json();
-        // In a real app, this would be filtered to only show clients
-        setClients(data);
-      } catch (error) {
-        console.error("Error fetching clients:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load client list",
-          variant: "destructive",
-        });
-      } finally {
-        setIsFetching(false);
-      }
-    };
+  // Fetch clients (users the coach can assign plans to)
+  const {
+    data: clients,
+    isLoading: isLoadingClients,
+    error: clientsError
+  } = useQuery<Client[]>({
+    queryKey: ["/api/coach/clients"],
+    enabled: isOpen,
+  });
 
-    if (isOpen) {
-      fetchClients();
+  // Fetch original plan info to pre-populate the form
+  const {
+    data: plan,
+    isLoading: isLoadingPlan
+  } = useQuery({
+    queryKey: ["/api/workout-plans", planId],
+    enabled: isOpen && !!planId,
+    onSuccess: (data) => {
+      setTitle(`${data.title} (Client Custom)`);
+      setDescription(data.description || "");
     }
-  }, [isOpen, toast]);
+  });
 
-  const handleForkPlan = async () => {
-    if (!selectedClientId) {
+  // Fork plan mutation
+  const forkPlanMutation = useMutation({
+    mutationFn: async (data: { 
+      planId: string | number; 
+      clientId: string | number;
+      title: string;
+      description: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/coach/fork-plan", data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fork plan");
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Plan forked successfully for client",
+      });
+      onClose();
+      if (onSuccess) {
+        onSuccess();
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fork plan",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!clientId) {
       toast({
         title: "Error",
         description: "Please select a client",
@@ -83,91 +111,118 @@ export function PlanForkModal({
       });
       return;
     }
-
-    setIsLoading(true);
-    try {
-      const response = await apiRequest(
-        "POST",
-        `/api/workout-plans/${planId}/fork`,
-        { clientId: parseInt(selectedClientId) }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to fork workout plan");
-      }
-
-      toast({
-        title: "Success",
-        description: "Workout plan forked successfully for client",
-        variant: "default",
-      });
-      onSuccess();
-      onClose();
-    } catch (error: any) {
-      console.error("Error forking plan:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to fork workout plan",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    
+    forkPlanMutation.mutate({ 
+      planId, 
+      clientId,
+      title: title || `${plan?.title} (Client Custom)`,
+      description: description || plan?.description || "",
+    });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Fork Workout Plan for Client</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <GitFork className="h-5 w-5" />
+            Fork Plan for Client
+          </DialogTitle>
           <DialogDescription>
-            Create a customized copy of this workout plan for a specific client. 
-            This lets you modify the plan for their individual needs without affecting 
-            the original plan.
+            Create a customized version of this plan for a specific client.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="client" className="text-right">
-              Client
-            </Label>
-            <div className="col-span-3">
-              {isFetching ? (
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading clients...</span>
-                </div>
-              ) : (
-                <Select
-                  value={selectedClientId}
-                  onValueChange={setSelectedClientId}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger id="client">
-                    <SelectValue placeholder="Select a client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
+
+        {isLoadingPlan || isLoadingClients ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : clientsError ? (
+          <div className="rounded-md bg-destructive/15 p-4 my-4">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 text-destructive mr-2" />
+              <p className="text-sm text-destructive font-medium">
+                Failed to load clients. Please try again.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="client">Select Client</Label>
+              <Select 
+                value={clientId} 
+                onValueChange={setClientId}
+              >
+                <SelectTrigger id="client">
+                  <SelectValue placeholder="Select a client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients && clients.length > 0 ? (
+                    clients.map((client) => (
                       <SelectItem key={client.id} value={client.id.toString()}>
                         {client.name || client.username}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+                    ))
+                  ) : (
+                    <SelectItem value="no-clients" disabled>
+                      No clients available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleForkPlan} disabled={isLoading || !selectedClientId}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Fork Plan
-          </Button>
-        </DialogFooter>
+
+            <div className="space-y-2">
+              <Label htmlFor="title">Plan Title</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter plan title"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Enter plan description"
+                className="min-h-[100px]"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose}
+                disabled={forkPlanMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                disabled={!clientId || forkPlanMutation.isPending}
+              >
+                {forkPlanMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Forking...
+                  </>
+                ) : (
+                  <>
+                    <GitFork className="mr-2 h-4 w-4" />
+                    Fork Plan
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
