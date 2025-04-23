@@ -53,7 +53,9 @@ import {
   UserSuggestion,
   messageParticipants,
   messageThreads,
-  messages
+  messages,
+  planTemplates,
+  purchases
 } from "@shared/schema";
 import { z } from "zod";
 
