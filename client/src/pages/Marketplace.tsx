@@ -283,7 +283,34 @@ export default function Marketplace() {
                 </Button>
                 <Button 
                   size="sm"
-                  onClick={() => setLocation(`/checkout?planId=${plan.id}`)}
+                  onClick={async () => {
+                    // For free plans, purchase directly without checkout page
+                    if (plan.price === 0) {
+                      try {
+                        // Make the API request directly to record the free plan purchase
+                        const response = await fetch("/api/init-plan-checkout", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ planId: Number(plan.id) }),
+                          credentials: "include"
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                          throw new Error(data.message || 'Failed to process free plan purchase');
+                        }
+                        
+                        // Redirect directly to success page with freeplan flag
+                        setLocation(`/payment-success?planId=${plan.id}&freeplan=true`);
+                      } catch (error) {
+                        console.error('Error processing free plan:', error);
+                      }
+                    } else {
+                      // For paid plans, redirect to checkout
+                      setLocation(`/checkout?planId=${plan.id}`);
+                    }
+                  }}
                 >
                   {plan.price === 0 ? "Get Free Plan" : "Buy Now"}
                 </Button>
