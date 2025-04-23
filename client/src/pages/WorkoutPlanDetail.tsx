@@ -194,15 +194,47 @@ export default function WorkoutPlanDetail() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
 
-  const handlePurchase = () => {
+  const handlePurchase = async () => {
     // Close the purchase dialog if it's open
     setPurchaseDialogOpen(false);
     
-    // Reset any payment processing state
-    setIsProcessingPayment(false);
-    
-    // Redirect to the plan checkout page which will handle Stripe integration
-    setLocation(`/plan-checkout?planId=${plan.id}`);
+    // If this is a free plan, handle it directly without redirecting to checkout
+    if (plan.price === 0) {
+      setIsProcessingPayment(true);
+      
+      try {
+        // Make the API request directly to record the free plan purchase
+        const response = await fetch("/api/init-plan-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planId: Number(plan.id) }),
+          credentials: "include"
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to process free plan purchase');
+        }
+        
+        // Redirect directly to success page
+        setLocation(`/payment-success?planId=${plan.id}`);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'An unexpected error occurred';
+        console.error('Error processing free plan:', errorMsg);
+        toast({
+          title: 'Purchase Failed',
+          description: errorMsg,
+          variant: 'destructive',
+        });
+      } finally {
+        setIsProcessingPayment(false);
+      }
+    } else {
+      // For paid plans, redirect to the checkout page
+      setIsProcessingPayment(false);
+      setLocation(`/plan-checkout?planId=${plan.id}`);
+    }
   };
   
   const handleDeletePlan = async () => {
@@ -675,11 +707,28 @@ export default function WorkoutPlanDetail() {
                   <Button 
                     className="w-full text-base py-6" 
                     size="lg"
-                    disabled={plan.isSoldOut}
-                    onClick={() => setPurchaseDialogOpen(true)}
+                    disabled={plan.isSoldOut || isProcessingPayment}
+                    onClick={() => {
+                      // If this is a free plan, handle it directly
+                      if (plan.price === 0) {
+                        handlePurchase();
+                      } else {
+                        // For paid plans, show the confirmation dialog first
+                        setPurchaseDialogOpen(true);
+                      }
+                    }}
                   >
-                    <ShoppingCart className="mr-2 h-5 w-5" />
-                    Purchase Plan
+                    {isProcessingPayment ? (
+                      <>
+                        <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-background border-t-transparent"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="mr-2 h-5 w-5" />
+                        {plan.price === 0 ? "Get Free Plan" : "Purchase Plan"}
+                      </>
+                    )}
                   </Button>
                 )}
 
