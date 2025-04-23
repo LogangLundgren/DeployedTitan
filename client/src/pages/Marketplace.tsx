@@ -285,7 +285,7 @@ export default function Marketplace() {
                   size="sm"
                   onClick={() => setLocation(`/checkout?planId=${plan.id}`)}
                 >
-                  Buy Now
+                  {plan.price === 0 ? "Get Free Plan" : "Buy Now"}
                 </Button>
               </div>
             )}
