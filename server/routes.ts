@@ -5282,6 +5282,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get coach clients (all users that a coach might assign plans to)
+  app.get("/api/coach/clients", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Check if the user is a coach
+      if (!req.user.isCoach) {
+        return res.status(403).json({ message: "Only coaches can access client list" });
+      }
+      
+      // For now, return all users except the coach themselves
+      // In a real application, you might want to filter this list further
+      const allUsers = await storage.getAllUsers();
+      const clients = allUsers.filter(user => user.id !== req.user?.id);
+      
+      // Return minimal user data for clients
+      const clientData = clients.map(client => ({
+        id: client.id,
+        username: client.username,
+        name: client.name
+      }));
+      
+      res.json(clientData);
+    } catch (error) {
+      console.error("Error getting coach clients:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Serve uploaded files
   app.get("/uploads/*", serveUploads);
   

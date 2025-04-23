@@ -74,7 +74,7 @@ export function PlanForkModal({ isOpen, onClose, planId, onSuccess }: PlanForkMo
       title: string;
       description: string;
     }) => {
-      const response = await apiRequest("POST", "/api/coach/fork-plan", data);
+      const response = await apiRequest("POST", `/api/workout-plans/${data.planId}/fork`, { clientId: data.clientId, title: data.title, description: data.description });
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to fork plan");
