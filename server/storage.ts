@@ -2476,13 +2476,27 @@ export class DbStorage implements IStorage {
   
   async createWorkoutPlan(plan: InsertWorkoutPlan): Promise<WorkoutPlan> {
     try {
-      // Filter out any fields that might not exist in the database
+      // Extract only the fields we know exist in the database
       // This handles cases where the schema was updated but the database wasn't migrated
-      const { parentPlanId, ...corePlanData } = plan as any;
+      const safeData = {
+        coachId: plan.coachId,
+        title: plan.title,
+        description: plan.description,
+        price: plan.price,
+        durationWeeks: plan.durationWeeks,
+        difficultyLevel: plan.difficultyLevel,
+        category: plan.category,
+        featuredImageUrl: plan.featuredImageUrl,
+        goals: plan.goals,
+        equipment: plan.equipment,
+        isFeatured: plan.isFeatured || false,
+        isSoldOut: plan.isSoldOut || false,
+        isPublished: plan.isPublished || false
+      };
       
-      console.log("Creating workout plan with filtered data:", corePlanData);
+      console.log("Creating workout plan with safe data:", safeData);
       
-      const result = await db.insert(workoutPlans).values(corePlanData).returning();
+      const result = await db.insert(workoutPlans).values(safeData).returning();
       return result[0];
     } catch (error) {
       console.error("Error creating workout plan:", error);
@@ -2522,8 +2536,24 @@ export class DbStorage implements IStorage {
       
       console.log("Creating forked plan with data:", forkedPlan);
       
-      // Create the forked plan
-      let newPlan = await db.insert(workoutPlans).values(forkedPlan).returning();
+      // Create the forked plan with only core fields
+      const safeForkedPlan = {
+        coachId: forkedPlan.coachId, 
+        title: forkedPlan.title,
+        description: forkedPlan.description,
+        price: forkedPlan.price,
+        durationWeeks: forkedPlan.durationWeeks,
+        difficultyLevel: forkedPlan.difficultyLevel,
+        category: forkedPlan.category,
+        featuredImageUrl: forkedPlan.featuredImageUrl,
+        goals: forkedPlan.goals,
+        equipment: forkedPlan.equipment,
+        isFeatured: forkedPlan.isFeatured,
+        isSoldOut: forkedPlan.isSoldOut,
+        isPublished: forkedPlan.isPublished
+      };
+      
+      let newPlan = await db.insert(workoutPlans).values(safeForkedPlan).returning();
       
       // If we successfully created the plan, we can mark it as a forked plan separately
       // This avoids issues if those columns don't exist yet
