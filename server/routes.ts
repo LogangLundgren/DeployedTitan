@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import Stripe from "stripe";
 import { hashPassword, verifyPassword, requireAuth, requireAuthWithUser, requireOwnership } from "./auth";
-import { eq, and, or, like, isNotNull } from "drizzle-orm";
+import { eq, and, or, like, isNotNull, inArray } from "drizzle-orm";
 import { handleBase64Upload, serveUploads } from "./fileUpload";
 import * as path from "path";
 
