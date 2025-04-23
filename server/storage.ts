@@ -2100,6 +2100,95 @@ export class MemStorage implements IStorage {
     return this.userSuggestions.delete(id);
   }
   
+  // Workout Plan Fork operations for MemStorage
+  async forkWorkoutPlan(originalPlanId: number, clientId: number, coachId: number): Promise<WorkoutPlan | undefined> {
+    // Get the original plan
+    const originalPlan = this.workoutPlans.get(originalPlanId);
+    if (!originalPlan) {
+      return undefined;
+    }
+    
+    // Create a new forked plan
+    const id = this.workoutPlanCurrentId++;
+    const forkedPlan: WorkoutPlan = {
+      ...originalPlan,
+      id,
+      title: `${originalPlan.title} (Custom for client)`,
+      price: 0, // Forked plans should be free as they're personalized
+      isFeatured: false,
+      isSoldOut: false,
+      isPublished: true, // Make it immediately available
+      parentPlanId: originalPlanId, // Link to parent plan
+      clientId: clientId, // Assign to specific client
+      isForked: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.workoutPlans.set(id, forkedPlan);
+    
+    // Copy templates (in a real DB we'd have to do this in a transaction)
+    const planTemplates = Array.from(this.planTemplates.values())
+      .filter(template => template.planId === originalPlanId);
+    
+    for (const template of planTemplates) {
+      const newTemplateId = this.planTemplateCurrentId++;
+      const newTemplate: PlanTemplate = {
+        ...template,
+        id: newTemplateId,
+        planId: id
+      };
+      this.planTemplates.set(newTemplateId, newTemplate);
+    }
+    
+    // Create a "purchase" record so the client can access the plan
+    const purchaseId = this.purchaseCurrentId++;
+    const purchase: Purchase = {
+      id: purchaseId,
+      userId: clientId,
+      planId: id,
+      amount: 0, // Free for the client
+      purchaseDate: new Date(),
+      transactionId: `forked-${Date.now()}`,
+      status: "completed"
+    };
+    this.purchases.set(purchaseId, purchase);
+    
+    // Create notification for the client
+    const notificationId = this.notificationCurrentId++;
+    const notification: Notification = {
+      id: notificationId,
+      userId: clientId,
+      title: "Custom Workout Plan",
+      message: `Your coach has created a customized workout plan for you: ${forkedPlan.title}`,
+      type: "plan",
+      link: `/workout-plans/${id}`,
+      createdAt: new Date(),
+      isRead: false
+    };
+    this.notifications.set(notificationId, notification);
+    
+    return forkedPlan;
+  }
+  
+  async getClientForkedPlans(coachId: number): Promise<WorkoutPlan[]> {
+    // For memory storage, we'll just filter the plans
+    return Array.from(this.workoutPlans.values())
+      .filter(plan => 
+        plan.coachId === coachId && 
+        plan.isForked === true && 
+        plan.clientId !== null
+      );
+  }
+  
+  async getClientForkedPlan(planId: number): Promise<WorkoutPlan | undefined> {
+    const plan = this.workoutPlans.get(planId);
+    if (!plan || !plan.isForked) {
+      return undefined;
+    }
+    return plan;
+  }
+  
   // Seed default exercises
   private seedDefaultExercises() {
     const defaultExercises: Omit<Exercise, 'id'>[] = [
