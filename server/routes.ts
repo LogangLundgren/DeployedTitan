@@ -1304,7 +1304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/templates/:id", requireAuth, requireOwnership, async (req, res) => {
+  app.get("/api/templates/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1318,8 +1318,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Template not found" });
       }
       
-      // Verify the template belongs to the authenticated user
-      if (template.userId !== req.user?.id) {
+      // Check if the user owns the template, is a coach, or has purchased a plan with this template
+      const userId = req.user?.id;
+      let hasAccess = false;
+      
+      // Direct ownership
+      if (template.userId === userId) {
+        hasAccess = true;
+      } else {
+        // Check if user has purchased a plan that includes this template
+        // First, find all workout plans that include this template
+        console.log(`Checking if user ${userId} has access to template ${id}`);
+        
+        // Get all plan templates that include this template
+        const planTemplateData = await db
+          .select()
+          .from(planTemplates)
+          .where(eq(planTemplates.templateId, id));
+        
+        if (planTemplateData.length > 0) {
+          console.log(`Template ${id} is used in ${planTemplateData.length} plan(s)`);
+          
+          // Get distinct plan IDs
+          const planIds = planTemplateData.map(pt => pt.planId);
+          
+          // Check if user has purchased any of these plans
+          if (planIds.length > 0) {
+            const userPurchases = await db
+              .select()
+              .from(purchases)
+              .where(
+                and(
+                  eq(purchases.userId, userId),
+                  inArray(purchases.planId, planIds),
+                  eq(purchases.status, 'completed')
+                )
+              );
+            
+            if (userPurchases.length > 0) {
+              console.log(`User ${userId} has purchased a plan containing template ${id}`);
+              hasAccess = true;
+            }
+          }
+        }
+      }
+      
+      if (!hasAccess) {
         return res.status(403).json({ message: "You do not have permission to access this template" });
       }
       
