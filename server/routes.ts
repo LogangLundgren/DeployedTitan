@@ -3398,6 +3398,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Purchase routes
+  app.get("/api/purchases/my-purchases", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Get the userId from the authenticated session
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      console.log(`Fetching purchases for authenticated user ID: ${userId}`);
+      const purchases = await storage.getPurchases(userId);
+      console.log(`Found ${purchases.length} purchases for user ${userId}`);
+      
+      // Enhanced purchases with details
+      const enhancedPurchases = await Promise.all(
+        purchases.map(async (purchase) => {
+          let planDetails = null;
+          let serviceDetails = null;
+          
+          if (purchase.planId) {
+            planDetails = await storage.getWorkoutPlan(purchase.planId);
+          }
+          
+          if (purchase.serviceId) {
+            serviceDetails = await storage.getCoachingService(purchase.serviceId);
+          }
+          
+          return {
+            ...purchase,
+            planDetails,
+            serviceDetails
+          };
+        })
+      );
+      
+      res.status(200).json(enhancedPurchases);
+    } catch (error) {
+      console.error("Get user purchases error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/purchases", async (req, res) => {
     try {
       const userId = parseInt(req.query.userId as string);
@@ -3698,9 +3740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Duplicate route removed - using the requireAuth version above instead
-  
-  // Purchases endpoints
+  // Purchases endpoints - keeping this legacy endpoint for backward compatibility
   app.get("/api/purchases", async (req, res) => {
     try {
       const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
