@@ -2505,7 +2505,9 @@ export class DbStorage implements IStorage {
       const forkedPlan = {
         coachId: originalPlan.coachId, // Keep the same coach
         title: customTitle || `${originalPlan.title} (Custom for client)`,
-        description: originalPlan.description,
+        description: customNotes ? 
+          `${originalPlan.description}\n\nCOACH NOTES: ${customNotes}` : 
+          originalPlan.description,
         price: 0, // Forked plans should be free as they're personalized
         durationWeeks: originalPlan.durationWeeks,
         difficultyLevel: originalPlan.difficultyLevel,

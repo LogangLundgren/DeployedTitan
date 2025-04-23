@@ -3277,21 +3277,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only fork your own workout plans" });
       }
       
-      // Fork the workout plan
-      const forkedPlan = await storage.forkWorkoutPlan(planId, clientId, req.user.id);
+      // Fork the workout plan with custom title and notes
+      const forkedPlan = await storage.forkWorkoutPlan(
+        planId, 
+        clientId, 
+        req.user.id,
+        customTitle,  // Pass the custom title directly to the fork method
+        customNotes   // Pass the custom notes directly to the fork method
+      );
       
       if (!forkedPlan) {
         return res.status(500).json({ message: "Failed to fork workout plan" });
-      }
-      
-      // Update the title if custom title is provided
-      if (customTitle && forkedPlan.id) {
-        await storage.updateWorkoutPlan(forkedPlan.id, {
-          title: customTitle
-        });
-        
-        // Update the returned plan object with the custom title
-        forkedPlan.title = customTitle;
       }
       
       res.status(201).json(forkedPlan);
