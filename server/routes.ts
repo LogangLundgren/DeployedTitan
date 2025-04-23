@@ -1649,7 +1649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Authentication required" });
       }
       
-      const { isPublic } = req.body;
+      const { isPublic, name, notes } = req.body;
       // Always use req.user.id for consistency instead of req.session.userId
       const userId = req.user.id;
       
@@ -1660,13 +1660,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Template not found" });
       }
       
+      // Check if user owns the template or has purchased a plan containing it
+      let hasAccess = false;
+      
+      // Direct ownership
+      if (template.userId === userId) {
+        hasAccess = true;
+      } else {
+        // Check if user has purchased a plan that includes this template
+        console.log(`Checking if user ${userId} has access to template ${templateId}`);
+        
+        // Get all plan templates that include this template
+        const planTemplateData = await db
+          .select()
+          .from(planTemplates)
+          .where(eq(planTemplates.templateId, templateId));
+        
+        if (planTemplateData.length > 0) {
+          console.log(`Template ${templateId} is used in ${planTemplateData.length} plan(s)`);
+          
+          // Get distinct plan IDs
+          const planIds = planTemplateData.map(pt => pt.planId);
+          
+          // Check if user has purchased any of these plans
+          if (planIds.length > 0) {
+            const userPurchases = await db
+              .select()
+              .from(purchases)
+              .where(
+                and(
+                  eq(purchases.userId, userId),
+                  inArray(purchases.planId, planIds),
+                  eq(purchases.status, 'completed')
+                )
+              );
+            
+            if (userPurchases.length > 0) {
+              console.log(`User ${userId} has purchased a plan containing template ${templateId}`);
+              hasAccess = true;
+            }
+          }
+        }
+      }
+      
+      if (!hasAccess) {
+        return res.status(403).json({ 
+          message: "Access denied. You don't have permission to use this template." 
+        });
+      }
+      
       // Create new workout
       const workout = await storage.createWorkout({
-        name: template.name,
+        name: name || template.name,
         date: new Date(),
         userId: userId,
         category: template.category,
-        notes: `Created from template: ${template.name}`,
+        notes: notes || `Created from template: ${template.name}`,
         isPublic: isPublic === true // convert to boolean in case undefined/null
       });
       

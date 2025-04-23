@@ -153,15 +153,15 @@ function PurchasedWorkoutPlans({ onWorkoutCreated }: { onWorkoutCreated: (workou
       const templateData = await templateResponse.json();
       
       // Now create a workout from this template
-      const response = await fetch('/api/workouts', {
+      // Use the dedicated endpoint for creating workouts from templates
+      const response = await fetch(`/api/templates/${templateId}/create-workout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          templateId,
+          isPublic: false, // Default to private workout
           name: selectedPlan ? `${selectedPlan.title}: ${templateData.name || 'Workout'}` : 'New Workout',
-          date: new Date().toISOString(),
           notes: `Created from purchased plan: ${selectedPlan?.title || ''}`
         }),
         credentials: 'include'
