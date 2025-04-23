@@ -141,6 +141,18 @@ function PurchasedWorkoutPlans({ onWorkoutCreated }: { onWorkoutCreated: (workou
     }
     
     try {
+      // First, fetch the template to get its details
+      const templateResponse = await fetch(`/api/templates/${templateId}`, {
+        credentials: 'include'
+      });
+      
+      if (!templateResponse.ok) {
+        throw new Error('Failed to fetch template details');
+      }
+      
+      const templateData = await templateResponse.json();
+      
+      // Now create a workout from this template
       const response = await fetch('/api/workouts', {
         method: 'POST',
         headers: {
@@ -148,14 +160,17 @@ function PurchasedWorkoutPlans({ onWorkoutCreated }: { onWorkoutCreated: (workou
         },
         body: JSON.stringify({
           templateId,
-          name: selectedPlan ? `${selectedPlan.title} Workout` : 'New Workout',
-          date: new Date().toISOString()
+          name: selectedPlan ? `${selectedPlan.title}: ${templateData.name || 'Workout'}` : 'New Workout',
+          date: new Date().toISOString(),
+          notes: `Created from purchased plan: ${selectedPlan?.title || ''}`
         }),
         credentials: 'include'
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create workout from template');
+        const errorData = await response.json();
+        console.error('Server error:', errorData);
+        throw new Error(errorData.message || 'Failed to create workout from template');
       }
       
       const workout = await response.json();
@@ -175,7 +190,7 @@ function PurchasedWorkoutPlans({ onWorkoutCreated }: { onWorkoutCreated: (workou
       console.error('Error creating workout:', error);
       toast({
         title: "Error",
-        description: "Failed to create workout. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create workout. Please try again.",
         variant: "destructive"
       });
     }
@@ -214,7 +229,7 @@ function PurchasedWorkoutPlans({ onWorkoutCreated }: { onWorkoutCreated: (workou
         <p className="text-muted-foreground mb-4">
           You haven't purchased any workout plans yet.
         </p>
-        <Button onClick={() => setLocation('/marketplace')}>
+        <Button onClick={() => window.location.href = '/marketplace'}>
           Browse Marketplace
         </Button>
       </div>
@@ -719,7 +734,7 @@ export default function WorkoutLogger() {
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    onClick={() => setLocation('/marketplace')}
+                    onClick={() => window.location.href = '/marketplace'}
                   >
                     Browse Marketplace
                   </Button>
