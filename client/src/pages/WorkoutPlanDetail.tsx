@@ -26,7 +26,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { PlanForkModal } from '@/components/workout/PlanForkModal';
+import PlanForkModal from '@/components/workout/PlanForkModal';
 import {
   Tabs,
   TabsContent,
@@ -698,15 +698,31 @@ export default function WorkoutPlanDetail() {
                       Add Workout Template
                     </Button>
                     
-                    {user.isCoach && (
-                      <Button 
-                        className="w-full mb-2" 
-                        variant="outline"
-                        onClick={() => setForkModalOpen(true)}
-                      >
-                        <GitFork className="mr-2 h-5 w-5" />
-                        Fork for Client
-                      </Button>
+                    {user.isCoach && plan && (
+                      <>
+                        <Button 
+                          className="w-full mb-2" 
+                          variant="outline"
+                          onClick={() => setForkModalOpen(true)}
+                        >
+                          <GitFork className="mr-2 h-5 w-5" />
+                          Fork for Client
+                        </Button>
+                        
+                        <PlanForkModal
+                          planId={planId}
+                          planTitle={plan.title}
+                          open={forkModalOpen}
+                          setOpen={setForkModalOpen}
+                          afterFork={(forkedPlanId) => {
+                            toast({
+                              title: "Success",
+                              description: "Plan forked successfully for client",
+                            });
+                            queryClient.invalidateQueries({ queryKey: ['/api/coach/client-plans'] });
+                          }}
+                        />
+                      </>
                     )}
                     
                     <Button 
@@ -920,19 +936,7 @@ export default function WorkoutPlanDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Fork Plan Modal */}
-      <PlanForkModal 
-        isOpen={forkModalOpen}
-        onClose={() => setForkModalOpen(false)}
-        planId={planId}
-        onSuccess={() => {
-          toast({
-            title: "Success",
-            description: "Plan forked successfully for client",
-          });
-          queryClient.invalidateQueries({ queryKey: ['/api/coach/client-plans'] });
-        }}
-      />
+      {/* We're using the Dialog from PlanForkModal directly with "Fork for Client" button */}
     </div>
   );
 }

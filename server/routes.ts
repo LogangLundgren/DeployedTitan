@@ -3153,6 +3153,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Fork a workout plan for a specific client
+  // Get clients for a coach (users who have purchased their plans)
+  app.get("/api/coach/clients", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Check if the user is a coach
+      if (!req.user.isCoach) {
+        return res.status(403).json({ message: "Only coaches can access client information" });
+      }
+      
+      // Get the coach profile
+      const coachProfile = await storage.getCoachProfile(req.user.id);
+      if (!coachProfile) {
+        return res.status(404).json({ message: "Coach profile not found" });
+      }
+      
+      // Get all workout plans by this coach
+      const coachPlans = await storage.getWorkoutPlans(coachProfile.id);
+      if (!coachPlans || coachPlans.length === 0) {
+        return res.json([]);
+      }
+      
+      const planIds = coachPlans.map(plan => plan.id);
+      
+      // Get all purchases for these plans
+      const { purchases, users } = await import("@shared/schema");
+      const { eq, inArray } = await import("drizzle-orm");
+      const { db } = await import("./db");
+      
+      // Get unique users who purchased coach's plans
+      const purchaseRecords = await db
+        .select({ userId: purchases.userId })
+        .from(purchases)
+        .where(inArray(purchases.planId, planIds));
+      
+      if (!purchaseRecords || purchaseRecords.length === 0) {
+        return res.json([]);
+      }
+      
+      // Get unique user IDs
+      const uniqueUserIds = [...new Set(purchaseRecords.map(p => p.userId))];
+      
+      // Get user details for these users
+      const clientUsers = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          username: users.username
+        })
+        .from(users)
+        .where(inArray(users.id, uniqueUserIds));
+      
+      res.json(clientUsers);
+    } catch (error) {
+      console.error("Error getting coach clients:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Get forked plans created for clients
+  app.get("/api/coach/forked-plans", requireAuth, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Check if the user is a coach
+      if (!req.user.isCoach) {
+        return res.status(403).json({ message: "Only coaches can access client plans" });
+      }
+      
+      // Get the coach profile
+      const coachProfile = await storage.getCoachProfile(req.user.id);
+      if (!coachProfile) {
+        return res.status(404).json({ message: "Coach profile not found" });
+      }
+      
+      // Get all forked plans by this coach
+      const forkedPlans = await storage.getClientForkedPlans(coachProfile.id);
+      
+      res.json(forkedPlans);
+    } catch (error) {
+      console.error("Error getting forked client plans:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.post("/api/workout-plans/:id/fork", requireAuth, async (req: Request, res: Response) => {
     try {
       if (!req.user) {
@@ -3165,7 +3254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const planId = parseInt(req.params.id);
-      const { clientId } = req.body;
+      const { clientId, customTitle, customNotes } = req.body;
       
       if (!clientId) {
         return res.status(400).json({ message: "Client ID is required" });
@@ -3193,6 +3282,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!forkedPlan) {
         return res.status(500).json({ message: "Failed to fork workout plan" });
+      }
+      
+      // Update the title if custom title is provided
+      if (customTitle && forkedPlan.id) {
+        await storage.updateWorkoutPlan(forkedPlan.id, {
+          title: customTitle
+        });
+        
+        // Update the returned plan object with the custom title
+        forkedPlan.title = customTitle;
       }
       
       res.status(201).json(forkedPlan);

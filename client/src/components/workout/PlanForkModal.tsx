@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
+// UI Components
 import {
   Dialog,
   DialogContent,
@@ -10,6 +12,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -19,210 +22,192 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Loader2, GitFork } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Loader2 } from 'lucide-react';
 
-interface PlanForkModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  planId: string | number;
-  onSuccess?: () => void;
-}
-
+// Types
 interface Client {
   id: number;
   username: string;
   name: string | null;
 }
 
-export function PlanForkModal({ isOpen, onClose, planId, onSuccess }: PlanForkModalProps) {
+interface PlanForkModalProps {
+  planId: number;
+  planTitle: string;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  afterFork?: (forkedPlanId: number) => void;
+}
+
+export default function PlanForkModal({ planId, planTitle, open, setOpen, afterFork }: PlanForkModalProps) {
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
+  const [customTitle, setCustomTitle] = useState('');
+  const [customNotes, setCustomNotes] = useState('');
+  
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [clientId, setClientId] = useState<string>("");
-  const [title, setTitle] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
-
-  // Fetch clients (users the coach can assign plans to)
-  const {
-    data: clients,
-    isLoading: isLoadingClients,
-    error: clientsError
-  } = useQuery<Client[]>({
-    queryKey: ["/api/coach/clients"],
-    enabled: isOpen,
+  
+  // Get coach clients
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery<Client[]>({
+    queryKey: ['/api/coach/clients'],
+    enabled: open && !!user?.id
   });
-
-  // Fetch original plan info to pre-populate the form
-  const {
-    data: plan,
-    isLoading: isLoadingPlan
-  } = useQuery({
-    queryKey: ["/api/workout-plans", planId],
-    enabled: isOpen && !!planId,
-    onSuccess: (data: any) => {
-      setTitle(`${data.title} (Client Custom)`);
-      setDescription(data.description || "");
+  
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      setSelectedClient(null);
+      setCustomTitle(`${planTitle} (Custom for client)`);
+      setCustomNotes('');
     }
-  });
-
-  // Fork plan mutation
-  const forkPlanMutation = useMutation({
-    mutationFn: async (data: { 
-      planId: string | number; 
-      clientId: string | number;
-      title: string;
-      description: string;
-    }) => {
-      const response = await apiRequest("POST", `/api/workout-plans/${data.planId}/fork`, { clientId: data.clientId, title: data.title, description: data.description });
+  }, [open, planTitle]);
+  
+  // Create fork mutation
+  const { mutate: forkPlan, isPending } = useMutation({
+    mutationFn: async () => {
+      if (!selectedClient) {
+        throw new Error('Please select a client');
+      }
+      
+      const response = await apiRequest(
+        'POST', 
+        `/api/workout-plans/${planId}/fork`, 
+        { 
+          clientId: parseInt(selectedClient),
+          customTitle: customTitle || `${planTitle} (Custom for client)`,
+          customNotes: customNotes || ''
+        }
+      );
+      
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to fork plan");
+        throw new Error(errorData.message || 'Failed to fork workout plan');
       }
+      
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "Success",
-        description: "Plan forked successfully for client",
+        title: "Plan Forked Successfully",
+        description: `You've created a custom plan for your client.`,
       });
-      onClose();
-      if (onSuccess) {
-        onSuccess();
+      
+      // Invalidate plans cache
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/coach/forked-plans'] });
+      
+      // Close modal
+      setOpen(false);
+      
+      // Call callback if provided
+      if (afterFork && data.id) {
+        afterFork(data.id);
       }
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to fork plan",
+        title: "Failed to fork plan",
+        description: error.message,
         variant: "destructive",
       });
-    },
+    }
   });
-
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!clientId) {
-      toast({
-        title: "Error",
-        description: "Please select a client",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    forkPlanMutation.mutate({ 
-      planId, 
-      clientId,
-      title: title || `${plan?.title} (Client Custom)`,
-      description: description || plan?.description || "",
-    });
+    forkPlan();
   };
-
+  
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      {/* The trigger is no longer needed as we control the dialog from the parent */}
       <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <GitFork className="h-5 w-5" />
-            Fork Plan for Client
-          </DialogTitle>
-          <DialogDescription>
-            Create a customized version of this plan for a specific client.
-          </DialogDescription>
-        </DialogHeader>
-
-        {isLoadingPlan || isLoadingClients ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Create Custom Plan for Client</DialogTitle>
+            <DialogDescription>
+              Create a personalized version of "{planTitle}" for an individual client.
+              The custom plan will be free for the selected client.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {isLoadingClients ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : !clients || clients.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <p>You don't have any clients yet.</p>
+                <p className="text-sm mt-1">Clients are users who have purchased your plans or services.</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="client">Select Client</Label>
+                  <Select value={selectedClient || ''} onValueChange={setSelectedClient}>
+                    <SelectTrigger id="client">
+                      <SelectValue placeholder="Select a client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id.toString()}>
+                          {client.name || client.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="title">Custom Title</Label>
+                  <Input
+                    id="title"
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                    placeholder="Enter a custom title for this plan"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Custom Notes (Optional)</Label>
+                  <Textarea
+                    id="notes"
+                    value={customNotes}
+                    onChange={(e) => setCustomNotes(e.target.value)}
+                    placeholder="Add custom notes about this plan for your client"
+                    rows={3}
+                  />
+                </div>
+              </>
+            )}
           </div>
-        ) : clientsError ? (
-          <div className="rounded-md bg-destructive/15 p-4 my-4">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-destructive mr-2" />
-              <p className="text-sm text-destructive font-medium">
-                Failed to load clients. Please try again.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="client">Select Client</Label>
-              <Select 
-                value={clientId} 
-                onValueChange={setClientId}
-              >
-                <SelectTrigger id="client">
-                  <SelectValue placeholder="Select a client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients && clients.length > 0 ? (
-                    clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id.toString()}>
-                        {client.name || client.username}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-clients" disabled>
-                      No clients available
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="title">Plan Title</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter plan title"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Enter plan description"
-                className="min-h-[100px]"
-              />
-            </div>
-
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose}
-                disabled={forkPlanMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                disabled={!clientId || forkPlanMutation.isPending}
-              >
-                {forkPlanMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Forking...
-                  </>
-                ) : (
-                  <>
-                    <GitFork className="mr-2 h-4 w-4" />
-                    Fork Plan
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        )}
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isPending || !selectedClient || isLoadingClients || (clients && clients.length === 0)}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : 'Create Custom Plan'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
