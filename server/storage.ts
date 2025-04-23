@@ -2476,28 +2476,55 @@ export class DbStorage implements IStorage {
   
   async createWorkoutPlan(plan: InsertWorkoutPlan): Promise<WorkoutPlan> {
     try {
-      // Extract only the fields we know exist in the database
-      // This handles cases where the schema was updated but the database wasn't migrated
-      const safeData = {
-        coachId: plan.coachId,
-        title: plan.title,
-        description: plan.description,
-        price: plan.price,
-        durationWeeks: plan.durationWeeks,
-        difficultyLevel: plan.difficultyLevel,
-        category: plan.category,
-        featuredImageUrl: plan.featuredImageUrl,
-        goals: plan.goals,
-        equipment: plan.equipment,
-        isFeatured: plan.isFeatured || false,
-        isSoldOut: plan.isSoldOut || false,
-        isPublished: plan.isPublished || false
-      };
+      // Use raw SQL to insert the workout plan to bypass schema issues
+      // This ensures we only insert fields that definitely exist in the database
+      const goals = typeof plan.goals === 'string' ? plan.goals : JSON.stringify(plan.goals || []);
+      const equipment = typeof plan.equipment === 'string' ? plan.equipment : JSON.stringify(plan.equipment || []);
       
-      console.log("Creating workout plan with safe data:", safeData);
+      console.log("Creating workout plan with raw SQL");
       
-      const result = await db.insert(workoutPlans).values(safeData).returning();
-      return result[0];
+      const result = await db.execute`
+        INSERT INTO workout_plans (
+          coach_id, title, description, price, duration_weeks, 
+          difficulty_level, category, featured_image_url, goals, equipment,
+          is_featured, is_sold_out, is_published, created_at, updated_at
+        ) VALUES (
+          ${plan.coachId}, ${plan.title}, ${plan.description}, ${plan.price}, ${plan.durationWeeks},
+          ${plan.difficultyLevel}, ${plan.category}, ${plan.featuredImageUrl}, ${goals}, ${equipment},
+          ${plan.isFeatured || false}, ${plan.isSoldOut || false}, ${plan.isPublished || false}, 
+          NOW(), NOW()
+        ) RETURNING *
+      `;
+      
+      // The result from db.execute is different from insert().values().returning()
+      // We need to extract the first row
+      if (result && result.rows && result.rows.length > 0) {
+        // Convert snake_case column names to camelCase for consistency with the rest of the app
+        const planData = result.rows[0];
+        return {
+          id: planData.id,
+          coachId: planData.coach_id,
+          title: planData.title,
+          description: planData.description,
+          price: planData.price,
+          durationWeeks: planData.duration_weeks,
+          difficultyLevel: planData.difficulty_level,
+          category: planData.category,
+          featuredImageUrl: planData.featured_image_url,
+          goals: planData.goals,
+          equipment: planData.equipment,
+          isFeatured: planData.is_featured,
+          isSoldOut: planData.is_sold_out,
+          isPublished: planData.is_published,
+          createdAt: planData.created_at,
+          updatedAt: planData.updated_at,
+          sales: planData.sales,
+          rating: planData.rating,
+          ratingsCount: planData.ratings_count
+        };
+      } else {
+        throw new Error("Failed to insert workout plan - no rows returned");
+      }
     } catch (error) {
       console.error("Error creating workout plan:", error);
       throw error;
@@ -2536,24 +2563,51 @@ export class DbStorage implements IStorage {
       
       console.log("Creating forked plan with data:", forkedPlan);
       
-      // Create the forked plan with only core fields
-      const safeForkedPlan = {
-        coachId: forkedPlan.coachId, 
-        title: forkedPlan.title,
-        description: forkedPlan.description,
-        price: forkedPlan.price,
-        durationWeeks: forkedPlan.durationWeeks,
-        difficultyLevel: forkedPlan.difficultyLevel,
-        category: forkedPlan.category,
-        featuredImageUrl: forkedPlan.featuredImageUrl,
-        goals: forkedPlan.goals,
-        equipment: forkedPlan.equipment,
-        isFeatured: forkedPlan.isFeatured,
-        isSoldOut: forkedPlan.isSoldOut,
-        isPublished: forkedPlan.isPublished
-      };
+      // Create the forked plan with raw SQL to bypass schema issues
+      const goals = typeof forkedPlan.goals === 'string' ? forkedPlan.goals : JSON.stringify(forkedPlan.goals || []);
+      const equipment = typeof forkedPlan.equipment === 'string' ? forkedPlan.equipment : JSON.stringify(forkedPlan.equipment || []);
       
-      let newPlan = await db.insert(workoutPlans).values(safeForkedPlan).returning();
+      console.log("Creating forked plan with raw SQL");
+      
+      const result = await db.execute`
+        INSERT INTO workout_plans (
+          coach_id, title, description, price, duration_weeks, 
+          difficulty_level, category, featured_image_url, goals, equipment,
+          is_featured, is_sold_out, is_published, created_at, updated_at
+        ) VALUES (
+          ${forkedPlan.coachId}, ${forkedPlan.title}, ${forkedPlan.description}, 
+          ${forkedPlan.price}, ${forkedPlan.durationWeeks}, ${forkedPlan.difficultyLevel}, 
+          ${forkedPlan.category}, ${forkedPlan.featuredImageUrl}, ${goals}, ${equipment},
+          ${forkedPlan.isFeatured}, ${forkedPlan.isSoldOut}, ${forkedPlan.isPublished}, 
+          NOW(), NOW()
+        ) RETURNING *
+      `;
+      
+      // Convert the result to a WorkoutPlan object
+      if (!result || !result.rows || result.rows.length === 0) {
+        throw new Error("Failed to create forked plan - no rows returned");
+      }
+      
+      // Convert snake_case column names to camelCase
+      const planData = result.rows[0];
+      let newPlan = [{
+        id: planData.id,
+        coachId: planData.coach_id,
+        title: planData.title,
+        description: planData.description,
+        price: planData.price,
+        durationWeeks: planData.duration_weeks,
+        difficultyLevel: planData.difficulty_level,
+        category: planData.category,
+        featuredImageUrl: planData.featured_image_url,
+        goals: planData.goals,
+        equipment: planData.equipment,
+        isFeatured: planData.is_featured,
+        isSoldOut: planData.is_sold_out,
+        isPublished: planData.is_published,
+        createdAt: planData.created_at,
+        updatedAt: planData.updated_at
+      }];
       
       // If we successfully created the plan, we can mark it as a forked plan separately
       // This avoids issues if those columns don't exist yet
