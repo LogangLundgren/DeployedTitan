@@ -91,7 +91,13 @@ interface Purchase {
 }
 
 // Component to display purchased workout plans
-function PurchasedWorkoutPlans({ onWorkoutCreated }: { onWorkoutCreated: (workout: WorkoutWithDetails) => void }) {
+function PurchasedWorkoutPlans({ 
+  onWorkoutCreated, 
+  updateTab 
+}: { 
+  onWorkoutCreated: (workout: WorkoutWithDetails) => void;
+  updateTab: (tab: 'new' | 'history' | 'analytics' | 'exercises' | 'plans') => void;
+}) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null);
@@ -185,7 +191,7 @@ function PurchasedWorkoutPlans({ onWorkoutCreated }: { onWorkoutCreated: (workou
       setSelectedPlan(null);
       
       // First switch to the New Workout tab 
-      updateActiveTab('new');
+      updateTab('new');
       
       // Notify parent component that a workout was created
       // This will set currentWorkout and isWorkoutStarted to true
@@ -747,6 +753,7 @@ export default function WorkoutLogger() {
                 
                 <PurchasedWorkoutPlans 
                   onWorkoutCreated={handleWorkoutCreated}
+                  updateTab={updateActiveTab}
                 />
               </div>
             </TabsContent>
