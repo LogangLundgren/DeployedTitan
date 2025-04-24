@@ -167,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all active users
       // Only show users that are valid and ensure there's a fixed list of protected users
       // This will keep only the Logan Main account (ID: 9) when cleanup happens
-      const protectedUserIds = [9]; // Logan Main (ID: 9)
+      const isProtectedUser = (user) => user.username === "Logan Main"; // Protected user check
       const users = await storage.getAllUsers();
       
       // Remove passwords and filter out current user, deleted accounts, and ensure admin is visible
@@ -175,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         users
           .filter(user => {
             // Keep protected users, active accounts, but filter out current user
-            const isProtected = protectedUserIds.includes(user.id);
+            const isProtected = isProtectedUser(user);
             const isCurrentUser = currentUserId && user.id === currentUserId;
             const hasUsername = !!user.username; // Filter out users without username
             
@@ -894,13 +894,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter out workouts from deleted users
       // Only show workouts from users that still exist (have a username)
       const activeUserIds = new Set();
-      const protectedUserIds = [9]; // Logan Main (ID: 9)
+      const isProtectedUser = (user) => user.username === "Logan Main"; // Protected user check
       
       // Get all active users to filter workouts
       const allUsers = await storage.getAllUsers();
       allUsers.forEach(user => {
         // Consider a user active if they have a username or are a protected user
-        if (user.username || protectedUserIds.includes(user.id)) {
+        if (user.username || isProtectedUser(user)) {
           activeUserIds.add(user.id);
         }
       });
@@ -4680,7 +4680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users", async (req: Request, res: Response) => {
     try {
       // Only allow admin (Logan Main) to perform this operation
-      if (!req.user || req.user.id !== 9) {
+      if (!req.user || req.user.username !== "Logan Main") {
         return res.status(403).json({ message: "Unauthorized. Only admin user can access all users." });
       }
       
@@ -4696,7 +4696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/users", async (req: Request, res: Response) => {
     try {
       // Only allow admin (Logan Main) to perform this operation
-      if (!req.user || req.user.id !== 9) {
+      if (!req.user || req.user.username !== "Logan Main") {
         return res.status(403).json({ message: "Unauthorized. Only admin user can perform this operation." });
       }
       
@@ -4708,7 +4708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { password, ...userWithoutPassword } = user;
         return {
           ...userWithoutPassword,
-          isProtected: user.id === 9 // Mark Logan Main as protected
+          isProtected: user.username === "Logan Main" // Mark Logan Main as protected
         };
       });
       
@@ -4723,7 +4723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/users/:id", async (req: Request, res: Response) => {
     try {
       // Only allow admin (Logan Main) to perform this operation
-      if (!req.user || req.user.id !== 9) {
+      if (!req.user || req.user.username !== "Logan Main") {
         return res.status(403).json({ message: "Unauthorized. Only admin user can perform this operation." });
       }
       
@@ -4769,7 +4769,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/cleanup-users", async (req: Request, res: Response) => {
     try {
       // Only allow admin (Logan Main) to perform this operation
-      if (!req.user || req.user.id !== 9) {
+      if (!req.user || req.user.username !== "Logan Main") {
         return res.status(403).json({ message: "Unauthorized. Only admin user can perform this operation." });
       }
       
