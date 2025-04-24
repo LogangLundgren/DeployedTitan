@@ -74,37 +74,50 @@ export function NotificationDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative hover:bg-white/10 transition-colors">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <Badge className="absolute -top-1 -right-1 px-1.5 py-0.5 min-w-5 h-5 flex items-center justify-center rounded-full" variant="destructive">
+            <Badge 
+              className="absolute -top-1 -right-1 px-1.5 py-0.5 min-w-5 h-5 flex items-center justify-center rounded-full animate-pulse shadow-sm" 
+              variant="destructive"
+            >
               {unreadCount}
             </Badge>
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel className="flex justify-between items-center">
-          <span>Notifications</span>
+      <DropdownMenuContent align="end" className="w-96 max-w-[90vw] shadow-xl overflow-hidden border">
+        <DropdownMenuLabel className="flex justify-between items-center bg-gradient-to-r from-primary/5 to-primary/10 py-3">
+          <span className="font-semibold">Notifications</span>
           {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={markAllAsRead} 
+              className="text-xs hover:bg-white/40 transition-colors"
+            >
               Mark all as read
             </Button>
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
-        <ScrollArea className="h-[300px]">
+        <ScrollArea className="h-[350px]">
           {loading ? (
-            <div className="flex justify-center items-center p-4">
+            <div className="flex flex-col justify-center items-center p-8 space-y-3">
+              <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
               <span className="text-sm text-muted-foreground">Loading notifications...</span>
             </div>
           ) : notifications.length === 0 ? (
-            <div className="flex justify-center items-center p-4">
-              <span className="text-sm text-muted-foreground">No notifications</span>
+            <div className="flex flex-col justify-center items-center p-12 space-y-2">
+              <Bell className="h-10 w-10 text-muted-foreground/40" />
+              <span className="text-sm font-medium text-muted-foreground">No notifications</span>
+              <span className="text-xs text-muted-foreground max-w-52 text-center">
+                We'll notify you when something important happens
+              </span>
             </div>
           ) : (
-            <div className="p-2">
+            <div className="p-3">
               {notifications.map((notification) => (
                 <NotificationItem 
                   key={notification.id} 

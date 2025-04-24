@@ -17,27 +17,32 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-gradient-to-r from-primary to-primary/90 text-white shadow-md">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            width="28" 
-            height="28" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2.5" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            className="text-white"
-          >
-            <path d="M7 11v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1z"/>
-            <path d="M14 6v13a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1z"/>
-            <path d="M21 4v15a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1z"/>
-          </svg>
+    <header className="bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg">
+      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+        <div className="flex items-center space-x-3">
+          <div className="bg-white rounded-full p-1.5 shadow-inner">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="26" 
+              height="26" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2.5" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              className="text-primary"
+            >
+              <path d="M7 11v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1z"/>
+              <path d="M14 6v13a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1z"/>
+              <path d="M21 4v15a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1z"/>
+            </svg>
+          </div>
           <Link href="/">
-            <h1 className="text-2xl font-bold tracking-tight">Titan Fitness</h1>
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-extrabold tracking-tight">TITAN</h1>
+              <span className="-mt-1 text-xs font-medium tracking-wider opacity-90">FITNESS</span>
+            </div>
           </Link>
         </div>
         
@@ -46,10 +51,10 @@ export default function Header() {
           
           <div className="relative">
             <button 
-              className="flex items-center gap-2 hover:bg-white/10 py-1.5 px-2 rounded-lg transition-colors"
+              className="flex items-center gap-2 hover:bg-white/10 py-1.5 px-2 rounded-lg transition-all duration-200 hover:shadow-inner"
               onClick={() => setDropdownOpen(!dropdownOpen)}
             >
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-medium shadow-sm">
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-sm font-bold shadow-sm text-primary">
                 {user?.name?.split(' ').map((n: string) => n[0]).join('')}
               </div>
               <span className="font-medium">{user?.name}</span>
@@ -70,23 +75,51 @@ export default function Header() {
             </button>
             
             {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg py-1.5 z-10 border border-gray-100">
-                <div className="px-4 py-2 border-b border-gray-100">
-                  <p className="text-sm text-gray-500">Signed in as</p>
-                  <p className="text-sm font-medium text-gray-900">{user?.email}</p>
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl py-1.5 z-10 border border-gray-100 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-primary/5 to-primary/10">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Signed in as</p>
+                  <p className="text-sm font-semibold text-gray-900">{user?.email}</p>
                 </div>
-                <Link href="/profile" className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50" onClick={() => setDropdownOpen(false)}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <Link 
+                  href="/profile" 
+                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors" 
+                  onClick={() => setDropdownOpen(false)}
+                >
+                  <svg 
+                    className="text-primary" 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  >
                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
                   </svg>
-                  <span>Profile</span>
+                  <span>My Profile</span>
                 </Link>
                 
                 {/* Only show Become a Coach option if user is not already a coach */}
                 {user && !user.isCoach && (
-                  <Link href="/become-coach" className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50" onClick={() => setDropdownOpen(false)}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <Link 
+                    href="/become-coach" 
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors" 
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    <svg 
+                      className="text-primary" 
+                      width="16" 
+                      height="16" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                    >
                       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
                       <circle cx="9" cy="7" r="4"></circle>
                       <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -99,7 +132,7 @@ export default function Header() {
                 <div className="border-t border-gray-100 my-1"></div>
                 <button 
                   onClick={handleLogout} 
-                  className="w-full text-left flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-gray-50"
+                  className="w-full text-left flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
                   disabled={logoutMutation.isPending}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -82,7 +82,7 @@ export default function Navigation() {
   ];
   
   return (
-    <nav className="bg-white shadow-sm sticky top-0 z-10">
+    <nav className="bg-white shadow-md sticky top-0 z-10 border-b border-gray-100">
       <div className="container mx-auto px-4">
         <div 
           className="flex items-center overflow-x-auto hide-scrollbar"
@@ -95,18 +95,23 @@ export default function Navigation() {
               <Link 
                 key={link.href} 
                 href={link.href}
-                className={`flex items-center gap-2 px-4 py-3.5 whitespace-nowrap transition-colors duration-200 ${
+                className={`flex items-center gap-2 px-4 py-3.5 whitespace-nowrap transition-all duration-200 ${
                   isActive
-                    ? 'text-primary font-medium relative'
+                    ? 'text-primary font-medium relative bg-primary/5'
                     : 'text-gray-500 hover:text-primary hover:bg-gray-50'
                 }`}
               >
-                <span className={`${isActive ? 'text-primary' : 'text-gray-400'}`}>
+                <span className={`${isActive 
+                  ? 'text-primary scale-110 transition-transform duration-200' 
+                  : 'text-gray-400'}`}
+                >
                   {link.icon}
                 </span>
-                {link.label}
+                <span className={`${isActive ? 'font-semibold' : ''}`}>
+                  {link.label}
+                </span>
                 {isActive && (
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></span>
+                  <span className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-primary/70 rounded-t"></span>
                 )}
               </Link>
             );
