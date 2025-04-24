@@ -16,12 +16,12 @@ interface FeedbackItem {
   id: number;
   type: string;
   content: string;
-  userId: number | null;
+  user_id: number | null;
   username: string | null;
   path: string;
-  userAgent: string;
+  user_agent: string;
   timestamp: string;
-  isResolved: boolean;
+  is_resolved: boolean;
 }
 
 // Feedback section component
@@ -115,7 +115,7 @@ function FeedbackSection() {
       {feedbackItems.map((item: FeedbackItem) => (
         <div 
           key={item.id} 
-          className={`border rounded-lg p-4 ${item.isResolved ? 'bg-muted/30' : 'bg-card'}`}
+          className={`border rounded-lg p-4 ${item.is_resolved ? 'bg-muted/30' : 'bg-card'}`}
         >
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">

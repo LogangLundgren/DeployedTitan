@@ -5501,7 +5501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Update the feedback status using parameterized query
-      const result = await db.execute(
+      const result = await pool.query(
         `UPDATE feedback SET is_resolved = true WHERE id = $1 RETURNING *`,
         [feedbackId]
       );
