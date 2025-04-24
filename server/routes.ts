@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { db } from "./db";
+import { db, pool } from "./db";
 import Stripe from "stripe";
 import { hashPassword, verifyPassword, requireAuth, requireAuthWithUser, requireOwnership } from "./auth";
 import { eq, and, or, like, isNotNull, inArray } from "drizzle-orm";
@@ -5435,32 +5435,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: timestamp || new Date().toISOString()
       };
       
-      // Insert the feedback into the database with parameterized query
-      // Since there are issues with the schema definition, we'll use direct SQL
-      const queryText = `
-        INSERT INTO feedback 
-        (type, content, user_id, username, path, user_agent, timestamp) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7) 
-        RETURNING *
-      `;
+      // Use pool.query for direct database access
+      // First, handle null values properly
+      let userIdValue = userId ? userId : null;
+      let usernameValue = username ? username : null;
       
-      const values = [
-        type,
-        content,
-        userId,
-        username,
-        path,
-        userAgent,
-        timestamp || new Date().toISOString()
-      ];
-      
-      // Execute the SQL query directly using the pg pool
-      const pgResult = await pool.query(queryText, values);
+      const result = await pool.query(
+        `INSERT INTO feedback (type, content, user_id, username, path, user_agent, timestamp) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7) 
+         RETURNING *`,
+        [
+          type, 
+          content, 
+          userIdValue, 
+          usernameValue, 
+          path, 
+          userAgent, 
+          timestamp || new Date().toISOString()
+        ]
+      );
       
       res.status(201).json({ 
         success: true, 
         message: "Feedback submitted successfully",
-        feedback: pgResult.rows[0]
+        feedback: result.rows[0]
       });
     } catch (error) {
       console.error("Error submitting feedback:", error);
@@ -5477,7 +5475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get all feedback ordered by most recent first using direct SQL
-      const result = await db.execute(
+      const result = await pool.query(
         `SELECT * FROM feedback ORDER BY timestamp DESC`
       );
       
@@ -5502,10 +5500,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
-      // Update the feedback status using direct SQL
-      const result = await db.execute(`
-        UPDATE feedback SET is_resolved = true WHERE id = ${feedbackId} RETURNING *
-      `);
+      // Update the feedback status using parameterized query
+      const result = await db.execute(
+        `UPDATE feedback SET is_resolved = true WHERE id = $1 RETURNING *`,
+        [feedbackId]
+      );
       
       if (result.rowCount === 0) {
         return res.status(404).json({ message: "Feedback not found" });
