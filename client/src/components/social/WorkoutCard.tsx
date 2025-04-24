@@ -124,25 +124,28 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
 
   return (
     <>
-      <Card>
+      <Card className="overflow-hidden transition-all duration-200 hover:shadow-md">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Avatar>
+              <Avatar className="border-2 border-primary/10">
                 <AvatarImage src={""} />
-                <AvatarFallback>
+                <AvatarFallback className="bg-primary/5 text-primary font-semibold">
                   {user && workout.userId === user.id ? "ME" : "U" + workout.userId}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <div className="font-medium">{userDisplayName}</div>
-                <div className="text-sm text-muted-foreground">
-                  {formatDate(workout.date)} at {formatTime(workout.date)}
+                <div className="text-sm text-muted-foreground flex items-center">
+                  <CalendarDays className="h-3 w-3 mr-1 opacity-70" />
+                  {formatDate(workout.date)} 
+                  <Clock className="h-3 w-3 mx-1 opacity-70" /> 
+                  {formatTime(workout.date)}
                 </div>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge variant="outline">{workout.category || "Workout"}</Badge>
+              <Badge variant="outline" className="bg-primary/5">{workout.category || "Workout"}</Badge>
               
               {isOwner && (
                 <DropdownMenu>
@@ -175,7 +178,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
         <CardContent className="pb-3">
           <div className="mb-2">
             <Link href={`/workout/${workout.id}`}>
-              <span className="text-lg font-medium hover:underline cursor-pointer">{workout.name}</span>
+              <span className="text-lg font-medium hover:underline cursor-pointer bg-gradient-to-r from-primary to-primary/80 text-transparent bg-clip-text">{workout.name}</span>
             </Link>
             <p className="text-muted-foreground mt-1">
               {workout.caption || workout.notes || "Completed a workout"}
@@ -189,11 +192,11 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
                     const mediaUrls = JSON.parse(workout.mediaUrls as string);
                     if (Array.isArray(mediaUrls) && mediaUrls.length > 0) {
                       return (
-                        <div className="rounded-md overflow-hidden mt-2">
+                        <div className="rounded-lg overflow-hidden mt-2 border shadow-sm">
                           <img 
                             src={mediaUrls[0].startsWith('/uploads') ? window.location.origin + mediaUrls[0] : mediaUrls[0]} 
                             alt="Workout media" 
-                            className="w-full h-auto max-h-80 object-cover"
+                            className="w-full h-auto max-h-80 object-cover transition-all duration-300 hover:scale-[1.01]"
                             onError={(e) => {
                               console.error('Image failed to load:', mediaUrls[0]);
                               (e.target as HTMLImageElement).style.display = 'none';
@@ -211,9 +214,9 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
               </div>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-4 mt-4 text-center">
+          <div className="grid grid-cols-3 gap-4 mt-4 text-center bg-muted/20 py-3 rounded-lg">
             <div>
-              <div className="text-xl font-semibold">
+              <div className="text-xl font-semibold text-primary">
                 {workout.duration} min
               </div>
               <div className="text-xs text-muted-foreground">Duration</div>
@@ -232,7 +235,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
             </div>
           </div>
         </CardContent>
-        <CardFooter className="pt-0 flex justify-between">
+        <CardFooter className="pt-2 flex justify-between border-t">
           <div className="flex space-x-4">
             <Button 
               variant="ghost" 
@@ -257,6 +260,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
             variant="outline" 
             size="sm" 
             onClick={() => setLocation(`/workout/${workout.id}`)}
+            className="bg-primary/5 hover:bg-primary/10"
           >
             View Details
           </Button>

@@ -99,7 +99,10 @@ export default function Admin() {
   };
 
   if (!user || user.id !== 1) {
-    return null; // Don't render anything if not authorized
+    return <div className="container mx-auto p-8">
+      <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
+      <p className="mt-2">You don't have permission to access this page.</p>
+    </div>; // Return an element instead of null
   }
 
   return (
