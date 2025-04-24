@@ -1,7 +1,12 @@
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Navigation() {
   const [location] = useLocation();
+  const { user } = useAuth();
+  
+  // Admin accounts - only your account should have admin access
+  const isAdmin = user && user.id === 1;
   
   const links = [
     { 
@@ -62,6 +67,18 @@ export default function Navigation() {
         </svg>
       )
     },
+    // Only show Admin link if user has admin privileges (user ID 1)
+    ...(isAdmin ? [{
+      href: '/admin',
+      label: 'Admin',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0-1.32 4.24 3 3 0 0 0 .34 5.58 2.5 2.5 0 0 0 2.96 3.08 2.5 2.5 0 0 0 4.91.05L12 20V4.5Z"></path>
+          <path d="M16 8V4.5a2.5 2.5 0 0 1 4.96-.46 2.5 2.5 0 0 1 1.98 3 2.5 2.5 0 0 1 1.32 4.24 3 3 0 0 1-.34 5.58 2.5 2.5 0 0 1-2.96 3.08 2.5 2.5 0 0 1-4.91.05L16 20V8Z"></path>
+          <path d="M12 4.5V20"></path>
+        </svg>
+      )
+    }] : []),
   ];
   
   return (
