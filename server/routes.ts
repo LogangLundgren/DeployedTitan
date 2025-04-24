@@ -5435,12 +5435,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: timestamp || new Date().toISOString()
       };
       
-      const result = await db.insert(feedback).values(feedbackData).returning();
+      // Insert the feedback into the database with parameterized query
+      // Since there are issues with the schema definition, we'll use direct SQL
+      const queryText = `
+        INSERT INTO feedback 
+        (type, content, user_id, username, path, user_agent, timestamp) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7) 
+        RETURNING *
+      `;
+      
+      const values = [
+        type,
+        content,
+        userId,
+        username,
+        path,
+        userAgent,
+        timestamp || new Date().toISOString()
+      ];
+      
+      // Execute the SQL query directly using the pg pool
+      const pgResult = await pool.query(queryText, values);
       
       res.status(201).json({ 
         success: true, 
         message: "Feedback submitted successfully",
-        feedback: result[0]
+        feedback: pgResult.rows[0]
       });
     } catch (error) {
       console.error("Error submitting feedback:", error);
@@ -5456,10 +5476,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
-      // Get all feedback ordered by most recent first
-      const allFeedback = await db.select().from(feedback).orderBy(feedback.timestamp).desc();
+      // Get all feedback ordered by most recent first using direct SQL
+      const result = await db.execute(
+        `SELECT * FROM feedback ORDER BY timestamp DESC`
+      );
       
-      res.json(allFeedback);
+      res.json(result.rows);
     } catch (error) {
       console.error("Error fetching feedback:", error);
       res.status(500).json({ message: "Failed to fetch feedback" });
@@ -5480,20 +5502,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access" });
       }
       
-      // Update the feedback status
-      const result = await db.update(feedback)
-        .set({ isResolved: true })
-        .where(eq(feedback.id, feedbackId))
-        .returning();
+      // Update the feedback status using direct SQL
+      const result = await db.execute(`
+        UPDATE feedback SET is_resolved = true WHERE id = ${feedbackId} RETURNING *
+      `);
       
-      if (result.length === 0) {
+      if (result.rowCount === 0) {
         return res.status(404).json({ message: "Feedback not found" });
       }
       
       res.json({ 
         success: true, 
         message: "Feedback marked as resolved",
-        feedback: result[0]
+        feedback: result.rows[0]
       });
     } catch (error) {
       console.error("Error resolving feedback:", error);
