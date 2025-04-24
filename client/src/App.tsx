@@ -40,6 +40,10 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import { OnboardingProvider } from "./context/onboarding-context";
 import { OnboardingTooltip } from "./components/onboarding/OnboardingTooltip";
 import { WelcomeScreen } from "./components/onboarding/WelcomeScreen";
+import ErrorBoundary from "./components/ErrorBoundary";
+import { FeedbackWidget } from "./components/FeedbackWidget";
+import { initializeErrorMonitoring } from "./lib/errorMonitoring";
+import Admin from "./pages/Admin"; // New Admin page
 
 function Router() {
   const { user } = useAuth();
@@ -100,7 +104,8 @@ function Router() {
             <ProtectedRoute path="/plan-checkout" component={PlanCheckout} />
             <ProtectedRoute path="/checkout" component={Checkout} />
             <ProtectedRoute path="/payment-success" component={PaymentSuccess} />
-            <ProtectedRoute path="/admin" component={AdminDashboard} />
+            <ProtectedRoute path="/admin" component={Admin} />
+            <ProtectedRoute path="/admin-dashboard" component={AdminDashboard} /> {/* Keep for backward compatibility */}
             <ProtectedRoute path="/admin/cleanup" component={AdminCleanup} />
             
             {/* Fallback to 404 */}
@@ -122,6 +127,11 @@ function Router() {
 }
 
 function App() {
+  // Initialize error monitoring on app startup
+  useEffect(() => {
+    initializeErrorMonitoring();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -129,8 +139,11 @@ function App() {
           <FollowProvider>
             <LikesProvider>
               <CommentsProvider>
-                <Router />
-                <Toaster />
+                <ErrorBoundary>
+                  <Router />
+                  <FeedbackWidget />
+                  <Toaster />
+                </ErrorBoundary>
               </CommentsProvider>
             </LikesProvider>
           </FollowProvider>
