@@ -12,7 +12,7 @@ async function makeWorkoutsPublic() {
     
     // Get count of private workouts before update
     const privateWorkoutsCountResult = await pool.query(
-      `SELECT COUNT(*) FROM workouts WHERE "isPublic" = false`
+      `SELECT COUNT(*) FROM workouts WHERE is_public = false OR is_public IS NULL`
     );
     
     const privateWorkoutsCount = parseInt(privateWorkoutsCountResult.rows[0]?.count || '0');
@@ -20,7 +20,7 @@ async function makeWorkoutsPublic() {
     
     // Update all workouts to be public
     const result = await pool.query(
-      `UPDATE workouts SET "isPublic" = true WHERE "isPublic" = false RETURNING id`
+      `UPDATE workouts SET is_public = true WHERE is_public = false OR is_public IS NULL RETURNING id`
     );
     
     console.log(`Successfully updated ${result.rowCount} workouts to public visibility`);
