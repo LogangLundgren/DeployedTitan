@@ -28,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Heart, MessageCircle, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, MoreVertical, Edit, Trash2, CalendarDays, Clock } from "lucide-react";
 
 interface WorkoutCardProps {
   workout: WorkoutWithExtraStats;

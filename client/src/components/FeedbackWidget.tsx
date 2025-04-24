@@ -103,9 +103,10 @@ export function FeedbackWidget() {
           <Button
             variant="outline"
             size="icon"
-            className="fixed bottom-6 right-6 rounded-full h-12 w-12 shadow-lg bg-primary text-white hover:bg-primary/90 z-50"
+            className="fixed bottom-6 right-6 rounded-full h-14 w-14 shadow-xl bg-primary text-white hover:bg-primary/90 z-50 transition-all duration-300 hover:scale-105 border-2 border-white"
           >
-            <MessageSquarePlus className="h-6 w-6" />
+            <div className="absolute inset-0 rounded-full bg-primary/20 animate-pulse" />
+            <MessageSquarePlus className="h-7 w-7" />
             <span className="sr-only">Send Feedback</span>
           </Button>
         </DialogTrigger>
