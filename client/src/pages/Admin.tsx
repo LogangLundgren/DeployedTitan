@@ -123,7 +123,7 @@ function FeedbackSection() {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-medium">{formatFeedbackType(item.type)}</h3>
-                  {item.isResolved && (
+                  {item.is_resolved && (
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Resolved
@@ -138,7 +138,7 @@ function FeedbackSection() {
               </div>
             </div>
             
-            {!item.isResolved && (
+            {!item.is_resolved && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -156,7 +156,7 @@ function FeedbackSection() {
           </div>
           
           <div className="mt-2 text-xs text-muted-foreground">
-            User Agent: {item.userAgent.length > 100 ? `${item.userAgent.substring(0, 100)}...` : item.userAgent}
+            User Agent: {item.user_agent.length > 100 ? `${item.user_agent.substring(0, 100)}...` : item.user_agent}
           </div>
         </div>
       ))}
