@@ -2948,14 +2948,67 @@ export class DbStorage implements IStorage {
         sanitizedUpdate.updatedAt = new Date(); // Last resort failsafe
       }
       
-      const result = await db
-        .update(workoutPlans)
-        .set(sanitizedUpdate)
-        .where(eq(workoutPlans.id, id))
-        .returning();
+      // Use raw SQL to update the plan
+      const { pool } = await import('./db');
+      
+      // Build the SQL dynamically based on the sanitized update
+      let sql = `UPDATE workout_plans SET updated_at = NOW()`;
+      const values: any[] = [];
+      let paramIndex = 1;
+      
+      // Add fields to update
+      Object.entries(sanitizedUpdate).forEach(([key, value]) => {
+        // Skip updatedAt as we're already setting it with NOW()
+        if (key === 'updatedAt') return;
+        
+        // Convert camelCase to snake_case
+        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        sql += `, ${snakeKey} = $${paramIndex}`;
+        values.push(value);
+        paramIndex++;
+      });
+      
+      // Add WHERE clause and RETURNING
+      sql += ` WHERE id = $${paramIndex} RETURNING *`;
+      values.push(id);
+      
+      console.log("Executing SQL:", sql);
+      console.log("With values:", values);
+      
+      const result = await pool.query(sql, values);
       
       console.log("Update result:", result);
-      return result[0];
+      
+      if (!result || !result.rows || result.rows.length === 0) {
+        return undefined;
+      }
+      
+      // Convert from snake_case to camelCase
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        coachId: row.coach_id,
+        title: row.title,
+        description: row.description,
+        price: row.price,
+        durationWeeks: row.duration_weeks,
+        difficultyLevel: row.difficulty_level,
+        category: row.category,
+        featuredImageUrl: row.featured_image_url,
+        goals: row.goals,
+        equipment: row.equipment,
+        isFeatured: row.is_featured,
+        isSoldOut: row.is_sold_out,
+        isPublished: row.is_published,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        sales: row.sales,
+        rating: row.rating,
+        ratingsCount: row.ratings_count,
+        parentPlanId: null,
+        clientId: null,
+        isForked: false
+      };
     } catch (error) {
       console.error("Error updating workout plan:", error);
       return undefined;
