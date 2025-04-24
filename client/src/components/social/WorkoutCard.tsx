@@ -163,7 +163,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
         </CardHeader>
         <CardContent className="pb-3">
           <div className="mb-2">
-            <Link href={`/workouts/${workout.id}`}>
+            <Link href={`/workout/${workout.id}`}>
               <span className="text-lg font-medium hover:underline cursor-pointer">{workout.name}</span>
             </Link>
             <p className="text-muted-foreground mt-1">
