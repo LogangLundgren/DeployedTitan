@@ -9,10 +9,8 @@ export default function Navigation() {
       label: 'Dashboard',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect width="7" height="9" x="3" y="3" rx="1" />
-          <rect width="7" height="5" x="14" y="3" rx="1" />
-          <rect width="7" height="9" x="14" y="12" rx="1" />
-          <rect width="7" height="5" x="3" y="16" rx="1" />
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
         </svg>
       )
     },
@@ -21,11 +19,11 @@ export default function Navigation() {
       label: 'Workouts',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
-          <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
-          <line x1="6" x2="6" y1="1" y2="4"></line>
-          <line x1="10" x2="10" y1="1" y2="4"></line>
-          <line x1="14" x2="14" y1="1" y2="4"></line>
+          <path d="M20 7h-2a4 4 0 0 0-4 4v1a3 3 0 0 1-3 3h-2"/>
+          <path d="M4 17h10"/>
+          <path d="M14 17a3 3 0 1 0 0-6H4"/>
+          <path d="M4 11V7"/>
+          <path d="M4 7a3 3 0 1 0 0-6H14a3 3 0 1 0 0 6H4Z"/>
         </svg>
       )
     },
@@ -35,10 +33,8 @@ export default function Navigation() {
       label: 'Social',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
         </svg>
       )
     },
@@ -47,9 +43,11 @@ export default function Navigation() {
       label: 'Marketplace',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="8" cy="21" r="1" />
-          <circle cx="19" cy="21" r="1" />
-          <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+          <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/>
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+          <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/>
+          <path d="M2 7h20"/>
+          <path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/>
         </svg>
       )
     },
@@ -58,8 +56,9 @@ export default function Navigation() {
       label: 'My Plans',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-          <path d="m9 10 2 2 4-4" />
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+          <path d="m9 14 2 2 4-4"></path>
         </svg>
       )
     },
