@@ -5410,6 +5410,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Feedback API endpoints
+  // Submit feedback
+  app.post("/api/feedback", async (req, res) => {
+    try {
+      const { type, content, path, userAgent, timestamp } = req.body;
+      
+      if (!type || !content || !path || !userAgent) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Add user info if authenticated
+      const userId = req.user?.id || null;
+      const username = req.user?.username || null;
+      
+      // Insert feedback into the database
+      const feedbackData = {
+        type,
+        content,
+        userId,
+        username,
+        path,
+        userAgent,
+        timestamp: timestamp || new Date().toISOString()
+      };
+      
+      const result = await db.insert(feedback).values(feedbackData).returning();
+      
+      res.status(201).json({ 
+        success: true, 
+        message: "Feedback submitted successfully",
+        feedback: result[0]
+      });
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      res.status(500).json({ message: "Failed to submit feedback" });
+    }
+  });
+  
+  // Get all feedback (admin only)
+  app.get("/api/feedback", async (req, res) => {
+    try {
+      // Check if the user is an admin (Logan Main)
+      if (!req.user || req.user.username !== "Logan Main") {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      // Get all feedback ordered by most recent first
+      const allFeedback = await db.select().from(feedback).orderBy(feedback.timestamp).desc();
+      
+      res.json(allFeedback);
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+      res.status(500).json({ message: "Failed to fetch feedback" });
+    }
+  });
+  
+  // Mark feedback as resolved (admin only)
+  app.patch("/api/feedback/:id/resolve", async (req, res) => {
+    try {
+      const feedbackId = parseInt(req.params.id);
+      
+      if (isNaN(feedbackId)) {
+        return res.status(400).json({ message: "Invalid feedback ID" });
+      }
+      
+      // Check if the user is an admin (Logan Main)
+      if (!req.user || req.user.username !== "Logan Main") {
+        return res.status(403).json({ message: "Unauthorized access" });
+      }
+      
+      // Update the feedback status
+      const result = await db.update(feedback)
+        .set({ isResolved: true })
+        .where(eq(feedback.id, feedbackId))
+        .returning();
+      
+      if (result.length === 0) {
+        return res.status(404).json({ message: "Feedback not found" });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Feedback marked as resolved",
+        feedback: result[0]
+      });
+    } catch (error) {
+      console.error("Error resolving feedback:", error);
+      res.status(500).json({ message: "Failed to resolve feedback" });
+    }
+  });
+
   // Serve uploaded files
   app.get("/uploads/*", serveUploads);
   
