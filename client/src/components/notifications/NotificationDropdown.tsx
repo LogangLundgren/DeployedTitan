@@ -17,27 +17,61 @@ import { formatDistanceToNow } from 'date-fns';
 // Map notification types to their respective styles
 const notificationStyles: Record<string, { icon: React.ReactNode, className: string }> = {
   info: {
-    icon: <span className="text-blue-500">ℹ️</span>,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 16v-4"/>
+        <path d="M12 8h.01"/>
+      </svg>
+    ),
     className: 'border-l-4 border-blue-500'
   },
   success: {
-    icon: <span className="text-green-500">✓</span>,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+    ),
     className: 'border-l-4 border-green-500'
   },
   warning: {
-    icon: <span className="text-yellow-500">⚠️</span>,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+        <path d="M12 9v4"/>
+        <path d="M12 17h.01"/>
+      </svg>
+    ),
     className: 'border-l-4 border-yellow-500'
   },
   error: {
-    icon: <span className="text-red-500">❌</span>,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="15" y1="9" x2="9" y2="15"/>
+        <line x1="9" y1="9" x2="15" y2="15"/>
+      </svg>
+    ),
     className: 'border-l-4 border-red-500'
   },
   workout: {
-    icon: <span className="text-purple-500">💪</span>,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500">
+        <path d="M18 11V9a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2"/>
+        <path d="m20 11-3-3"/>
+        <path d="m17 14 3-3"/>
+      </svg>
+    ),
     className: 'border-l-4 border-purple-500'
   },
   achievement: {
-    icon: <span className="text-amber-500">🏆</span>,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500">
+        <path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/>
+        <circle cx="12" cy="8" r="7"/>
+      </svg>
+    ),
     className: 'border-l-4 border-amber-500'
   }
 };
@@ -49,15 +83,24 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
   
   return (
     <div 
-      className={`p-4 mb-2 rounded bg-card hover:bg-accent cursor-pointer ${style.className} ${notification.isRead ? 'opacity-70' : 'font-medium'}`}
+      className={`p-4 mb-2.5 rounded-lg bg-card hover:bg-accent/60 cursor-pointer transition-all duration-200 
+        ${style.className} ${notification.isRead ? 'opacity-70' : 'shadow-sm'} 
+        ${!notification.isRead ? 'bg-primary/5' : ''}`}
       onClick={onRead}
     >
       <div className="flex items-start gap-3">
-        <div className="mt-1">{style.icon}</div>
+        <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+          {style.icon}
+        </div>
         <div className="flex-1">
-          <div className="font-semibold">{notification.title}</div>
-          <div className="text-sm text-muted-foreground">{notification.message}</div>
-          <div className="text-xs text-muted-foreground mt-1">{timeAgo}</div>
+          <div className={`font-semibold ${!notification.isRead ? 'text-primary' : ''}`}>
+            {notification.title}
+            {!notification.isRead && (
+              <span className="ml-2 inline-flex h-2 w-2 rounded-full bg-primary"></span>
+            )}
+          </div>
+          <div className="text-sm text-muted-foreground mt-0.5">{notification.message}</div>
+          <div className="text-xs text-muted-foreground/80 mt-1.5 font-medium">{timeAgo}</div>
         </div>
       </div>
     </div>
