@@ -236,7 +236,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
               variant="ghost" 
               size="sm" 
               className="h-8 px-2"
-              onClick={() => setLocation(`/workouts/${workout.id}`)}
+              onClick={() => setLocation(`/workout/${workout.id}`)}
             >
               <MessageCircle className="h-4 w-4 mr-1" />
               {commentCount > 0 ? `${commentCount}` : 'Comment'}
@@ -245,7 +245,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => setLocation(`/workouts/${workout.id}`)}
+            onClick={() => setLocation(`/workout/${workout.id}`)}
           >
             View Details
           </Button>
