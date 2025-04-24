@@ -2391,13 +2391,55 @@ export class DbStorage implements IStorage {
   // Workout Plan operations
   async getWorkoutPlans(coachId?: number, publishedOnly: boolean = false): Promise<WorkoutPlan[]> {
     try {
-      let query = db.select().from(workoutPlans);
+      // Use raw SQL to avoid schema issues with missing columns
+      const { pool } = await import('./db');
+      
+      let sql = `
+        SELECT 
+          id, coach_id, title, description, price, duration_weeks, 
+          difficulty_level, category, featured_image_url, goals, equipment,
+          is_featured, is_sold_out, is_published, created_at, updated_at,
+          sales, rating, ratings_count
+        FROM workout_plans
+      `;
+      
+      const params: any[] = [];
       
       if (coachId) {
-        query = query.where(eq(workoutPlans.coachId, coachId));
+        sql += ` WHERE coach_id = $1`;
+        params.push(coachId);
       }
       
-      const plans = await query.orderBy(desc(workoutPlans.createdAt));
+      sql += ` ORDER BY created_at DESC`;
+      
+      const result = await pool.query(sql, params);
+      
+      if (!result || !result.rows) {
+        return [];
+      }
+      
+      // Convert from snake_case to camelCase
+      const plans = result.rows.map(row => ({
+        id: row.id,
+        coachId: row.coach_id,
+        title: row.title,
+        description: row.description,
+        price: row.price,
+        durationWeeks: row.duration_weeks,
+        difficultyLevel: row.difficulty_level,
+        category: row.category,
+        featuredImageUrl: row.featured_image_url,
+        goals: row.goals,
+        equipment: row.equipment,
+        isFeatured: row.is_featured,
+        isSoldOut: row.is_sold_out,
+        isPublished: row.is_published,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        sales: row.sales,
+        rating: row.rating,
+        ratingsCount: row.ratings_count
+      }));
       
       // Apply publishedOnly filter if needed
       if (publishedOnly && (!coachId || coachId === undefined)) {
@@ -2413,18 +2455,50 @@ export class DbStorage implements IStorage {
   
   async getAllWorkoutPlans(): Promise<WorkoutPlan[]> {
     try {
-      // Fetch all workout plans without any filtering, but be flexible about the schema
-      // since we might not have migrated the database to include the new columns yet
-      const result = await db.query.workoutPlans.findMany({
-        orderBy: (workoutPlans, { desc }) => [desc(workoutPlans.createdAt)]
-      });
+      // Use raw SQL to avoid schema issues with missing columns
+      const { pool } = await import('./db');
       
-      // Add default values for the new columns if they don't exist
-      const plans = result.map(plan => ({
-        ...plan,
-        parentPlanId: (plan as any).parentPlanId ?? null,
-        clientId: (plan as any).clientId ?? null,
-        isForked: (plan as any).isForked ?? false
+      const sql = `
+        SELECT 
+          id, coach_id, title, description, price, duration_weeks, 
+          difficulty_level, category, featured_image_url, goals, equipment,
+          is_featured, is_sold_out, is_published, created_at, updated_at,
+          sales, rating, ratings_count
+        FROM workout_plans
+        ORDER BY created_at DESC
+      `;
+      
+      const result = await pool.query(sql);
+      
+      if (!result || !result.rows) {
+        return [];
+      }
+      
+      // Convert from snake_case to camelCase
+      const plans = result.rows.map(row => ({
+        id: row.id,
+        coachId: row.coach_id,
+        title: row.title,
+        description: row.description,
+        price: row.price,
+        durationWeeks: row.duration_weeks,
+        difficultyLevel: row.difficulty_level,
+        category: row.category,
+        featuredImageUrl: row.featured_image_url,
+        goals: row.goals,
+        equipment: row.equipment,
+        isFeatured: row.is_featured,
+        isSoldOut: row.is_sold_out,
+        isPublished: row.is_published,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        sales: row.sales,
+        rating: row.rating,
+        ratingsCount: row.ratings_count,
+        // Add default values for the fork-specific fields
+        parentPlanId: null,
+        clientId: null,
+        isForked: false
       }));
       
       console.log("DEBUGGING - Database getAllWorkoutPlans fetched", plans.length, "plans");
@@ -2437,22 +2511,52 @@ export class DbStorage implements IStorage {
   
   async getWorkoutPlan(id: number): Promise<WorkoutPlan | undefined> {
     try {
-      const result = await db
-        .select()
-        .from(workoutPlans)
-        .where(eq(workoutPlans.id, id));
+      // Use raw SQL to avoid schema issues with missing columns
+      const { pool } = await import('./db');
       
-      if (!result.length) return undefined;
+      const sql = `
+        SELECT 
+          id, coach_id, title, description, price, duration_weeks, 
+          difficulty_level, category, featured_image_url, goals, equipment,
+          is_featured, is_sold_out, is_published, created_at, updated_at,
+          sales, rating, ratings_count
+        FROM workout_plans
+        WHERE id = $1
+      `;
       
-      // Add default values for the new columns if they don't exist
-      const plan = {
-        ...result[0],
-        parentPlanId: (result[0] as any).parentPlanId ?? null,
-        clientId: (result[0] as any).clientId ?? null,
-        isForked: (result[0] as any).isForked ?? false
+      const result = await pool.query(sql, [id]);
+      
+      if (!result || !result.rows || result.rows.length === 0) {
+        return undefined;
+      }
+      
+      // Convert from snake_case to camelCase
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        coachId: row.coach_id,
+        title: row.title,
+        description: row.description,
+        price: row.price,
+        durationWeeks: row.duration_weeks,
+        difficultyLevel: row.difficulty_level,
+        category: row.category,
+        featuredImageUrl: row.featured_image_url,
+        goals: row.goals,
+        equipment: row.equipment,
+        isFeatured: row.is_featured,
+        isSoldOut: row.is_sold_out,
+        isPublished: row.is_published,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        sales: row.sales,
+        rating: row.rating,
+        ratingsCount: row.ratings_count,
+        // Add default values for the fork-specific fields
+        parentPlanId: null,
+        clientId: null,
+        isForked: false
       };
-      
-      return plan;
     } catch (error) {
       console.error("Error getting workout plan:", error);
       return undefined;
@@ -2461,13 +2565,24 @@ export class DbStorage implements IStorage {
   
   async checkWorkoutPlanExists(id: number): Promise<boolean> {
     try {
-      const count = await db
-        .select({ count: count() })
-        .from(workoutPlans)
-        .where(eq(workoutPlans.id, id));
+      // Use raw SQL to avoid schema issues with missing columns
+      const { pool } = await import('./db');
       
-      console.log(`Checking if workout plan with ID ${id} exists:`, count[0]?.count > 0);
-      return count[0]?.count > 0;
+      const sql = `
+        SELECT COUNT(*) as count
+        FROM workout_plans
+        WHERE id = $1
+      `;
+      
+      const result = await pool.query(sql, [id]);
+      
+      if (!result || !result.rows || result.rows.length === 0) {
+        return false;
+      }
+      
+      const count = parseInt(result.rows[0].count);
+      console.log(`Checking if workout plan with ID ${id} exists:`, count > 0);
+      return count > 0;
     } catch (error) {
       console.error("Error checking if workout plan exists:", error);
       return false;
