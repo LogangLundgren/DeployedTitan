@@ -5,8 +5,8 @@ export default function Navigation() {
   const [location] = useLocation();
   const { user } = useAuth();
   
-  // Admin accounts - only your account should have admin access
-  const isAdmin = user && user.id === 1;
+  // Admin accounts - only Logan Main account should have admin access
+  const isAdmin = user && user.username === "Logan Main";
   
   const links = [
     { 
@@ -24,10 +24,11 @@ export default function Navigation() {
       label: 'Workouts',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 5v14"></path>
-          <path d="M18 5v14"></path>
-          <path d="M2 8h20"></path>
-          <path d="M2 16h20"></path>
+          <circle cx="20" cy="12" r="2"/>
+          <circle cx="4" cy="12" r="2"/>
+          <path d="M20 12h-2"/>
+          <path d="M6 12H4"/>
+          <path d="M18 12H6"/>
         </svg>
       )
     },

@@ -679,7 +679,7 @@ export default function Dashboard() {
       </div>
       
       {/* Admin Dashboard Link - Only visible to founders/admins */}
-      {user && user.id === 1 && (
+      {user && user.username === "Logan Main" && (
         <div className="mb-8 mt-12">
           <Card className="bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800">
             <CardContent className="pt-6">
