@@ -82,7 +82,18 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
         throw new Error("Failed to delete workout");
       }
 
-      return await response.json();
+      // Handle 204 No Content response (successful deletion without body)
+      if (response.status === 204) {
+        return { success: true };
+      }
+
+      // Only try to parse JSON if there is content
+      try {
+        return await response.json();
+      } catch (e) {
+        // If parsing fails, still return success since the API call worked
+        return { success: true };
+      }
     },
     onSuccess: () => {
       // Invalidate relevant queries
