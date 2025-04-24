@@ -17,7 +17,7 @@ export default function Admin() {
   
   // Check if user is authorized
   useEffect(() => {
-    if (!user || user.id !== 1) {
+    if (!user || user.username !== "Logan Main") {
       setLocation("/");
       toast({
         title: "Access Denied",
@@ -35,7 +35,7 @@ export default function Admin() {
       if (!res.ok) throw new Error("Failed to fetch users");
       return await res.json();
     },
-    enabled: !!user && user.id === 1 // Only fetch if user is admin
+    enabled: !!user && user.username === "Logan Main" // Only fetch if user is admin
   });
 
   // Delete user mutation
