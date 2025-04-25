@@ -2121,6 +2121,22 @@ export class MemStorage implements IStorage {
     return this.userSuggestions.delete(id);
   }
   
+  // Feedback methods
+  async saveFeedback(feedback: Feedback): Promise<Feedback> {
+    const id = this.feedbackCurrentId++;
+    const newFeedback = { 
+      ...feedback, 
+      id 
+    };
+    this.feedbacks.set(id, newFeedback);
+    return newFeedback;
+  }
+  
+  async getFeedback(): Promise<Feedback[]> {
+    return Array.from(this.feedbacks.values())
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+  
   // Workout Plan Fork operations for MemStorage
   async forkWorkoutPlan(originalPlanId: number, clientId: number, coachId: number): Promise<WorkoutPlan | undefined> {
     // Get the original plan
@@ -4946,6 +4962,38 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting user suggestion:", error);
       return false;
+    }
+  }
+  
+  // Feedback methods
+  async saveFeedback(feedback: Feedback): Promise<Feedback> {
+    try {
+      const { feedbacks } = await import("@shared/schema");
+      
+      const result = await db
+        .insert(feedbacks)
+        .values(feedback)
+        .returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error saving feedback:", error);
+      throw error;
+    }
+  }
+  
+  async getFeedback(): Promise<Feedback[]> {
+    try {
+      const { feedbacks } = await import("@shared/schema");
+      const { desc } = await import("drizzle-orm");
+      
+      return await db
+        .select()
+        .from(feedbacks)
+        .orderBy(desc(feedbacks.timestamp));
+    } catch (error) {
+      console.error("Error getting feedbacks:", error);
+      return [];
     }
   }
   
