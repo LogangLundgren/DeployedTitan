@@ -370,14 +370,14 @@ function ActivityFeed() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="space-y-6">
-        <h2 className="text-xl font-semibold">Activity Feed</h2>
+        <h2 className="text-xl font-semibold text-center sm:text-left">Activity Feed</h2>
         
         {workoutsLoading ? (
-          <div className="space-y-6">
+          <div className="space-y-8 max-w-3xl mx-auto">
             {[...Array(3)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
+              <Card key={i} className="animate-pulse shadow-sm">
                 <CardHeader className="pb-4">
                   <div className="flex items-center space-x-4">
                     <div className="h-10 w-10 rounded-full bg-gray-200"></div>
@@ -395,7 +395,7 @@ function ActivityFeed() {
             ))}
           </div>
         ) : communityWorkouts.length === 0 ? (
-          <Card>
+          <Card className="max-w-3xl mx-auto shadow-sm">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <div className="rounded-full bg-primary/10 p-6 mb-4">
                 <svg
@@ -422,7 +422,7 @@ function ActivityFeed() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8 max-w-3xl mx-auto">
             {communityWorkouts.map((workout: WorkoutWithExtraStats) => (
               <WorkoutCard 
                 key={workout.id}
@@ -1185,33 +1185,37 @@ export default function Social() {
   };
   
   return (
-    <main className="container py-6">
-      <h1 className="text-3xl font-bold mb-8">Social</h1>
-      
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-        <TabsList className="mb-6 grid grid-cols-4">
-          <TabsTrigger value="feed">Activity Feed</TabsTrigger>
-          <TabsTrigger value="discover">Discover People</TabsTrigger>
-          <TabsTrigger value="messages">Messages</TabsTrigger>
-          <TabsTrigger value="profile">My Public Profile</TabsTrigger>
-        </TabsList>
+    <main className="container py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+        <h1 className="text-3xl font-bold mb-8 text-center sm:text-left">Social</h1>
         
-        <TabsContent value="feed">
-          <ActivityFeed />
-        </TabsContent>
-        
-        <TabsContent value="discover">
-          <PeopleDiscover />
-        </TabsContent>
-        
-        <TabsContent value="messages">
-          <Messages />
-        </TabsContent>
-        
-        <TabsContent value="profile">
-          <PublicProfileView />
-        </TabsContent>
-      </Tabs>
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
+          <div className="flex justify-center sm:justify-start">
+            <TabsList className="mb-8 grid grid-cols-4 w-full max-w-3xl">
+              <TabsTrigger value="feed">Activity Feed</TabsTrigger>
+              <TabsTrigger value="discover">Discover People</TabsTrigger>
+              <TabsTrigger value="messages">Messages</TabsTrigger>
+              <TabsTrigger value="profile">My Public Profile</TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <TabsContent value="feed">
+            <ActivityFeed />
+          </TabsContent>
+          
+          <TabsContent value="discover">
+            <PeopleDiscover />
+          </TabsContent>
+          
+          <TabsContent value="messages">
+            <Messages />
+          </TabsContent>
+          
+          <TabsContent value="profile">
+            <PublicProfileView />
+          </TabsContent>
+        </Tabs>
+      </div>
     </main>
   );
 }
