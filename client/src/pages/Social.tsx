@@ -695,9 +695,9 @@ function PeopleDiscover() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-semibold">People to Follow</h2>
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 max-w-4xl mx-auto">
+        <h2 className="text-xl font-semibold text-center sm:text-left">People to Follow</h2>
         
         <div className="w-full sm:w-auto relative">
           <Input 
@@ -705,7 +705,7 @@ function PeopleDiscover() {
             placeholder="Search for users..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full sm:w-[260px] pr-10"
+            className="w-full sm:w-[260px] pr-10 shadow-sm"
           />
           {searchQuery && (
             <button
@@ -736,7 +736,7 @@ function PeopleDiscover() {
       {usersLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
+            <Card key={i} className="animate-pulse shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-4">
                 <div className="flex items-center space-x-4">
                   <div className="h-16 w-16 rounded-full bg-gray-200"></div>
@@ -786,7 +786,7 @@ function PeopleDiscover() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredUsers.map((user: UserProfile) => (
-            <Card key={user.id}>
+            <Card key={user.id} className="shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-4">
                 <div className="flex items-center space-x-4">
                   <Link href={`/users/${user.id}`}>
