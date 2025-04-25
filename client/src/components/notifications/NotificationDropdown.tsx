@@ -74,6 +74,39 @@ const notificationStyles: Record<string, { icon: React.ReactNode, className: str
       </svg>
     ),
     className: 'border-l-4 border-amber-500'
+  },
+  progress: {
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500">
+        <path d="M12 20v-6"/>
+        <path d="M6 20V10"/>
+        <path d="M18 20V4"/>
+      </svg>
+    ),
+    className: 'border-l-4 border-emerald-500'
+  },
+  milestone: {
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-500">
+        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+        <line x1="9" x2="15" y1="9" y2="9"/>
+        <line x1="9" x2="15" y1="15" y2="15"/>
+        <line x1="9" x2="9" y1="9" y2="15"/>
+        <line x1="15" x2="15" y1="9" y2="15"/>
+      </svg>
+    ),
+    className: 'border-l-4 border-indigo-500'
+  },
+  social: {
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-pink-500">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    ),
+    className: 'border-l-4 border-pink-500'
   }
 };
 
@@ -95,10 +128,10 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
   
   return (
     <div 
-      className={`p-4 mb-2.5 rounded-lg bg-card hover:bg-accent/60 cursor-pointer transition-all duration-200 
+      className={`p-4 mb-2.5 rounded-lg bg-card transition-all duration-200 
         ${style.className} ${notification.isRead ? 'opacity-70' : 'shadow-sm'} 
         ${!notification.isRead ? 'bg-primary/5' : ''} 
-        ${notification.link ? 'hover:ring-1 hover:ring-primary/30' : ''}`}
+        ${notification.link ? 'hover:ring-1 hover:ring-primary/30 hover:translate-x-0.5 hover:bg-accent/60 cursor-pointer transform' : 'hover:bg-accent/30 cursor-default'}`}
       onClick={handleClick}
     >
       <div className="flex items-start gap-3">
@@ -113,10 +146,15 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
             )}
           </div>
           <div className="text-sm text-muted-foreground mt-0.5">{notification.message}</div>
-          <div className="text-xs text-muted-foreground/80 mt-1.5 font-medium">
-            {timeAgo}
+          <div className="text-xs text-muted-foreground/80 mt-1.5 font-medium flex items-center">
+            <span>{timeAgo}</span>
             {notification.link && (
-              <span className="ml-2 text-primary/80">• Click to view</span>
+              <span className="ml-2 text-primary/80 flex items-center">
+                • Click to view 
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
+                  <path d="m9 18 6-6-6-6"/>
+                </svg>
+              </span>
             )}
           </div>
         </div>

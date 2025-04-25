@@ -4433,7 +4433,8 @@ export class DbStorage implements IStorage {
           userId: goal.userId,
           title: "Milestone Achieved! 🏆",
           message: `You've reached a milestone in your goal "${goal.title}": ${milestone.title}`,
-          type: "milestone"
+          type: "milestone",
+          link: `/goals/${goal.id}` // Direct link to the goal with the milestone
         });
       }
       
