@@ -151,7 +151,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
 
   return (
     <>
-      <Card className="overflow-hidden transition-all duration-200 hover:shadow-md">
+      <Card className="overflow-hidden transition-all duration-200 hover:shadow-md shadow-sm">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             {isOwner ? (
