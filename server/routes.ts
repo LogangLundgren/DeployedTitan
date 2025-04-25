@@ -36,6 +36,7 @@ import {
   insertPurchaseSchema,
   insertWorkoutPlanDaySchema,
   insertUserSuggestionSchema,
+  insertFeedbackSchema,
   Workout,
   TemplateExercise,
   User,
@@ -51,6 +52,7 @@ import {
   Purchase,
   Review,
   UserSuggestion,
+  Feedback,
   messageParticipants,
   messageThreads,
   messages,
@@ -5019,6 +5021,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+
+  
   app.patch("/api/user-suggestions/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -5082,22 +5086,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Feedback endpoints
   app.post("/api/feedback", async (req, res) => {
     try {
-      const { insertFeedbackSchema } = await import("@shared/schema");
+      // Log the received data for debugging
+      console.log("Received feedback data:", req.body);
       
-      const feedbackData = insertFeedbackSchema.safeParse(req.body);
+      // Parse the feedback data
+      const feedbackData = {
+        type: req.body.type,
+        content: req.body.content,
+        userId: req.body.userId || null,
+        username: req.body.username || null,
+        path: req.body.path,
+        userAgent: req.body.userAgent,
+        timestamp: new Date(req.body.timestamp || Date.now())
+      };
       
-      if (!feedbackData.success) {
-        return res.status(400).json({ 
-          message: "Invalid feedback data", 
-          errors: feedbackData.error.errors 
-        });
-      }
+      // Save the feedback to storage
+      const feedback = await storage.saveFeedback(feedbackData);
       
-      const feedback = await storage.saveFeedback(feedbackData.data);
+      // Return success response
       res.status(201).json(feedback);
     } catch (error) {
       console.error("Error saving feedback:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Internal server error", error: String(error) });
     }
   });
   
