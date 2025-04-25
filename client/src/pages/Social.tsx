@@ -466,17 +466,32 @@ function ActivityFeed() {
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <div className="flex items-center space-x-4 mb-2">
-                <Avatar>
-                  <AvatarImage src={""} />
-                  <AvatarFallback>
-                    {user && selectedWorkout.userId === user.id ? "ME" : "U" + selectedWorkout.userId}
-                  </AvatarFallback>
-                </Avatar>
+                {user && selectedWorkout.userId === user.id ? (
+                  <Avatar>
+                    <AvatarImage src={""} />
+                    <AvatarFallback>ME</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <Link href={`/profile/${selectedWorkout.userId}`}>
+                    <Avatar className="cursor-pointer hover:opacity-90 transition-opacity">
+                      <AvatarImage src={""} />
+                      <AvatarFallback>
+                        {"U" + selectedWorkout.userId}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                )}
                 <div>
                   <DialogTitle className="text-xl">
-                    {user && selectedWorkout.userId === user.id 
-                      ? "Your workout" 
-                      : (demoUsers.find(u => u.id === selectedWorkout.userId)?.name || "User") + "'s workout"}
+                    {user && selectedWorkout.userId === user.id ? (
+                      "Your workout"
+                    ) : (
+                      <Link href={`/profile/${selectedWorkout.userId}`}>
+                        <span className="hover:underline cursor-pointer">
+                          {(demoUsers.find(u => u.id === selectedWorkout.userId)?.name || "User") + "'s workout"}
+                        </span>
+                      </Link>
+                    )}
                   </DialogTitle>
                   <DialogDescription>
                     {formatDate(selectedWorkout.date)} at {formatTime(selectedWorkout.date)}
@@ -526,14 +541,28 @@ function ActivityFeed() {
                   ) : (
                     commentsState.map((comment: WorkoutComment) => (
                       <div key={comment.id} className="flex items-start space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>
-                            {user && comment.userId === user.id ? "ME" : getInitials(comment.username)}
-                          </AvatarFallback>
-                        </Avatar>
+                        {user && comment.userId === user.id ? (
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>ME</AvatarFallback>
+                          </Avatar>
+                        ) : (
+                          <Link href={`/profile/${comment.userId}`}>
+                            <Avatar className="h-8 w-8 cursor-pointer hover:opacity-90 transition-opacity">
+                              <AvatarFallback>
+                                {getInitials(comment.username)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </Link>
+                        )}
                         <div className="bg-muted p-3 rounded-md text-sm flex-1 relative group">
                           <div className="font-medium mb-1">
-                            {user && comment.userId === user.id ? "You" : comment.username}
+                            {user && comment.userId === user.id ? (
+                              "You"
+                            ) : (
+                              <Link href={`/profile/${comment.userId}`}>
+                                <span className="hover:underline cursor-pointer">{comment.username}</span>
+                              </Link>
+                            )}
                           </div>
                           <p>{comment.text}</p>
                           <div className="text-xs text-muted-foreground mt-1 flex justify-between items-center">
@@ -760,12 +789,16 @@ function PeopleDiscover() {
             <Card key={user.id}>
               <CardHeader className="pb-4">
                 <div className="flex items-center space-x-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage src={user.profilePicture} />
-                    <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                  </Avatar>
+                  <Link href={`/profile/${user.id}`}>
+                    <Avatar className="h-16 w-16 cursor-pointer hover:opacity-90 transition-opacity">
+                      <AvatarImage src={user.profilePicture} />
+                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                    </Avatar>
+                  </Link>
                   <div>
-                    <CardTitle className="text-lg">{user.name}</CardTitle>
+                    <Link href={`/profile/${user.id}`}>
+                      <CardTitle className="text-lg hover:underline cursor-pointer">{user.name}</CardTitle>
+                    </Link>
                     <CardDescription>@{user.username}</CardDescription>
                   </div>
                 </div>
