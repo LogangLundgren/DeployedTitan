@@ -5,9 +5,124 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
-import { Trash2, UserX } from "lucide-react";
+import { Trash2, UserX, Bug, Lightbulb, MousePointer, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+
+// Feedback type definition matching what's in the server
+interface FeedbackItem {
+  id: number;
+  type: 'bug' | 'feature' | 'ux' | 'other';
+  content: string;
+  userId: number | null;
+  username: string | null;
+  path: string;
+  userAgent: string;
+  timestamp: string;
+}
+
+// Component to display feedback list
+function FeedbackList() {
+  // Fetch feedback from API
+  const { data: feedbackItems = [], isLoading, error } = useQuery({
+    queryKey: ['/api/feedback'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/feedback');
+      if (!res.ok) {
+        throw new Error('Failed to fetch feedback');
+      }
+      return await res.json() as FeedbackItem[];
+    }
+  });
+
+  // Function to render icon based on feedback type
+  const getFeedbackIcon = (type: string) => {
+    switch (type) {
+      case 'bug':
+        return <Bug className="h-4 w-4" />;
+      case 'feature':
+        return <Lightbulb className="h-4 w-4" />;
+      case 'ux':
+        return <MousePointer className="h-4 w-4" />;
+      default:
+        return <MessageSquare className="h-4 w-4" />;
+    }
+  };
+
+  // Function to get badge color based on feedback type
+  const getFeedbackBadgeVariant = (type: string): "default" | "destructive" | "outline" | "secondary" => {
+    switch (type) {
+      case 'bug':
+        return 'destructive';
+      case 'feature':
+        return 'secondary';
+      case 'ux':
+        return 'outline';
+      default:
+        return 'default';
+    }
+  };
+
+  // Display loading state
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  // Display error state
+  if (error) {
+    return (
+      <div className="p-4 border border-red-300 bg-red-50 text-red-800 rounded-md">
+        Error loading feedback: {error instanceof Error ? error.message : 'Unknown error'}
+      </div>
+    );
+  }
+
+  // Display empty state
+  if (feedbackItems.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-20" />
+        <p>No feedback submissions yet.</p>
+      </div>
+    );
+  }
+
+  // Display feedback list
+  return (
+    <div className="space-y-4">
+      {feedbackItems.map((item) => (
+        <div key={item.id} className="border rounded-lg p-4 hover:bg-muted/20 transition-colors">
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex items-center gap-2">
+              <Badge variant={getFeedbackBadgeVariant(item.type)} className="flex items-center gap-1">
+                {getFeedbackIcon(item.type)}
+                {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+              </Badge>
+              {item.username && (
+                <span className="text-sm text-muted-foreground">
+                  from <span className="font-medium">{item.username}</span>
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(item.timestamp), "MMM d, yyyy 'at' h:mm a")}
+            </span>
+          </div>
+          <p className="mt-2 whitespace-pre-wrap">{item.content}</p>
+          <div className="mt-3 text-xs text-muted-foreground">
+            <span>Page: {item.path}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function Admin() {
   const [, setLocation] = useLocation();
@@ -199,9 +314,7 @@ export default function Admin() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Feedback data will appear here once users submit feedback through the application.
-              </p>
+              <FeedbackList />
             </CardContent>
           </Card>
         </TabsContent>
