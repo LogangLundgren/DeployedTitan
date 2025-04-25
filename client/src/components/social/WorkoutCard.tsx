@@ -30,6 +30,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Heart, MessageCircle, MoreVertical, Edit, Trash2, CalendarDays, Clock } from "lucide-react";
 
+// Helper function to get initials from a name
+function getInitials(name: string): string {
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map(part => part[0])
+    .join("")
+    .toUpperCase();
+}
+
 interface WorkoutCardProps {
   workout: WorkoutWithExtraStats;
   formatDate: (date: Date | string) => string;
@@ -132,7 +142,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
                 <Avatar className="border-2 border-primary/10">
                   <AvatarImage src={""} />
                   <AvatarFallback className="bg-primary/5 text-primary font-semibold">
-                    ME
+                    {getInitials(userDisplayName)}
                   </AvatarFallback>
                 </Avatar>
               ) : (
@@ -140,7 +150,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
                   <Avatar className="border-2 border-primary/10 cursor-pointer hover:opacity-90 transition-opacity">
                     <AvatarImage src={""} />
                     <AvatarFallback className="bg-primary/5 text-primary font-semibold">
-                      {"U" + workout.userId}
+                      {getInitials(userDisplayName)}
                     </AvatarFallback>
                   </Avatar>
                 </Link>
