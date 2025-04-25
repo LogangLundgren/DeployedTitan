@@ -472,7 +472,7 @@ function ActivityFeed() {
                     <AvatarFallback>ME</AvatarFallback>
                   </Avatar>
                 ) : (
-                  <Link href={`/profile/${selectedWorkout.userId}`}>
+                  <Link href={`/users/${selectedWorkout.userId}`}>
                     <Avatar className="cursor-pointer hover:opacity-90 transition-opacity">
                       <AvatarImage src={""} />
                       <AvatarFallback>
@@ -486,7 +486,7 @@ function ActivityFeed() {
                     {user && selectedWorkout.userId === user.id ? (
                       "Your workout"
                     ) : (
-                      <Link href={`/profile/${selectedWorkout.userId}`}>
+                      <Link href={`/users/${selectedWorkout.userId}`}>
                         <span className="hover:underline cursor-pointer">
                           {(demoUsers.find(u => u.id === selectedWorkout.userId)?.name || "User") + "'s workout"}
                         </span>
@@ -546,7 +546,7 @@ function ActivityFeed() {
                             <AvatarFallback>ME</AvatarFallback>
                           </Avatar>
                         ) : (
-                          <Link href={`/profile/${comment.userId}`}>
+                          <Link href={`/users/${comment.userId}`}>
                             <Avatar className="h-8 w-8 cursor-pointer hover:opacity-90 transition-opacity">
                               <AvatarFallback>
                                 {getInitials(comment.username)}
@@ -559,7 +559,7 @@ function ActivityFeed() {
                             {user && comment.userId === user.id ? (
                               "You"
                             ) : (
-                              <Link href={`/profile/${comment.userId}`}>
+                              <Link href={`/users/${comment.userId}`}>
                                 <span className="hover:underline cursor-pointer">{comment.username}</span>
                               </Link>
                             )}
@@ -789,14 +789,14 @@ function PeopleDiscover() {
             <Card key={user.id}>
               <CardHeader className="pb-4">
                 <div className="flex items-center space-x-4">
-                  <Link href={`/profile/${user.id}`}>
+                  <Link href={`/users/${user.id}`}>
                     <Avatar className="h-16 w-16 cursor-pointer hover:opacity-90 transition-opacity">
                       <AvatarImage src={user.profilePicture} />
                       <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                     </Avatar>
                   </Link>
                   <div>
-                    <Link href={`/profile/${user.id}`}>
+                    <Link href={`/users/${user.id}`}>
                       <CardTitle className="text-lg hover:underline cursor-pointer">{user.name}</CardTitle>
                     </Link>
                     <CardDescription>@{user.username}</CardDescription>

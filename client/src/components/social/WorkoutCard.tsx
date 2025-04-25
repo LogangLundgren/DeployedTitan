@@ -136,7 +136,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
                   </AvatarFallback>
                 </Avatar>
               ) : (
-                <Link href={`/profile/${workout.userId}`}>
+                <Link href={`/users/${workout.userId}`}>
                   <Avatar className="border-2 border-primary/10 cursor-pointer hover:opacity-90 transition-opacity">
                     <AvatarImage src={""} />
                     <AvatarFallback className="bg-primary/5 text-primary font-semibold">
@@ -150,7 +150,7 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
                   {isOwner ? (
                     userDisplayName
                   ) : (
-                    <Link href={`/profile/${workout.userId}`}>
+                    <Link href={`/users/${workout.userId}`}>
                       <span className="hover:underline cursor-pointer">{userDisplayName}</span>
                     </Link>
                   )}
