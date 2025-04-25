@@ -1,5 +1,6 @@
 import React from 'react';
 import { Bell } from 'lucide-react';
+import { useLocation } from 'wouter';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -80,13 +81,25 @@ const notificationStyles: Record<string, { icon: React.ReactNode, className: str
 const NotificationItem = ({ notification, onRead }: { notification: Notification, onRead: () => void }) => {
   const style = notificationStyles[notification.type] || notificationStyles.info;
   const timeAgo = notification.createdAt ? formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true }) : '';
+  const [, setLocation] = useLocation();
+  
+  const handleClick = () => {
+    // Mark as read first
+    onRead();
+    
+    // Then navigate if there's a link
+    if (notification.link) {
+      setLocation(notification.link);
+    }
+  };
   
   return (
     <div 
       className={`p-4 mb-2.5 rounded-lg bg-card hover:bg-accent/60 cursor-pointer transition-all duration-200 
         ${style.className} ${notification.isRead ? 'opacity-70' : 'shadow-sm'} 
-        ${!notification.isRead ? 'bg-primary/5' : ''}`}
-      onClick={onRead}
+        ${!notification.isRead ? 'bg-primary/5' : ''} 
+        ${notification.link ? 'hover:ring-1 hover:ring-primary/30' : ''}`}
+      onClick={handleClick}
     >
       <div className="flex items-start gap-3">
         <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
@@ -100,7 +113,12 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
             )}
           </div>
           <div className="text-sm text-muted-foreground mt-0.5">{notification.message}</div>
-          <div className="text-xs text-muted-foreground/80 mt-1.5 font-medium">{timeAgo}</div>
+          <div className="text-xs text-muted-foreground/80 mt-1.5 font-medium">
+            {timeAgo}
+            {notification.link && (
+              <span className="ml-2 text-primary/80">• Click to view</span>
+            )}
+          </div>
         </div>
       </div>
     </div>
