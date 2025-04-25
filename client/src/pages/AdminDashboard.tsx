@@ -413,7 +413,7 @@ export default function AdminDashboard() {
                                 className="h-8 w-8"
                                 asChild
                               >
-                                <Link href={`/profile/${user.id}`}>
+                                <Link href={`/users/${user.id}`}>
                                   <User className="h-4 w-4" />
                                 </Link>
                               </Button>
