@@ -4198,12 +4198,13 @@ export class DbStorage implements IStorage {
       const result = await db.insert(goals).values(goal).returning();
       const newGoal = result[0];
       
-      // Create a notification for the new goal
+      // Create a notification for the new goal with a link to the goals page
       await this.createNotification({
         userId: newGoal.userId,
         title: "New Goal Created",
         message: `You've set a new goal: ${newGoal.title}`,
-        type: "goal"
+        type: "goal",
+        link: `/goals/${newGoal.id}` // Direct link to the specific goal
       });
       
       return newGoal;
@@ -4295,7 +4296,8 @@ export class DbStorage implements IStorage {
           userId: goal.userId,
           title: "Goal Completed! 🎉",
           message: `Congratulations! You've completed your goal: ${goal.title}`,
-          type: "achievement"
+          type: "achievement",
+          link: `/goals/${goal.id}` // Direct link to the completed goal
         });
       }
       
@@ -4310,7 +4312,8 @@ export class DbStorage implements IStorage {
             userId: goal.userId,
             title: `${percentage}% Progress! 💪`,
             message: `You've reached ${percentage}% of your goal: ${goal.title}`,
-            type: "progress"
+            type: "progress",
+            link: `/goals/${goal.id}` // Direct link to the goal
           });
           break;
         }

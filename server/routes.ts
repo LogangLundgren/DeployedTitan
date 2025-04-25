@@ -1019,6 +1019,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Workout not found" });
       }
       
+      // Create a notification if the workout was marked as complete
+      if (updateData.data.isComplete === true) {
+        // Get workout details for a better notification message
+        const workoutDetails = await storage.getWorkoutWithDetails(id);
+        const workoutName = workoutDetails?.name || 'Workout';
+        
+        await storage.createNotification({
+          userId: req.user.id,
+          title: "Workout Completed",
+          message: `You've completed your ${workoutName} workout! Great job!`,
+          type: "success",
+          link: `/workouts/${id}` // Direct link to the completed workout
+        });
+      }
+      
       res.status(200).json(updatedWorkout);
     } catch (error) {
       console.error("Update workout caption error:", error);
@@ -1075,6 +1090,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updatedWorkout) {
         return res.status(404).json({ message: "Workout not found" });
+      }
+      
+      // Create a notification if the workout was marked as complete
+      if (updateData.data.isComplete === true) {
+        // Get workout details for a better notification message
+        const workoutDetails = await storage.getWorkoutWithDetails(id);
+        const workoutName = workoutDetails?.name || 'Workout';
+        
+        await storage.createNotification({
+          userId: req.user.id,
+          title: "Workout Completed",
+          message: `You've completed your ${workoutName} workout! Great job!`,
+          type: "success",
+          link: `/workouts/${id}` // Direct link to the completed workout
+        });
       }
       
       res.status(200).json(updatedWorkout);
