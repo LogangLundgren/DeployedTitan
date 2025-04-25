@@ -54,6 +54,7 @@ export default function ExerciseFrequency({ userId }: ExerciseFrequencyProps) {
   const [exerciseData, setExerciseData] = useState<ExerciseFrequencyData[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>("all");
   
   // Fetch recent workouts
   const { data: workouts, isLoading: workoutsLoading } = useQuery<WorkoutWithDetails[]>({
@@ -86,6 +87,28 @@ export default function ExerciseFrequency({ userId }: ExerciseFrequencyProps) {
   });
 
   // Process workout data for exercise frequency
+  // Get unique muscle groups from exercises
+  const getUniqueMuscleGroups = () => {
+    if (!exercises) return [];
+    
+    // Get unique categories
+    const uniqueCategories = new Set<string>();
+    exercises.forEach(exercise => {
+      if (exercise.category) {
+        uniqueCategories.add(exercise.category);
+      }
+    });
+    
+    return Array.from(uniqueCategories).sort();
+  };
+
+  // Reset muscle group filter when view changes
+  useEffect(() => {
+    if (view === 'categories') {
+      setSelectedMuscleGroup('all');
+    }
+  }, [view]);
+
   useEffect(() => {
     if (!workouts || !exercises) return;
     
@@ -151,10 +174,18 @@ export default function ExerciseFrequency({ userId }: ExerciseFrequencyProps) {
       item.color = colors[index % colors.length];
     });
     
+    // Filter by muscle group if a specific one is selected
+    let filteredExerciseData = exerciseDataArray;
+    if (view === 'exercises' && selectedMuscleGroup !== 'all') {
+      filteredExerciseData = exerciseDataArray.filter(
+        exercise => exercise.category === selectedMuscleGroup
+      );
+    }
+    
     // Limit to top 10 exercises for better visualization
-    setExerciseData(exerciseDataArray.slice(0, 10));
+    setExerciseData(filteredExerciseData.slice(0, 10));
     setCategoryData(categoryDataArray);
-  }, [workouts, exercises]);
+  }, [workouts, exercises, view, selectedMuscleGroup]);
 
   // Generate percentage label for tooltip
   const generatePercentage = (value: number, dataArray: ExerciseFrequencyData[] | CategoryData[]) => {
@@ -258,6 +289,31 @@ export default function ExerciseFrequency({ userId }: ExerciseFrequencyProps) {
           </Tabs>
         </div>
 
+        {/* Muscle Group Filter (only shown for exercises view) */}
+        {view === 'exercises' && (
+          <div className="mb-6">
+            <label className="text-sm font-medium mb-1.5 text-gray-500 block">
+              Filter by Muscle Group
+            </label>
+            <Select
+              value={selectedMuscleGroup}
+              onValueChange={setSelectedMuscleGroup}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Muscle Group" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Muscle Groups</SelectItem>
+                {getUniqueMuscleGroups().map(category => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="h-80 flex items-center justify-center">
             <p className="text-gray-500">Loading data...</p>
@@ -283,7 +339,11 @@ export default function ExerciseFrequency({ userId }: ExerciseFrequencyProps) {
               <path d="M6 14v0a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
               <path d="m7 9 4.5 7L16 9" />
             </svg>
-            <p className="text-gray-400">No workout data available for this time period</p>
+            <p className="text-gray-400">
+              {view === 'exercises' && selectedMuscleGroup !== 'all' 
+                ? `No workout data for ${selectedMuscleGroup} exercises in this time period`
+                : "No workout data available for this time period"}
+            </p>
           </div>
         ) : (
           <>
