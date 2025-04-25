@@ -5079,6 +5079,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Feedback endpoints
+  app.post("/api/feedback", async (req, res) => {
+    try {
+      const { insertFeedbackSchema } = await import("@shared/schema");
+      
+      const feedbackData = insertFeedbackSchema.safeParse(req.body);
+      
+      if (!feedbackData.success) {
+        return res.status(400).json({ 
+          message: "Invalid feedback data", 
+          errors: feedbackData.error.errors 
+        });
+      }
+      
+      const feedback = await storage.saveFeedback(feedbackData.data);
+      res.status(201).json(feedback);
+    } catch (error) {
+      console.error("Error saving feedback:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.get("/api/feedback", requireAuth, async (req, res) => {
+    // Check if user is admin (Logan Main)
+    if (!req.user || req.user.username !== "Logan Main") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const feedback = await storage.getFeedback();
+      res.status(200).json(feedback);
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Direct messaging routes
   
   // Get all message threads for the current user

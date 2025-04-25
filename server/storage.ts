@@ -26,17 +26,8 @@ import {
 import { eq, desc, and, asc, sql, or, isNull, isNotNull, inArray, like, notLike, count } from 'drizzle-orm';
 import { db } from './db';
 
-// Feedback type definition
-export interface Feedback {
-  id?: number;
-  type: string;
-  content: string;
-  userId?: number;
-  username?: string;
-  path: string;
-  userAgent: string;
-  timestamp: string;
-}
+// Import feedback schema type from shared/schema
+import { feedbacks, type Feedback, type InsertFeedback } from "@shared/schema";
 
 export interface IStorage {
   // User operations
