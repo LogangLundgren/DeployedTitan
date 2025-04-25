@@ -137,42 +137,49 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
       <Card className="overflow-hidden transition-all duration-200 hover:shadow-md">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {isOwner ? (
+            {isOwner ? (
+              <div className="flex items-center space-x-4">
                 <Avatar className="border-2 border-primary/10">
                   <AvatarImage src={""} />
                   <AvatarFallback className="bg-primary/5 text-primary font-semibold">
                     {getInitials(userDisplayName)}
                   </AvatarFallback>
                 </Avatar>
-              ) : (
-                <Link href={`/users/${workout.userId}`}>
+                <div>
+                  <div className="font-medium">
+                    {userDisplayName}
+                  </div>
+                  <div className="text-sm text-muted-foreground flex items-center">
+                    <CalendarDays className="h-3 w-3 mr-1 opacity-70" />
+                    {formatDate(workout.date)} 
+                    <Clock className="h-3 w-3 mx-1 opacity-70" /> 
+                    {formatTime(workout.date)}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Link href={`/users/${workout.userId}`} className="group">
+                <div className="flex items-center space-x-4">
                   <Avatar className="border-2 border-primary/10 cursor-pointer hover:opacity-90 transition-opacity">
                     <AvatarImage src={""} />
                     <AvatarFallback className="bg-primary/5 text-primary font-semibold">
                       {getInitials(userDisplayName)}
                     </AvatarFallback>
                   </Avatar>
-                </Link>
-              )}
-              <div>
-                <div className="font-medium">
-                  {isOwner ? (
-                    userDisplayName
-                  ) : (
-                    <Link href={`/users/${workout.userId}`}>
-                      <span className="hover:underline cursor-pointer">{userDisplayName}</span>
-                    </Link>
-                  )}
+                  <div>
+                    <div className="font-medium group-hover:underline">
+                      {userDisplayName}
+                    </div>
+                    <div className="text-sm text-muted-foreground flex items-center">
+                      <CalendarDays className="h-3 w-3 mr-1 opacity-70" />
+                      {formatDate(workout.date)} 
+                      <Clock className="h-3 w-3 mx-1 opacity-70" /> 
+                      {formatTime(workout.date)}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground flex items-center">
-                  <CalendarDays className="h-3 w-3 mr-1 opacity-70" />
-                  {formatDate(workout.date)} 
-                  <Clock className="h-3 w-3 mx-1 opacity-70" /> 
-                  {formatTime(workout.date)}
-                </div>
-              </div>
-            </div>
+              </Link>
+            )}
             <div className="flex items-center space-x-2">
               <Badge variant="outline" className="bg-primary/5">{workout.category || "Workout"}</Badge>
               
