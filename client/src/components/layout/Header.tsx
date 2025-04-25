@@ -75,7 +75,7 @@ export default function Header() {
             </button>
             
             {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl py-1.5 z-10 border border-gray-100 overflow-hidden">
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl py-1.5 z-50 border border-gray-100 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-primary/5 to-primary/10">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Signed in as</p>
                   <p className="text-sm font-semibold text-gray-900">{user?.email}</p>
