@@ -12,6 +12,7 @@ export interface Notification {
   type: string;
   isRead: boolean;
   createdAt: Date;
+  link?: string; // Optional link to navigate to when notification is clicked
 }
 
 interface NotificationsContextType {

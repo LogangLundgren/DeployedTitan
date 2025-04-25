@@ -4117,7 +4117,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.user.id,
         title: "New Custom Exercise",
         message: `You've created a new custom exercise: ${exercise.name}`,
-        type: "info"
+        type: "info",
+        link: "/exercises" // Link to exercises page
       });
       
       res.status(201).json(exercise);
@@ -4495,7 +4496,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: parseInt(userId),
         title: "Coach Registration Complete",
         message: "Congratulations! You're now registered as a coach. Set up your profile to start creating and selling workout plans.",
-        type: "registration"
+        type: "success",
+        link: "/coach/profile" // Link to coach profile setup
       });
       
       res.status(200).json({
@@ -4536,7 +4538,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: parseInt(userId),
         title: "Coach Registration Complete (Test Mode)",
         message: "This is a test registration. You're now registered as a coach. Set up your profile to start creating and selling workout plans.",
-        type: "registration"
+        type: "success",
+        link: "/coach/profile" // Link to coach profile setup
       });
       
       res.status(200).json({
