@@ -26,6 +26,18 @@ import {
 import { eq, desc, and, asc, sql, or, isNull, isNotNull, inArray, like, notLike, count } from 'drizzle-orm';
 import { db } from './db';
 
+// Feedback type definition
+export interface Feedback {
+  id?: number;
+  type: string;
+  content: string;
+  userId?: number;
+  username?: string;
+  path: string;
+  userAgent: string;
+  timestamp: string;
+}
+
 export interface IStorage {
   // User operations
   getAllUsers(): Promise<User[]>;
@@ -200,6 +212,10 @@ export interface IStorage {
   getClientForkedPlans(coachId: number): Promise<WorkoutPlan[]>;
   getClientForkedPlan(planId: number): Promise<WorkoutPlan | undefined>;
   
+  // Feedback operations
+  saveFeedback(feedback: Feedback): Promise<Feedback>;
+  getFeedback(): Promise<Feedback[]>;
+  
   // DB-specific method
   initialize?(): Promise<void>;
 }
@@ -227,6 +243,7 @@ export class MemStorage implements IStorage {
   private purchases: Map<number, Purchase>;
   private reviews: Map<number, Review>;
   private userSuggestions: Map<number, UserSuggestion>;
+  private feedbacks: Map<number, Feedback>;
   
   private userCurrentId: number;
   private exerciseCurrentId: number;
@@ -250,6 +267,7 @@ export class MemStorage implements IStorage {
   private purchaseCurrentId: number;
   private reviewCurrentId: number;
   private userSuggestionCurrentId: number;
+  private feedbackCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -274,6 +292,7 @@ export class MemStorage implements IStorage {
     this.purchases = new Map();
     this.reviews = new Map();
     this.userSuggestions = new Map();
+    this.feedbacks = new Map();
     
     this.userCurrentId = 1;
     this.exerciseCurrentId = 1;
@@ -297,6 +316,7 @@ export class MemStorage implements IStorage {
     this.purchaseCurrentId = 1;
     this.reviewCurrentId = 1;
     this.userSuggestionCurrentId = 1;
+    this.feedbackCurrentId = 1;
     
     // Seed initial users
     this.seedDefaultUsers();

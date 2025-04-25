@@ -67,14 +67,14 @@ export function FeedbackWidget() {
         timestamp: new Date().toISOString(),
       };
       
-      // Store in local storage temporarily (could later be sent to a server endpoint)
+      // Store in local storage for backup
       const existingFeedback = JSON.parse(localStorage.getItem("titan-fitness-feedback") || "[]");
       existingFeedback.push(feedbackData);
       localStorage.setItem("titan-fitness-feedback", JSON.stringify(existingFeedback));
       
-      // For future implementation - send to server endpoint
-      // const res = await apiRequest("POST", "/api/feedback", feedbackData);
-      // if (!res.ok) throw new Error("Failed to submit feedback");
+      // Send to server endpoint
+      const res = await apiRequest("POST", "/api/feedback", feedbackData);
+      if (!res.ok) throw new Error("Failed to submit feedback");
 
       toast({
         title: "Feedback received",
