@@ -5089,9 +5089,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log the received data for debugging
       console.log("Received feedback data:", req.body);
       
-      // Parse the feedback data - we need to use optional fields to match the expected schema
+      // Parse the feedback data without specifying an ID (let the DB auto-generate it)
       const feedbackData = {
-        id: 0, // This will be replaced by the database auto-increment
         type: req.body.type,
         content: req.body.content,
         userId: req.body.userId || null,
