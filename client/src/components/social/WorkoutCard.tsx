@@ -73,10 +73,28 @@ export default function WorkoutCard({ workout, formatDate, formatTime }: Workout
     fetchCommentCount();
   }, [workout.id]);
 
+  // Fetch user data
+  const { data: workoutUser } = useQuery({
+    queryKey: [`/api/users/${workout.userId}`],
+    queryFn: async () => {
+      // Don't fetch if it's the current user
+      if (user && workout.userId === user.id) {
+        return null;
+      }
+      const response = await apiRequest("GET", `/api/users/${workout.userId}`);
+      if (!response.ok) {
+        console.error("Failed to fetch user data for workout");
+        return null;
+      }
+      return response.json();
+    },
+    staleTime: 300000, // Cache for 5 minutes
+  });
+
   // Format for display
   const userDisplayName = user && workout.userId === user.id 
     ? "You" 
-    : demoUsers.find(u => u.id === workout.userId)?.name || "User " + workout.userId;
+    : workoutUser?.username || workoutUser?.name || `User ${workout.userId}`;
 
   // Delete workout mutation
   const deleteWorkoutMutation = useMutation({
