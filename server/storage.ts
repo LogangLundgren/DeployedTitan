@@ -5215,6 +5215,6 @@ export class DbStorage implements IStorage {
 }
 
 // Use in-memory storage during development, database storage in production
-// Temporarily using MemStorage to fix startup issues
-console.log('Using memory store for storage');
-export const storage = new MemStorage();
+export const storage = process.env.DATABASE_URL 
+  ? new DbStorage() 
+  : new MemStorage();

@@ -617,30 +617,3 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
 });
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
-
-// Feedback schema
-export const feedback = pgTable("feedback", {
-  id: serial("id").primaryKey(),
-  type: text("type").notNull(), // bug, feature, ux, other
-  content: text("content").notNull(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-  username: text("username"),
-  path: text("path").notNull(),
-  userAgent: text("user_agent").notNull(),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
-  isResolved: boolean("is_resolved").default(false),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertFeedbackSchema = createInsertSchema(feedback).pick({
-  type: true,
-  content: true,
-  userId: true,
-  username: true,
-  path: true,
-  userAgent: true,
-  timestamp: true,
-});
-
-export type Feedback = typeof feedback.$inferSelect;
-export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;

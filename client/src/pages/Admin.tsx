@@ -5,164 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
-import { Trash2, UserX, CheckCircle, MessageSquare, Bug, Lightbulb, Settings, FileQuestion } from "lucide-react";
+import { Trash2, UserX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
-
-// Type for feedback data
-interface FeedbackItem {
-  id: number;
-  type: string;
-  content: string;
-  user_id: number | null;
-  username: string | null;
-  path: string;
-  user_agent: string;
-  timestamp: string;
-  is_resolved: boolean;
-}
-
-// Feedback section component
-function FeedbackSection() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  // Fetch feedback
-  const { data: feedbackItems = [], isLoading } = useQuery({
-    queryKey: ["/api/feedback"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/feedback");
-      if (!res.ok) throw new Error("Failed to fetch feedback");
-      return await res.json();
-    }
-  });
-  
-  // Mark feedback as resolved mutation
-  const resolveFeedbackMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("PATCH", `/api/feedback/${id}/resolve`);
-      if (!res.ok) throw new Error("Failed to resolve feedback");
-      return await res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/feedback"] });
-      toast({
-        title: "Feedback Resolved",
-        description: "The feedback has been marked as resolved."
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to resolve feedback: ${error.message}`,
-        variant: "destructive"
-      });
-    }
-  });
-  
-  // Get icon for feedback type
-  const getFeedbackTypeIcon = (type: string) => {
-    switch (type) {
-      case 'bug':
-        return <Bug className="h-5 w-5 text-red-500" />;
-      case 'feature':
-        return <Lightbulb className="h-5 w-5 text-amber-500" />;
-      case 'ux':
-        return <Settings className="h-5 w-5 text-blue-500" />;
-      default:
-        return <FileQuestion className="h-5 w-5 text-gray-500" />;
-    }
-  };
-  
-  // Format feedback type for display
-  const formatFeedbackType = (type: string) => {
-    switch (type) {
-      case 'bug':
-        return 'Bug Report';
-      case 'feature':
-        return 'Feature Request';
-      case 'ux':
-        return 'UX Feedback';
-      default:
-        return 'Other';
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
-
-  if (feedbackItems.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground opacity-20" />
-        <h3 className="mt-4 text-lg font-medium">No feedback yet</h3>
-        <p className="mt-2 text-muted-foreground">
-          Feedback submitted by users will appear here.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {feedbackItems.map((item: FeedbackItem) => (
-        <div 
-          key={item.id} 
-          className={`border rounded-lg p-4 ${item.is_resolved ? 'bg-muted/30' : 'bg-card'}`}
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              {getFeedbackTypeIcon(item.type)}
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium">{formatFeedbackType(item.type)}</h3>
-                  {item.is_resolved && (
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Resolved
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {item.username ? `From: ${item.username}` : 'Anonymous'} • 
-                  {' '}{formatDistanceToNow(new Date(item.timestamp))} ago • 
-                  {' '}Page: {item.path}
-                </p>
-              </div>
-            </div>
-            
-            {!item.is_resolved && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => resolveFeedbackMutation.mutate(item.id)}
-                disabled={resolveFeedbackMutation.isPending}
-              >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Mark Resolved
-              </Button>
-            )}
-          </div>
-          
-          <div className="mt-3 p-3 bg-muted/30 rounded-md whitespace-pre-wrap">
-            {item.content}
-          </div>
-          
-          <div className="mt-2 text-xs text-muted-foreground">
-            User Agent: {item.user_agent.length > 100 ? `${item.user_agent.substring(0, 100)}...` : item.user_agent}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default function Admin() {
   const [, setLocation] = useLocation();
@@ -350,11 +195,13 @@ export default function Admin() {
             <CardHeader>
               <CardTitle>User Feedback</CardTitle>
               <CardDescription>
-                View and manage feedback submitted by users.
+                View feedback submitted by users.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FeedbackSection />
+              <p className="text-muted-foreground">
+                Feedback data will appear here once users submit feedback through the application.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>

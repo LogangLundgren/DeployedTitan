@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { db, pool } from "./db";
+import { db } from "./db";
 import Stripe from "stripe";
 import { hashPassword, verifyPassword, requireAuth, requireAuthWithUser, requireOwnership } from "./auth";
 import { eq, and, or, like, isNotNull, inArray } from "drizzle-orm";
@@ -36,7 +36,6 @@ import {
   insertPurchaseSchema,
   insertWorkoutPlanDaySchema,
   insertUserSuggestionSchema,
-  insertFeedbackSchema,
   Workout,
   TemplateExercise,
   User,
@@ -52,7 +51,6 @@ import {
   Purchase,
   Review,
   UserSuggestion,
-  Feedback,
   messageParticipants,
   messageThreads,
   messages,
@@ -5407,117 +5405,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error getting coach clients:", error);
       res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Feedback API endpoints
-  // Submit feedback
-  app.post("/api/feedback", async (req, res) => {
-    try {
-      const { type, content, path, userAgent, timestamp } = req.body;
-      
-      if (!type || !content || !path || !userAgent) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-      
-      // Add user info if authenticated
-      const userId = req.user?.id || null;
-      const username = req.user?.username || null;
-      
-      // Insert feedback into the database
-      const feedbackData = {
-        type,
-        content,
-        userId,
-        username,
-        path,
-        userAgent,
-        timestamp: timestamp || new Date().toISOString()
-      };
-      
-      // Use pool.query for direct database access
-      // First, handle null values properly
-      let userIdValue = userId ? userId : null;
-      let usernameValue = username ? username : null;
-      
-      const result = await pool.query(
-        `INSERT INTO feedback (type, content, user_id, username, path, user_agent, timestamp) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7) 
-         RETURNING *`,
-        [
-          type, 
-          content, 
-          userIdValue, 
-          usernameValue, 
-          path, 
-          userAgent, 
-          timestamp || new Date().toISOString()
-        ]
-      );
-      
-      res.status(201).json({ 
-        success: true, 
-        message: "Feedback submitted successfully",
-        feedback: result.rows[0]
-      });
-    } catch (error) {
-      console.error("Error submitting feedback:", error);
-      res.status(500).json({ message: "Failed to submit feedback" });
-    }
-  });
-  
-  // Get all feedback (admin only)
-  app.get("/api/feedback", async (req, res) => {
-    try {
-      // Check if the user is an admin (Logan Main)
-      if (!req.user || req.user.username !== "Logan Main") {
-        return res.status(403).json({ message: "Unauthorized access" });
-      }
-      
-      // Get all feedback ordered by most recent first using direct SQL
-      const result = await pool.query(
-        `SELECT * FROM feedback ORDER BY timestamp DESC`
-      );
-      
-      res.json(result.rows);
-    } catch (error) {
-      console.error("Error fetching feedback:", error);
-      res.status(500).json({ message: "Failed to fetch feedback" });
-    }
-  });
-  
-  // Mark feedback as resolved (admin only)
-  app.patch("/api/feedback/:id/resolve", async (req, res) => {
-    try {
-      const feedbackId = parseInt(req.params.id);
-      
-      if (isNaN(feedbackId)) {
-        return res.status(400).json({ message: "Invalid feedback ID" });
-      }
-      
-      // Check if the user is an admin (Logan Main)
-      if (!req.user || req.user.username !== "Logan Main") {
-        return res.status(403).json({ message: "Unauthorized access" });
-      }
-      
-      // Update the feedback status using parameterized query
-      const result = await pool.query(
-        `UPDATE feedback SET is_resolved = true WHERE id = $1 RETURNING *`,
-        [feedbackId]
-      );
-      
-      if (result.rowCount === 0) {
-        return res.status(404).json({ message: "Feedback not found" });
-      }
-      
-      res.json({ 
-        success: true, 
-        message: "Feedback marked as resolved",
-        feedback: result.rows[0]
-      });
-    } catch (error) {
-      console.error("Error resolving feedback:", error);
-      res.status(500).json({ message: "Failed to resolve feedback" });
     }
   });
 
