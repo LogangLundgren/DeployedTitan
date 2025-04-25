@@ -371,280 +371,68 @@ function ActivityFeed() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-6">
-          <h2 className="text-xl font-semibold">Activity Feed</h2>
-          
-          {workoutsLoading ? (
-            <div className="space-y-6">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="h-10 w-10 rounded-full bg-gray-200"></div>
-                      <div className="space-y-2">
-                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
-                        <div className="h-3 w-16 bg-gray-200 rounded"></div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-4 w-3/4 bg-gray-200 rounded mb-3"></div>
-                    <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : communityWorkouts.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <div className="rounded-full bg-primary/10 p-6 mb-4">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-primary"
-                  >
-                    <path d="M17 6.1H3" />
-                    <path d="M21 12.1H3" />
-                    <path d="M15.5 18.1H3" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium mb-2">No Recent Activity</h3>
-                <p className="text-center text-muted-foreground mb-6">
-                  Follow more users to see their workouts and achievements in your feed.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-              {communityWorkouts.map((workout: WorkoutWithExtraStats) => (
-                <WorkoutCard 
-                  key={workout.id}
-                  workout={workout}
-                  formatDate={formatDate}
-                  formatTime={formatTime}
-                />
-              ))}
-            </div>
-          )}
-          
-          <h2 className="text-xl font-semibold mt-8">Your Goals</h2>
-          
-          {goalsLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[...Array(2)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader className="pb-4">
-                    <div className="h-4 w-24 bg-gray-200 rounded"></div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-4 w-3/4 bg-gray-200 rounded mb-3"></div>
-                    <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : userGoals.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-8">
-                <p className="text-center text-muted-foreground">
-                  You haven't set any goals yet. Add some goals to track your progress.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {userGoals.slice(0, 4).map((goal: Goal) => (
-                <Card key={goal.id}>
-                  <CardHeader className="pb-4">
-                    <div className="flex justify-between items-start">
-                      <Badge>{goal.category}</Badge>
-                      <div className="text-sm text-muted-foreground">
-                        By {user && goal.userId === user.id ? 'You' : demoUsers.find(u => u.id === goal.userId)?.name || 'User ' + goal.userId}
-                      </div>
-                    </div>
-                    <CardTitle className="mt-2">{goal.title}</CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {goal.description || "No description provided"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pb-4">
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Progress</span>
-                        <span>
-                          {goal.currentValue} / {goal.targetValue}
-                        </span>
-                      </div>
-                      <Progress
-                        value={calculateProgress(goal.currentValue, goal.targetValue)}
-                        className="h-2"
-                      />
-                    </div>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Started: {goal.startDate ? formatDate(goal.startDate) : 'N/A'}</span>
-                      <span>Target: {goal.targetDate ? formatDate(goal.targetDate) : 'N/A'}</span>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="border-t pt-4 bg-muted/20">
-                    <Button 
-                      variant="ghost" 
-                      className="w-full text-primary"
-                    >
-                      Follow Progress
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold">Activity Feed</h2>
         
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Suggested Users</CardTitle>
-              <CardDescription>
-                People you might want to follow
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {usersLoading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex items-center justify-between animate-pulse">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full bg-muted"></div>
-                      <div className="space-y-2">
-                        <div className="h-4 w-24 bg-muted rounded"></div>
-                        <div className="h-3 w-16 bg-muted rounded"></div>
-                      </div>
+        {workoutsLoading ? (
+          <div className="space-y-6">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="h-10 w-10 rounded-full bg-gray-200"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                      <div className="h-3 w-16 bg-gray-200 rounded"></div>
                     </div>
-                    <div className="h-8 w-16 bg-muted rounded"></div>
                   </div>
-                ))
-              ) : users.length === 0 ? (
-                <div className="text-center py-2 text-muted-foreground">
-                  No suggested users found
-                </div>
-              ) : (
-                users.slice(0, 4).map((suggestedUser: any) => (
-                  <div key={suggestedUser.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Avatar>
-                        <AvatarImage src={suggestedUser.profilePicture} />
-                        <AvatarFallback>{suggestedUser.name ? getInitials(suggestedUser.name) : "U"}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{suggestedUser.name || "User"}</div>
-                        <div className="text-sm text-muted-foreground">@{suggestedUser.username}</div>
-                      </div>
-                    </div>
-                    <Button 
-                      variant={suggestedUser.isFollowing ? "default" : "outline"} 
-                      size="sm"
-                      onClick={() => handleFollowUser(suggestedUser.id)}
-                      disabled={followUserMutation.isPending}
-                    >
-                      {suggestedUser.isFollowing ? 'Unfollow' : 'Follow'}
-                    </Button>
-                  </div>
-                ))
-              )}
-            </CardContent>
-            <CardFooter>
-              <Button variant="ghost" size="sm" className="w-full">
-                See More
-              </Button>
-            </CardFooter>
-          </Card>
-          
+                </CardHeader>
+                <CardContent>
+                  <div className="h-4 w-3/4 bg-gray-200 rounded mb-3"></div>
+                  <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : communityWorkouts.length === 0 ? (
           <Card>
-            <CardHeader>
-              <CardTitle>Weekly Leaderboard</CardTitle>
-              <CardDescription>
-                Users you follow with highest weekly volume
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {usersLoading && (
-                <>
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex items-center justify-between animate-pulse">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-6 h-6 rounded-full bg-muted"></div>
-                        <div className="space-y-2">
-                          <div className="h-4 w-24 bg-muted rounded"></div>
-                          <div className="h-3 w-16 bg-muted rounded"></div>
-                        </div>
-                      </div>
-                      <div className="h-4 w-16 bg-muted rounded"></div>
-                    </div>
-                  ))}
-                </>
-              )}
-              
-              {!usersLoading && users.filter(user => user && isFollowing[user.id]).length === 0 && (
-                <div className="text-center py-4 text-muted-foreground">
-                  No connections found. Follow more users to see them in your leaderboard.
-                </div>
-              )}
-              
-              {!usersLoading && users.filter(user => user && isFollowing[user.id]).length > 0 && (
-                <>
-                  {users
-                    .filter(user => 
-                      // Make sure the user still exists and we're following them
-                      user && isFollowing[user.id]
-                    )
-                    .sort((a, b) => ((b.weeklyVolume || 0) - (a.weeklyVolume || 0)))
-                    .slice(0, 5)
-                    .map((user, index) => {
-                      const rank = index + 1;
-                      return (
-                        <div key={user.id} className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                              rank === 1 
-                                ? "bg-yellow-400 text-yellow-800" 
-                                : rank === 2 
-                                  ? "bg-gray-300 text-gray-800" 
-                                  : rank === 3 
-                                    ? "bg-amber-700 text-amber-100" 
-                                    : "bg-gray-100 text-gray-800"
-                            } font-medium text-sm`}>
-                              {rank}
-                            </div>
-                            <div>
-                              <div className="font-medium">{user.name}</div>
-                              <div className="text-sm text-muted-foreground">@{user.username}</div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">{user.weeklyVolume || 0}</div>
-                            <div className="text-xs text-muted-foreground">volume</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </>
-              )}
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <div className="rounded-full bg-primary/10 p-6 mb-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-primary"
+                >
+                  <path d="M17 6.1H3" />
+                  <path d="M21 12.1H3" />
+                  <path d="M15.5 18.1H3" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium mb-2">No Recent Activity</h3>
+              <p className="text-center text-muted-foreground mb-6">
+                Follow more users to see their workouts and achievements in your feed.
+              </p>
             </CardContent>
-            <CardFooter>
-              <Button variant="outline" size="sm" className="w-full">
-                View Full Leaderboard
-              </Button>
-            </CardFooter>
           </Card>
-          
-
-        </div>
+        ) : (
+          <div className="space-y-6">
+            {communityWorkouts.map((workout: WorkoutWithExtraStats) => (
+              <WorkoutCard 
+                key={workout.id}
+                workout={workout}
+                formatDate={formatDate}
+                formatTime={formatTime}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Comment delete confirmation dialog */}
