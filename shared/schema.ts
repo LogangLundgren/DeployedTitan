@@ -617,3 +617,21 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
 });
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+// Feedback schema
+export const feedbacks = pgTable("feedbacks", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(),
+  content: text("content").notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  username: text("username"),
+  path: text("path").notNull(),
+  userAgent: text("user_agent").notNull(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export const insertFeedbackSchema = createInsertSchema(feedbacks).omit({
+  id: true,
+});
+export type Feedback = typeof feedbacks.$inferSelect;
+export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
