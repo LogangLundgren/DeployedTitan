@@ -1,0 +1,596 @@
+Continuation of the project from last semester (MIS3400) 
+
+Continuation of the project from last semester (MIS3400) 
+
+Senior Project: Development of a Business Application from Prototype to Beta Releases 
+
+Project Overview: 
+In this senior project, students will develop a business application through multiple stages, starting with a prototype and progressing through three beta versions. Students will go through the full lifecycle of software development, including testing, documentation, user manuals, and the creation of policies to ensure the application is functional, secure, and user-friendly. They will also learn how to manage feedback and iteratively improve the application. 
+
+Milestones: This project will be structured around seven key milestones, each with specific deliverables and goals. The project will simulate a real-world software development process, emphasizing iterative development, testing, and documentation. 
+
+ 
+
+Milestone 1: Initial Planning & Requirements Gathering (Week 1-2) 
+
+Objective: 
+Gather and define the requirements for the business application. This will lay the foundation for the project and guide the design and development process. 
+
+Deliverables: 
+
+Project Scope Document: A detailed document outlining the business goals, target audience, key features, and high-level technical requirements. 
+
+Use Case Diagrams & User Stories: A set of use cases and user stories that describe how users will interact with the application. 
+
+Technology Stack Selection: A report explaining the technologies and frameworks to be used for front-end, back-end, and database. 
+
+Initial Risk Assessment: Identification of potential risks and mitigation strategies. 
+
+ 
+
+Milestone 2: Prototype Design (Week 3-5) 
+
+Objective: 
+Create the first version of the business application in the form of a prototype. The focus will be on creating a basic, functional interface to demonstrate the core functionality. 
+
+Deliverables: 
+
+Prototype (Low-Fidelity): A wireframe or interactive mock-up of the user interface (UI), possibly using tools like Figma, Sketch, or Adobe XD. 
+
+Prototype Feedback Report: A summary of feedback from initial user testing of the prototype. 
+
+Technical Architecture Diagram: A diagram outlining the high-level architecture of the application, including front-end, back-end, and database interactions. 
+
+ 
+
+Milestone 3: Alpha Version Development (Week 6-9) 
+
+Objective: 
+Develop the first fully functional version (Alpha) of the business application. This version should have the core features implemented but may still have bugs or missing functionality. 
+
+Deliverables: 
+
+Alpha Version of Application: A working version of the application with the primary features implemented, but still in an early-stage state. 
+
+Alpha Testing Report: Results from internal testing, including identification of critical bugs, performance issues, and user experience challenges. 
+
+Code Repository: A GitHub or GitLab repository containing the application’s code and version control. 
+
+ 
+
+Milestone 4: Beta Version 1 (Week 10-13) 
+
+Objective: 
+Release the first beta version of the application, incorporating feedback from alpha testing and focusing on bug fixes and usability improvements. The beta version should be feature-complete but may still have some minor bugs. 
+
+Deliverables: 
+
+Beta Version 1 of Application: A feature-complete application with most critical bugs fixed. 
+
+Beta Testing Plan: A detailed testing plan for external users, including test cases, instructions, and feedback forms. 
+
+User Feedback Summary: A summary of feedback from external beta testers, highlighting major pain points or feature requests. 
+
+ 
+
+Milestone 5: Beta Version 2 & Bug Fixing (Week 14-16) 
+
+Objective: 
+Release the second beta version, focusing on refining the application based on feedback from Beta Version 1. This version should be more stable, with more bugs fixed and features enhanced. 
+
+Deliverables: 
+
+Beta Version 2 of Application: Improved version with bug fixes, performance optimizations, and enhanced user interface (UI). 
+
+User Documentation: A comprehensive user guide covering how to install, configure, and use the application. 
+
+Test Report & Bug Fixes: A report on the bugs fixed since the first beta and results of regression testing. 
+
+Updated Code Repository: The latest version of the code, with detailed commit messages explaining the changes. 
+
+ 
+
+Milestone 6: Beta Version 3 & Final Testing (Week 17-19) 
+
+Objective: 
+Release the third and final beta version. The goal is to perform comprehensive testing, address all critical bugs, and ensure the application is stable and ready for launch. 
+
+Deliverables: 
+
+Beta Version 3 of Application: The final beta version with all key bugs fixed and additional minor enhancements. 
+
+Stress Testing Report: Results from load and stress testing, ensuring the application can handle large numbers of users or transactions. 
+
+Security Assessment Report: A document outlining any security measures implemented, vulnerabilities discovered, and actions taken to secure the application. 
+
+Final User Feedback Summary: A summary of final feedback from beta testers, including any last-minute adjustments that were made. 
+
+ 
+
+Milestone 7: Final Documentation, Policies, and Launch Preparation (Week 20-22) 
+
+Objective: 
+Prepare all final documentation, policies, and instructions for a successful launch of the business application. This includes preparing a deployment plan, creating policies for ongoing support and maintenance, and finalizing user and technical documentation. 
+
+Deliverables: 
+
+Final User Manual: An updated and comprehensive user manual that includes all features, FAQs, troubleshooting tips, and installation instructions. 
+
+Technical Documentation: A complete technical documentation set including architecture details, API documentation, and a deployment guide. 
+
+Privacy Policy & Terms of Service: Legal documents that govern the use of the application, including privacy policies and terms of service agreements. 
+
+Deployment Plan: A plan for launching the application to production, including server setup, database configurations, and any other necessary infrastructure. 
+
+Project Final Report: A final report documenting the entire project lifecycle, lessons learned, challenges faced, and how they were addressed. 
+
+ 
+
+Assessment Criteria: 
+
+Technical Skills: Ability to implement a business application using modern frameworks and technologies. 
+
+Testing & Quality Assurance: Proper testing strategies, including unit testing, integration testing, and user acceptance testing. 
+
+Documentation: Clarity, comprehensiveness, and professionalism of the user manuals, technical documentation, and policies. 
+
+Collaboration & Feedback Incorporation: Ability to work as part of a team and effectively incorporate feedback from users and testers. 
+
+Presentation & Communication: Quality of the final presentation, including a demonstration of the application, project outcomes, and reflections on the development process. 
+
+ 
+
+Tools & Technologies to Consider: 
+
+Development: JavaScript (React, Angular), Python (Django, Flask), Java (Spring Boot), C# (.NET Core) 
+
+Database: MySQL, PostgreSQL, MongoDB 
+
+Version Control: Git (GitHub, GitLab) 
+
+Project Management: Trello, Jira, or Asana 
+
+Design/Prototyping: Figma, Adobe XD, Sketch 
+
+Testing: Selenium, Jest, Mocha, Postman 
+
+CI/CD Tools: Jenkins, GitHub Actions, Travis CI 
+
+Cloud Services: AWS, Google Cloud, Azure for hosting and deployment 
+
+ 
+
+ 
+
+ 
+
+ 
+
+Senior Project: Final Report Template (APA Format) 
+
+This is a template for your final project report, following the APA format. The report should detail the entire development process, challenges encountered, solutions implemented, and the final product. The report must be clearly written, well-organized, and adhere to APA style. You are required to use at least 3 academic sources or credible references related to software development, business applications, or relevant technical methodologies to support your analysis and discussions. 
+
+ 
+
+Title Page (APA format) 
+
+Title of the Project 
+Student Name 
+Institution Name 
+Course Name 
+Instructor Name 
+Date 
+
+ 
+
+Abstract (150-250 words) 
+
+Provide a concise summary of your project, including: 
+
+Objective: Briefly describe the goal of the business application you developed. 
+
+Process: Summarize the steps you took to complete the project, including major milestones such as prototype, alpha, and beta versions. 
+
+Outcome: Highlight the key results and outcomes, including the final version of the application. 
+
+Key Findings: Mention any significant discoveries or insights from the project, such as challenges or user feedback. 
+
+ 
+
+Table of Contents 
+
+Introduction 
+
+Project Scope and Requirements 
+
+Design and Development Process 
+
+Prototype Design 
+
+Alpha Version Development 
+
+Beta Testing and Feedback 
+
+Testing and Quality Assurance 
+
+Security and Performance Measures 
+
+Documentation and Policies 
+
+Challenges and Solutions 
+
+Conclusion and Future Work 
+
+References 
+
+ 
+
+1. Introduction 
+
+(1-2 pages) 
+
+Introduce the project and provide context for the application you developed. Address the following: 
+
+Business Need: What problem does your application aim to solve? Why is it relevant for businesses or the target audience? 
+
+Scope: Provide an overview of the application’s key features and functionality. 
+
+Research Context: Why is this application significant in the broader field of business applications? Reference academic sources that discuss relevant software development methodologies, trends in business applications, or technology choices (include at least one academic source here). 
+
+ 
+
+2. Project Scope and Requirements 
+
+(1-2 pages) 
+
+Discuss the requirements gathering phase: 
+
+Business Goals: Outline the key business goals of the project, the features required, and the target users. 
+
+Functional Requirements: Provide a summary of the core features of the application (e.g., data entry, reporting, analytics). 
+
+Non-functional Requirements: Address other aspects such as security, performance, and scalability. 
+
+Use Cases and User Stories: Discuss how you gathered user requirements and translated them into use cases or user stories. 
+
+Include at least one reference to an academic paper or textbook that explains requirements gathering and its role in the development process. 
+
+ 
+
+3. Design and Development Process 
+
+(2-3 pages) 
+
+This section details how you moved from planning to development: 
+
+Prototype Design: Describe how you created your initial prototype (tools used, design process, user feedback). 
+
+Alpha Version Development: Explain how you developed the first version of the application, focusing on the core functionality. 
+
+Beta Versions & Iterative Feedback: Discuss how beta testing was conducted, feedback collected, and changes made for subsequent versions. 
+
+Academic Source: Reference one or more academic sources about the iterative development process or prototyping in business application design. 
+
+ 
+
+4. Testing and Quality Assurance 
+
+(1-2 pages) 
+
+Explain the testing strategy used throughout the project: 
+
+Alpha Testing: Discuss the internal testing of the alpha version, including the identification of bugs and areas for improvement. 
+
+Beta Testing: Detail the external beta testing process, the feedback from users, and how it was incorporated into the final versions. 
+
+Quality Assurance Processes: Discuss the QA practices you used to ensure the stability and functionality of the application. 
+
+Academic Source: Cite a relevant academic article on software testing methods (e.g., unit testing, integration testing) or quality assurance in business applications. 
+
+ 
+
+5. Security and Performance Measures 
+
+(1-2 pages) 
+
+Provide an overview of how security and performance were addressed: 
+
+Security Features: What steps did you take to secure the application, such as encryption, authentication, or data protection measures? 
+
+Performance Optimization: Explain any measures you took to ensure the application performs well under load (e.g., stress testing, caching, or database optimization). 
+
+Academic Source: Reference an academic paper that discusses security best practices in business applications or performance optimization techniques. 
+
+ 
+
+6. Documentation and Policies 
+
+(1-2 pages) 
+
+Explain the final documentation and policies you created for the application: 
+
+User Manual: Describe the contents and structure of the user manual, including how it supports end-users. 
+
+Technical Documentation: Summarize the technical documentation created for developers, including API references, system architecture, and deployment instructions. 
+
+Privacy Policy and Terms of Service: Briefly describe the legal documents and their importance for users of the application. 
+
+ 
+
+7. Challenges and Solutions 
+
+(1-2 pages) 
+
+Describe the main challenges encountered during the development process and how you overcame them. This may include: 
+
+Technical Challenges: Any issues with coding, debugging, or integrating third-party services. 
+
+Project Management: Challenges related to meeting deadlines or managing team coordination (if applicable). 
+
+User Feedback: Difficulties in incorporating beta tester feedback or addressing specific user requests. 
+
+ 
+
+8. Conclusion and Future Work 
+
+(1 page) 
+
+Summarize the outcomes of the project: 
+
+Project Success: Discuss the extent to which the project met its goals and objectives. 
+
+Lessons Learned: Reflect on what went well and what could have been improved. 
+
+Future Work: Suggest areas for future development or improvements that could be made to the application. 
+
+ 
+
+9. References 
+
+(APA format) 
+
+List at least 3 academic sources related to the development of business applications, software engineering, or relevant methodologies. All sources must be credible, such as peer-reviewed journal articles, textbooks, or authoritative technical papers. Ensure the references are in APA format, including: 
+
+Books: Author(s). (Year). Title of the book. Publisher. 
+
+Journal Articles: Author(s). (Year). Title of the article. Title of the Journal, Volume(Issue), Page range. DOI 
+
+Websites: Author(s). (Year, Month Day). Title of the webpage. Website Name. URL 
+
+Example: 
+Jones, A. B., & Smith, C. D. (2020). Agile methodologies in software development. Journal of Software Engineering, 45(3), 233-245. https://doi.org/10.1234/jse.2020.03456 
+
+ 
+
+Additional Formatting Notes: 
+
+Font: Use 12-point Times New Roman font. 
+
+Margins: 1-inch margins on all sides. 
+
+Spacing: Double-spaced throughout the document. 
+
+Headings: Use APA heading styles (Level 1 for main sections, Level 2 for subsections). 
+
+In-text Citations: Include in-text citations throughout the report to reference academic sources. 
+
+Page Numbers: Include page numbers in the top right corner of each page. 
+
+ 
+
+This template should help guide you through writing a comprehensive and well-structured final report. Make sure your analysis is clear and well-supported with relevant academic sources. Each section should flow logically into the next, providing a clear narrative of your project’s lifecycle from planning to final documentation. 
+
+ 
+
+ 
+
+Detailed Rubric for Final Documentation (Senior Project Report) 
+
+This rubric assesses the final documentation for your senior project, focusing on clarity, completeness, adherence to APA format, and the quality of your analysis and writing. The total points for the final documentation are 100. 
+
+Criteria 
+
+Description 
+
+Points 
+
+Weight 
+
+Total Points 
+
+Comments 
+
+1. Title Page & Formatting 
+
+Title page follows APA format; includes project title, student name, course name, and instructor. 
+
+5 
+
+5% 
+
+5 
+
+Ensure all required elements are included. 
+
+2. Abstract 
+
+Provides a concise summary (150-250 words) of the project, including goals, methods, results, and key findings. 
+
+10 
+
+10% 
+
+10 
+
+Abstract should be clear and succinct. 
+
+3. Introduction 
+
+Introduces the project with clear context, defining the problem the application solves, its relevance, and goals. 
+
+10 
+
+10% 
+
+10 
+
+Includes research context and business need. 
+
+4. Project Scope & Requirements 
+
+Clear and detailed explanation of project requirements (business, functional, and non-functional). Describes user stories, use cases, and any constraints. 
+
+12 
+
+12% 
+
+12 
+
+Must reflect a thorough understanding of user needs and technical constraints. 
+
+5. Design & Development Process 
+
+Describes the design process, tools used for prototyping, and how feedback was incorporated into later versions (alpha and beta). 
+
+15 
+
+15% 
+
+15 
+
+Must include iteration feedback, design adjustments, and development details. 
+
+6. Testing & Quality Assurance 
+
+Detailed account of the testing process, including alpha and beta testing strategies, results, and how feedback was integrated. 
+
+10 
+
+10% 
+
+10 
+
+Should include testing reports, quality assurance practices, and bug fixes. 
+
+7. Security & Performance Measures 
+
+Describes how security and performance were addressed in the development process (e.g., encryption, performance optimization, stress testing). 
+
+8 
+
+8% 
+
+8 
+
+Must cover both security and performance considerations with detail. 
+
+8. Documentation & Policies 
+
+Comprehensive user manual, technical documentation, and legal policies (privacy, terms of service). 
+
+10 
+
+10% 
+
+10 
+
+All documentation should be clear, professional, and user-friendly. 
+
+9. Challenges & Solutions 
+
+Identifies key challenges encountered during the project and provides clear solutions or workarounds. 
+
+8 
+
+8% 
+
+8 
+
+Must reflect critical thinking and problem-solving. 
+
+10. Conclusion & Future Work 
+
+Summarizes the project outcomes and reflects on what went well and what could be improved. Includes ideas for future work and project evolution. 
+
+7 
+
+7% 
+
+7 
+
+Conclusion should be concise and reflective. 
+
+11. Academic Sources 
+
+At least 3 academic sources referenced throughout the document. Proper citations and references in APA format. 
+
+5 
+
+5% 
+
+5 
+
+Ensure proper citation of peer-reviewed sources. 
+
+12. APA Formatting & Organization 
+
+Adherence to APA style throughout the document (e.g., in-text citations, headings, formatting, page numbers). 
+
+5 
+
+5% 
+
+5 
+
+Ensure that all sections and citations are correctly formatted according to APA style. 
+
+ 
+
+Total Points: 100 
+
+ 
+
+Scoring Guidelines: 
+
+Grade 
+
+Points Range 
+
+A 
+
+90-100 
+
+B 
+
+80-89 
+
+C 
+
+70-79 
+
+D 
+
+60-69 
+
+F 
+
+Below 60 
+
+ 
+
+Comments & Feedback: 
+
+Strengths: 
+[Instructor’s comments on the strengths of the documentation, such as clear writing, thorough testing details, or well-organized sections.] 
+
+Areas for Improvement: 
+[Instructor’s feedback on specific areas for improvement, such as lacking certain required details, incomplete documentation, or issues with formatting.] 
+
+Suggestions for Future Work: 
+[Instructor's thoughts on potential improvements or future directions for the application, such as additional features, performance improvements, or user interface enhancements.] 
+
+ 
+
+This rubric ensures that the final documentation is well-structured, comprehensive, and follows professional standards, offering constructive feedback to help students improve their reporting and presentation skills. 
+
+ 
