@@ -269,85 +269,22 @@ export default function MyPlans() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {user?.isCoach ? "My Plans & Purchases" : "My Purchases"}
+            My Workout Plans
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            {user?.isCoach 
-              ? "Manage your created workout plans and view your purchases" 
-              : "View and manage your purchased workout plans and coaching services"
-            }
+            Manage your created workout plans for clients
           </p>
         </div>
         <div className="flex gap-3">
-          {user?.isCoach ? (
-            <Button variant="default" onClick={() => setLocation('/create-plan')}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create New Plan
-            </Button>
-          ) : (
-            <Button variant="default" onClick={() => setLocation('/become-coach')}>
-              <BadgeCheck className="mr-2 h-4 w-4" />
-              Become a Coach
-            </Button>
-          )}
-          <Button variant="outline" onClick={() => setLocation('/marketplace')}>
-            <ShoppingBag className="mr-2 h-4 w-4" />
-            Browse Marketplace
+          <Button variant="default" onClick={() => setLocation('/create-plan')}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Create New Plan
           </Button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
-        <div className="relative flex-grow">
-          <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-          <Select
-            value={statusFilter || "all"}
-            onValueChange={(value) => setStatusFilter(value === "all" ? null : value)}
-          >
-            <SelectTrigger className="pl-10">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="relative flex-grow">
-          <ChevronRight className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-          <Input
-            placeholder="Search purchases..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <Tabs defaultValue={user?.isCoach ? "coach-plans" : "plans"}>
-        <TabsList className="mb-6">
-          {user?.isCoach && (
-            <TabsTrigger value="coach-plans">
-              <Dumbbell className="mr-2 h-4 w-4" />
-              My Coach Plans
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="plans">
-            <FileText className="mr-2 h-4 w-4" />
-            Purchased Plans
-          </TabsTrigger>
-          <TabsTrigger value="services">
-            <CalendarCheck className="mr-2 h-4 w-4" />
-            Coaching Services
-          </TabsTrigger>
-        </TabsList>
-        {/* Coach Plans Tab Content */}
-        {user?.isCoach && (
-          <TabsContent value="coach-plans">
-            {isLoading ? (
+      <div>
+          {isLoading ? (
               <div className="text-center py-8">
                 <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
                 <p className="mt-2">Loading your coach plans...</p>
