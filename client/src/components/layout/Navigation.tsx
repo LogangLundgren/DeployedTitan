@@ -7,6 +7,8 @@ export default function Navigation() {
   
   // Admin accounts - only Logan Main account should have admin access
   const isAdmin = user && user.username === "Logan Main";
+  // Check if user is a coach
+  const isCoach = user && user.isCoach === true;
   
   const links = [
     { 
@@ -55,7 +57,8 @@ export default function Navigation() {
         </svg>
       )
     },
-    { 
+    // Only show My Plans tab for coaches
+    ...(isCoach ? [{
       href: '/my-plans', 
       label: 'My Plans',
       icon: (
@@ -65,7 +68,7 @@ export default function Navigation() {
           <path d="m9 14 2 2 4-4"></path>
         </svg>
       )
-    },
+    }] : []),
     // Only show Admin link if user has admin privileges (username "Logan Main")
     ...(isAdmin ? [{
       href: '/admin',
