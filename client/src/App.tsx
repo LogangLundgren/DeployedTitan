@@ -100,6 +100,7 @@ function Router() {
             <ProtectedRoute path="/my-plans" component={MyPlans} />
             <ProtectedRoute path="/become-coach" component={BecomeCoach} />
             <ProtectedRoute path="/create-plan" component={CreatePlan} />
+            <ProtectedRoute path="/edit-plan/:id" component={CreatePlan} />
             <ProtectedRoute path="/workout/:id" component={WorkoutDetail} />
             <ProtectedRoute path="/plan-checkout" component={PlanCheckout} />
             <ProtectedRoute path="/checkout" component={Checkout} />

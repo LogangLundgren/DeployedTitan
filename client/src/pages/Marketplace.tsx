@@ -282,109 +282,61 @@ export default function Marketplace() {
           <div className="flex justify-between items-center w-full">
             <div className="font-bold text-lg">${plan.price.toFixed(2)}</div>
             
-            {/* Different actions for coach vs users */}
-            {isOwner ? (
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => setLocation(`/workout-plans/${plan.id}`)}
-                >
-                  Edit Plan
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setLocation(`/workout-plans/${plan.id}/assignments`)}
-                >
-                  Assign to Client
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Button 
-                  size="sm"
-                  variant="outline" 
-                  onClick={() => setLocation(`/workout-plans/${plan.id}`)}
-                >
-                  Preview
-                  <Eye className="h-4 w-4 ml-1" />
-                </Button>
-                <Button 
-                  size="sm"
-                  onClick={async () => {
-                    // For free plans, purchase directly without checkout page
-                    if (plan.price === 0) {
-                      try {
-                        // Make the API request directly to record the free plan purchase
-                        const response = await fetch("/api/init-plan-checkout", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ planId: Number(plan.id) }),
-                          credentials: "include"
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (!response.ok) {
-                          throw new Error(data.message || 'Failed to process free plan purchase');
-                        }
-                        
-                        // Redirect directly to success page with freeplan flag
-                        setLocation(`/payment-success?planId=${plan.id}&freeplan=true`);
-                      } catch (error) {
-                        console.error('Error processing free plan:', error);
-                      }
-                    } else {
-                      // For paid plans, redirect to checkout
-                      setLocation(`/checkout?planId=${plan.id}`);
-                    }
-                  }}
-                >
-                  {plan.price === 0 ? "Get Free Plan" : "Purchase"}
-                </Button>
-              </div>
-            )}
-          </div>
-          
-          {/* Additional buttons for coach-centered functionality */}
-          {isOwner ? (
-            <div className="flex gap-2 w-full mt-2">
+            {/* Simplified buttons for all users */}
+            <div className="flex gap-2">
               <Button 
-                size="sm" 
-                variant="outline"
-                className="w-1/2"
-                onClick={() => setLocation(`/workout-plans/${plan.id}/analytics`)}
+                size="sm"
+                variant="outline" 
+                onClick={() => setLocation(`/workout-plans/${plan.id}`)}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                  <path d="M3 3v18h18"/>
-                  <path d="m19 9-5 5-4-4-3 3"/>
-                </svg>
-                Analytics
+                See Details
+                <Eye className="h-4 w-4 ml-1" />
               </Button>
               <Button 
-                size="sm" 
-                variant="outline"
-                className="w-1/2"
-                onClick={() => setLocation(`/workout-plans/${plan.id}/fork`)}
+                size="sm"
+                onClick={async () => {
+                  // For free plans, purchase directly without checkout page
+                  if (plan.price === 0) {
+                    try {
+                      // Make the API request directly to record the free plan purchase
+                      const response = await fetch("/api/init-plan-checkout", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ planId: Number(plan.id) }),
+                        credentials: "include"
+                      });
+                      
+                      const data = await response.json();
+                      
+                      if (!response.ok) {
+                        throw new Error(data.message || 'Failed to process free plan purchase');
+                      }
+                      
+                      // Redirect directly to success page with freeplan flag
+                      setLocation(`/payment-success?planId=${plan.id}&freeplan=true`);
+                    } catch (error) {
+                      console.error('Error processing free plan:', error);
+                    }
+                  } else {
+                    // For paid plans, redirect to checkout
+                    setLocation(`/checkout?planId=${plan.id}`);
+                  }
+                }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                  <path d="M7 7 L17 17"/>
-                  <path d="M17 7 L7 17"/>
-                </svg>
-                Customize
+                {plan.price === 0 ? "Get Free Plan" : "Purchase Plan"}
               </Button>
             </div>
-          ) : (
-            <Button 
-              size="sm" 
-              variant="secondary"
-              className="w-full"
-              onClick={() => setLocation(`/users/${plan.coach?.userId}`)}
-            >
-              Contact Coach
-            </Button>
-          )}
+          </div>
+          
+          {/* Contact coach button for all users */}
+          <Button 
+            size="sm" 
+            variant="secondary"
+            className="w-full"
+            onClick={() => setLocation(`/users/${plan.coach?.userId}`)}
+          >
+            Contact Coach
+          </Button>
         </CardFooter>
       </Card>
     );
