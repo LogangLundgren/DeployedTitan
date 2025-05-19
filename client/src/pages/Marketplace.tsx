@@ -335,18 +335,35 @@ export default function Marketplace() {
             className="w-full"
             onClick={async () => {
               try {
-                if (!plan.coach?.userId) {
+                // First check if we have the coach's user ID directly
+                if (plan.coach?.userId) {
+                  // Import the contactCoach function only when needed
+                  const { contactCoach } = await import('@/lib/messaging');
+                  await contactCoach(plan.coach.userId, setLocation);
+                  
                   toast({
-                    title: "Error",
-                    description: "Could not find coach information",
-                    variant: "destructive"
+                    title: "Success",
+                    description: "You can now message the coach in your conversations",
                   });
                   return;
                 }
                 
-                // Import the contactCoach function only when needed
+                // If we don't have user ID in the coach object, fetch the coach profile
+                const coachProfileResponse = await fetch(`/api/coaches/${plan.coachId}`);
+                
+                if (!coachProfileResponse.ok) {
+                  throw new Error("Could not fetch coach profile");
+                }
+                
+                const coachData = await coachProfileResponse.json();
+                
+                if (!coachData || !coachData.userId) {
+                  throw new Error("Coach profile doesn't contain user ID");
+                }
+                
+                // Now use the fetched user ID
                 const { contactCoach } = await import('@/lib/messaging');
-                await contactCoach(plan.coach.userId, setLocation);
+                await contactCoach(coachData.userId, setLocation);
                 
                 toast({
                   title: "Success",
