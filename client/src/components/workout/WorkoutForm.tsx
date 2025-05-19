@@ -337,13 +337,15 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
             name: data.name || workoutName || "My Workout",
             date: data.date || new Date(workoutDate),
             notes: data.notes || workoutNotes || "",
-            duration: data.duration || duration || 0,
             userId: userId || 0,
             category: data.category || "Strength",
             isPublic: false,
             caption: "",
             mediaUrls: null,
-            isComplete: true
+            isComplete: true,
+            coachNotes: null,
+            coachShared: false,
+            updatedAt: new Date()
           };
           
           console.log("Prepared workout for social modal:", workoutForModal);

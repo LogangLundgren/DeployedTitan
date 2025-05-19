@@ -70,6 +70,9 @@ export const workouts = pgTable("workouts", {
   caption: text("caption"),  // Instagram-style caption for social sharing
   mediaUrls: text("media_urls"), // JSON string array for future photo/video URLs
   isComplete: boolean("is_complete").default(false),
+  coachNotes: text("coach_notes"), // Notes specifically for the coach
+  coachShared: boolean("coach_shared").default(false), // Whether this workout has been shared with a coach
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertWorkoutSchema = createInsertSchema(workouts).pick({
@@ -83,6 +86,9 @@ export const insertWorkoutSchema = createInsertSchema(workouts).pick({
   caption: true,
   mediaUrls: true,
   isComplete: true,
+  coachNotes: true,
+  coachShared: true,
+  updatedAt: true,
 });
 
 export const workoutExercises = pgTable("workout_exercises", {

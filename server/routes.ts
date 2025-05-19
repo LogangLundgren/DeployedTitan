@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword, requireAuth, requireAuthWithUser, require
 import { eq, and, or, like, isNotNull, inArray } from "drizzle-orm";
 import { handleBase64Upload, serveUploads } from "./fileUpload";
 import * as path from "path";
+import coachRoutes from "./routes/coach";
 
 // Initialize Stripe with the secret key
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -62,6 +63,9 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register Coach Routes
+  app.use(coachRoutes);
+  
   // Authentication routes
   // User authentication routes
   app.post("/api/register", async (req, res) => {
