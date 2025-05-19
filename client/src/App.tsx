@@ -11,7 +11,7 @@ import TemplateDetail from "@/pages/TemplateDetail";
 import ExerciseLibrary from "@/pages/ExerciseLibrary";
 import Profile from "@/pages/Profile";
 import Goals from "@/pages/Goals";
-import Social from "@/pages/Social";
+import Messages from "@/pages/Messages";
 import Marketplace from "@/pages/Marketplace";
 import WorkoutPlanDetail from "@/pages/WorkoutPlanDetail";
 import PurchasedPlanDetail from "@/pages/PurchasedPlanDetail";
@@ -91,7 +91,7 @@ function Router() {
             <ProtectedRoute path="/exercises" component={ExerciseLibrary} />
             <ProtectedRoute path="/profile" component={Profile} />
             <ProtectedRoute path="/goals" component={Goals} />
-            <ProtectedRoute path="/social" component={Social} />
+            <ProtectedRoute path="/messages" component={Messages} />
             <ProtectedRoute path="/marketplace" component={Marketplace} />
             <ProtectedRoute path="/workout-plans/:id" component={WorkoutPlanDetail} />
             <ProtectedRoute path="/purchased-plans/:id" component={PurchasedPlanDetail} />
