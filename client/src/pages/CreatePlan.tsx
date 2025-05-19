@@ -111,7 +111,13 @@ export default function CreatePlan() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editPlanId, setEditPlanId] = useState<number | null>(null);
   
-  // Parse URL query parameters to check for edit mode
+  // Check for edit mode from both URL path and query parameters
+  const pathname = window.location.pathname;
+  const editIdFromPath = pathname.startsWith('/edit-plan/') 
+    ? parseInt(pathname.split('/edit-plan/')[1]) 
+    : null;
+    
+  // Also check query parameters for backwards compatibility
   const params = new URLSearchParams(window.location.search);
   const editIdParam = params.get('edit');
   
@@ -147,6 +153,14 @@ export default function CreatePlan() {
 
   // Determine if we're in edit mode and get the plan ID
   useEffect(() => {
+    // First check path parameter (new method)
+    if (editIdFromPath && !isNaN(editIdFromPath)) {
+      setIsEditMode(true);
+      setEditPlanId(editIdFromPath);
+      return;
+    }
+    
+    // Then check query parameter (old method) for backward compatibility
     if (editIdParam) {
       const planId = parseInt(editIdParam);
       if (!isNaN(planId)) {
@@ -154,7 +168,7 @@ export default function CreatePlan() {
         setEditPlanId(planId);
       }
     }
-  }, [editIdParam]);
+  }, [editIdFromPath, editIdParam]);
 
   // Fetch plan data if in edit mode
   const { 
