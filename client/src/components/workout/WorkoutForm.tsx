@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import ExerciseCard from "./ExerciseCard";
 import AddExerciseModal from "./AddExerciseModal";
 import WorkoutSummary from "./WorkoutSummary";
-import WorkoutSocialModal from "./WorkoutSocialModal";
+import WorkoutCoachModal from "./WorkoutCoachModal";
 import { Button } from "@/components/ui/button";
 import { Plus, Save } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -625,15 +625,15 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
         onAddExercise={handleAddExercise}
       />
       
-      {/* Social Sharing Modal */}
+      {/* Coach Sharing Modal */}
       {savedWorkout && (
-        <WorkoutSocialModal 
+        <WorkoutCoachModal 
           workout={savedWorkout}
           isOpen={showSocialModal}
           onClose={() => {
             setShowSocialModal(false);
             setSavedWorkout(null);
-            // Now that the user has closed the social modal, proceed with the original navigation
+            // Now that the user has closed the modal, proceed with the original navigation
             if (onWorkoutSaved) {
               onWorkoutSaved();
             }
