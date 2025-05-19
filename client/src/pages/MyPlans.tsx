@@ -81,9 +81,39 @@ export default function MyPlans() {
   // Delete workout plan mutation
   const deletePlanMutation = useMutation({
     mutationFn: async (planId: number) => {
-      return await apiRequest("DELETE", `/api/workout-plans/${planId}`);
+      console.log(`Attempting to delete plan with ID: ${planId}`);
+      
+      // Use fetch directly to get the exact response
+      try {
+        const response = await fetch(`/api/workout-plans/${planId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+        });
+        
+        console.log('Delete plan response status:', response.status);
+        
+        if (!response.ok) {
+          // Try to parse error message if available
+          try {
+            const errorData = await response.json();
+            console.error('Delete plan error response:', errorData);
+            throw new Error(errorData.message || 'Failed to delete plan');
+          } catch (parseError) {
+            // If response can't be parsed as JSON
+            throw new Error(`Delete failed with status: ${response.status}`);
+          }
+        }
+        
+        return response; // The endpoint returns 204 No Content on successful delete
+      } catch (error) {
+        console.error('Error deleting plan:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
+      console.log('Plan deletion successful, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['/api/workout-plans/my-plans'] });
       queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] }); // Also invalidate marketplace plans
       toast({
@@ -94,6 +124,7 @@ export default function MyPlans() {
       setPlanToDelete(null);
     },
     onError: (error) => {
+      console.error('Delete plan mutation error:', error);
       toast({
         title: "Error",
         description: `Failed to delete plan: ${error instanceof Error ? error.message : String(error)}`,

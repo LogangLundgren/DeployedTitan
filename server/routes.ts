@@ -3130,21 +3130,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.delete("/api/workout-plans/:id", async (req, res) => {
     try {
+      console.log("[DELETE-DEBUG] Starting delete process for workout plan");
       const id = parseInt(req.params.id);
       
+      console.log("[DELETE-DEBUG] Plan ID to delete:", id);
+      
       if (isNaN(id)) {
+        console.log("[DELETE-DEBUG] Invalid plan ID:", req.params.id);
         return res.status(400).json({ message: "Valid workout plan ID is required" });
       }
       
-      const deleted = await storage.deleteWorkoutPlan(id);
+      // First check if the plan exists
+      const plan = await storage.getWorkoutPlan(id);
+      console.log("[DELETE-DEBUG] Found plan to delete:", plan);
       
-      if (!deleted) {
+      if (!plan) {
+        console.log("[DELETE-DEBUG] Plan not found with ID:", id);
         return res.status(404).json({ message: "Workout plan not found" });
       }
       
+      console.log("[DELETE-DEBUG] Attempting to delete plan with ID:", id);
+      const deleted = await storage.deleteWorkoutPlan(id);
+      console.log("[DELETE-DEBUG] Delete result:", deleted);
+      
+      if (!deleted) {
+        console.log("[DELETE-DEBUG] Delete operation returned false");
+        return res.status(404).json({ message: "Workout plan not found or could not be deleted" });
+      }
+      
+      console.log("[DELETE-DEBUG] Successfully deleted plan:", id);
       res.status(204).end();
     } catch (error) {
-      console.error("Delete workout plan error:", error);
+      console.error("[DELETE-DEBUG] Error deleting workout plan:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

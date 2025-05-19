@@ -3103,18 +3103,67 @@ export class DbStorage implements IStorage {
   
   async deleteWorkoutPlan(id: number): Promise<boolean> {
     try {
-      // Delete related entities first
-      await db.delete(workoutPlanDays).where(eq(workoutPlanDays.planId, id));
-      await db.delete(planTemplates).where(eq(planTemplates.planId, id));
+      console.log("[DELETE-STORAGE] Starting deletion process for plan ID:", id);
       
-      // Delete the plan
-      const result = await db
-        .delete(workoutPlans)
-        .where(eq(workoutPlans.id, id))
-        .returning();
-      return result.length > 0;
+      // Try using raw SQL for more direct control
+      const { pool } = await import('./db');
+      
+      // First check if the plan exists
+      const checkPlanSql = "SELECT * FROM workout_plans WHERE id = $1";
+      const checkResult = await pool.query(checkPlanSql, [id]);
+      
+      if (!checkResult.rows || checkResult.rows.length === 0) {
+        console.log("[DELETE-STORAGE] Plan not found with ID:", id);
+        return false;
+      }
+      
+      console.log("[DELETE-STORAGE] Found plan to delete:", checkResult.rows[0]);
+      
+      // Delete in specific order to avoid foreign key conflicts
+      // 1. First delete purchases (if any)
+      console.log("[DELETE-STORAGE] Deleting related purchases");
+      await pool.query("DELETE FROM purchases WHERE plan_id = $1", [id]);
+      
+      // 2. Delete reviews (if any)
+      console.log("[DELETE-STORAGE] Deleting related reviews");
+      await pool.query("DELETE FROM reviews WHERE plan_id = $1", [id]);
+      
+      // 3. Delete template exercises (if any - this might involve multiple steps with joins)
+      console.log("[DELETE-STORAGE] Finding and deleting template exercises");
+      // First need to find template IDs from plan_templates
+      const templateIdsSql = "SELECT template_id FROM plan_templates WHERE plan_id = $1";
+      const templateIdsResult = await pool.query(templateIdsSql, [id]);
+      
+      if (templateIdsResult.rows && templateIdsResult.rows.length > 0) {
+        const templateIds = templateIdsResult.rows.map(row => row.template_id);
+        console.log("[DELETE-STORAGE] Found template IDs:", templateIds);
+        
+        if (templateIds.length > 0) {
+          // Then delete template exercises using those IDs
+          const placeholders = templateIds.map((_, idx) => `$${idx + 1}`).join(',');
+          const deleteExercisesSql = `DELETE FROM template_exercises WHERE template_id IN (${placeholders})`;
+          await pool.query(deleteExercisesSql, templateIds);
+        }
+      }
+      
+      // 4. Delete plan templates
+      console.log("[DELETE-STORAGE] Deleting plan templates");
+      await pool.query("DELETE FROM plan_templates WHERE plan_id = $1", [id]);
+      
+      // 5. Delete workout plan days
+      console.log("[DELETE-STORAGE] Deleting workout plan days");
+      await pool.query("DELETE FROM workout_plan_days WHERE plan_id = $1", [id]);
+      
+      // 6. Finally delete the plan itself
+      console.log("[DELETE-STORAGE] Deleting the workout plan");
+      const result = await pool.query("DELETE FROM workout_plans WHERE id = $1 RETURNING *", [id]);
+      
+      const success = result.rows && result.rows.length > 0;
+      console.log("[DELETE-STORAGE] Deletion " + (success ? "successful" : "failed"));
+      
+      return success;
     } catch (error) {
-      console.error("Error deleting workout plan:", error);
+      console.error("[DELETE-STORAGE] Error deleting workout plan:", error);
       return false;
     }
   }
