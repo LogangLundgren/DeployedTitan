@@ -52,7 +52,6 @@ interface StoredWorkoutData {
   workoutDate: string;
   workoutNotes: string;
   exercises: ExerciseWithSets[];
-  duration: number;
   lastUpdated: number; // timestamp
 }
 
@@ -77,7 +76,6 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
   );
   const [workoutNotes, setWorkoutNotes] = useState(workout?.notes || "");
   const [exercises, setExercises] = useState<ExerciseWithSets[]>([]);
-  const [duration, setDuration] = useState(workout?.duration || 45);
   const [workoutId, setWorkoutId] = useState<number | undefined>(workout?.id);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   
