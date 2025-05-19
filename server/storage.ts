@@ -2815,35 +2815,47 @@ export class DbStorage implements IStorage {
       }
       
       // Now copy all templates from the original plan
-      const planTemplates = await this.getPlanTemplates(originalPlanId);
-      console.log(`Copying ${planTemplates.length} templates from original plan`);
-      
-      // Create new entries in plan_templates table for each template
-      for (const template of planTemplates) {
-        try {
-          // Instead of using the ORM insert, use raw SQL to avoid schema issues
-          const templateSql = `
-            INSERT INTO plan_templates (
-              plan_id, template_id, week_number, day_number, "order", notes
-            ) VALUES (
-              $1, $2, $3, $4, $5, $6
-            )
-          `;
-          
-          const templateValues = [
-            newPlan[0].id,
-            template.templateId,
-            template.weekNumber,
-            template.dayNumber,
-            template.order || 1,
-            template.notes
-          ];
-          
-          await pool.query(templateSql, templateValues);
-        } catch (templateError) {
-          console.error("Error copying template:", templateError);
-          // Continue with the next template if one fails
+      try {
+        // First get the raw template data directly from the database
+        const templatesQuery = `
+          SELECT * FROM plan_templates 
+          WHERE plan_id = $1
+        `;
+        
+        const templatesResult = await pool.query(templatesQuery, [originalPlanId]);
+        const originalTemplates = templatesResult.rows;
+        
+        console.log(`Copying ${originalTemplates.length} templates from original plan`);
+        
+        // Copy each template using the raw database field names
+        for (const template of originalTemplates) {
+          try {
+            const templateSql = `
+              INSERT INTO plan_templates (
+                plan_id, template_id, week_number, day_number, "order", notes
+              ) VALUES (
+                $1, $2, $3, $4, $5, $6
+              )
+            `;
+            
+            const templateValues = [
+              newPlan[0].id,
+              template.template_id,
+              template.week_number,
+              template.day_number,
+              template.order || 1,
+              template.notes
+            ];
+            
+            await pool.query(templateSql, templateValues);
+          } catch (templateError) {
+            console.error("Error copying template:", templateError);
+            // Continue with the next template if one fails
+          }
         }
+      } catch (templatesError) {
+        console.error("Error fetching or copying templates:", templatesError);
+        // Continue even if template copying fails
       }
       
       // Get the client user details for notification
