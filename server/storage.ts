@@ -2816,45 +2816,60 @@ export class DbStorage implements IStorage {
       
       // Now copy all templates from the original plan
       try {
+        console.log("[DEBUG] About to fetch templates for plan ID:", originalPlanId);
+        
         // First get the raw template data directly from the database
         const templatesQuery = `
           SELECT * FROM plan_templates 
           WHERE plan_id = $1
         `;
         
+        console.log("[DEBUG] Running template query:", templatesQuery);
         const templatesResult = await pool.query(templatesQuery, [originalPlanId]);
+        console.log("[DEBUG] Template query result:", JSON.stringify(templatesResult.rows, null, 2));
+        
         const originalTemplates = templatesResult.rows;
+        console.log(`[DEBUG] Found ${originalTemplates.length} templates to copy`);
         
-        console.log(`Copying ${originalTemplates.length} templates from original plan`);
-        
-        // Copy each template using the raw database field names
-        for (const template of originalTemplates) {
-          try {
-            const templateSql = `
-              INSERT INTO plan_templates (
-                plan_id, template_id, week_number, day_number, "order", notes
-              ) VALUES (
-                $1, $2, $3, $4, $5, $6
-              )
-            `;
-            
-            const templateValues = [
-              newPlan[0].id,
-              template.template_id,
-              template.week_number,
-              template.day_number,
-              template.order || 1,
-              template.notes
-            ];
-            
-            await pool.query(templateSql, templateValues);
-          } catch (templateError) {
-            console.error("Error copying template:", templateError);
-            // Continue with the next template if one fails
+        if (originalTemplates.length === 0) {
+          console.log("[DEBUG] No templates found for original plan, skipping template copying");
+        } else {
+          // Copy each template using the raw database field names
+          for (const template of originalTemplates) {
+            try {
+              console.log("[DEBUG] Copying template:", JSON.stringify(template, null, 2));
+              console.log("[DEBUG] New plan ID for template:", newPlan[0].id);
+              
+              const templateSql = `
+                INSERT INTO plan_templates (
+                  plan_id, template_id, week_number, day_number, "order", notes
+                ) VALUES (
+                  $1, $2, $3, $4, $5, $6
+                ) RETURNING *
+              `;
+              
+              const templateValues = [
+                newPlan[0].id,
+                template.template_id,
+                template.week_number,
+                template.day_number,
+                template.order || 1,
+                template.notes
+              ];
+              
+              console.log("[DEBUG] Template SQL:", templateSql);
+              console.log("[DEBUG] Template values:", templateValues);
+              
+              const result = await pool.query(templateSql, templateValues);
+              console.log("[DEBUG] Template insert result:", JSON.stringify(result.rows, null, 2));
+            } catch (templateError) {
+              console.error("[DEBUG] Error copying template:", templateError);
+              // Continue with the next template if one fails
+            }
           }
         }
       } catch (templatesError) {
-        console.error("Error fetching or copying templates:", templatesError);
+        console.error("[DEBUG] Error in template copying process:", templatesError);
         // Continue even if template copying fails
       }
       

@@ -3280,38 +3280,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/workout-plans/:id/fork", requireAuth, async (req: Request, res: Response) => {
     try {
+      console.log("[FORK-DEBUG] Starting fork process");
+      
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
       }
       
       // Check if the user is a coach
       if (!req.user.isCoach) {
+        console.log("[FORK-DEBUG] User is not a coach:", req.user);
         return res.status(403).json({ message: "Only coaches can fork workout plans" });
       }
       
       const planId = parseInt(req.params.id);
       const { clientId, customTitle, customNotes } = req.body;
       
+      console.log("[FORK-DEBUG] Fork parameters:", {
+        planId,
+        clientId,
+        customTitle,
+        customNotes,
+        userId: req.user.id
+      });
+      
       if (!clientId) {
         return res.status(400).json({ message: "Client ID is required" });
       }
       
       // Get the coach profile using the authenticated user
+      console.log("[FORK-DEBUG] Getting coach profile for user:", req.user.id);
       const coachProfile = await storage.getCoachProfile(req.user.id);
+      console.log("[FORK-DEBUG] Coach profile:", coachProfile);
+      
       if (!coachProfile) {
         return res.status(404).json({ message: "Coach profile not found" });
       }
       
       // Check if the plan exists 
+      console.log("[FORK-DEBUG] Getting workout plan:", planId);
       const originalPlan = await storage.getWorkoutPlan(planId);
+      console.log("[FORK-DEBUG] Original plan:", originalPlan);
+      
       if (!originalPlan) {
         return res.status(404).json({ message: "Workout plan not found" });
       }
       
       // Check if the coach owns the plan
       if (originalPlan.coachId !== coachProfile.id) {
+        console.log("[FORK-DEBUG] Coach doesn't own plan:", {
+          planCoachId: originalPlan.coachId,
+          userCoachId: coachProfile.id
+        });
         return res.status(403).json({ message: "You can only fork your own workout plans" });
       }
+      
+      console.log("[FORK-DEBUG] Calling forkWorkoutPlan method with params:", {
+        planId, 
+        clientId, 
+        userId: req.user.id,
+        customTitle,
+        customNotes
+      });
       
       // Fork the workout plan with custom title and notes
       const forkedPlan = await storage.forkWorkoutPlan(
@@ -3322,13 +3351,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customNotes   // Pass the custom notes directly to the fork method
       );
       
+      console.log("[FORK-DEBUG] Result from forkWorkoutPlan:", forkedPlan);
+      
       if (!forkedPlan) {
+        console.log("[FORK-DEBUG] No plan returned from fork operation");
         return res.status(500).json({ message: "Failed to fork workout plan" });
       }
       
+      console.log("[FORK-DEBUG] Fork successful, returning new plan");
       res.status(201).json(forkedPlan);
     } catch (error) {
-      console.error("Error forking workout plan:", error);
+      console.error("[FORK-DEBUG] Error in fork route handler:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
