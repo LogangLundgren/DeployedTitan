@@ -333,7 +333,34 @@ export default function Marketplace() {
             size="sm" 
             variant="secondary"
             className="w-full"
-            onClick={() => setLocation(`/users/${plan.coach?.userId}`)}
+            onClick={async () => {
+              try {
+                if (!plan.coach?.userId) {
+                  toast({
+                    title: "Error",
+                    description: "Could not find coach information",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                
+                // Import the contactCoach function only when needed
+                const { contactCoach } = await import('@/lib/messaging');
+                await contactCoach(plan.coach.userId, setLocation);
+                
+                toast({
+                  title: "Success",
+                  description: "You can now message the coach in your conversations",
+                });
+              } catch (error) {
+                console.error("Error contacting coach:", error);
+                toast({
+                  title: "Error",
+                  description: "Failed to open conversation with coach",
+                  variant: "destructive"
+                });
+              }
+            }}
           >
             Contact Coach
           </Button>
