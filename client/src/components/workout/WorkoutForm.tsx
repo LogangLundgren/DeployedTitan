@@ -99,7 +99,6 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       workoutDate,
       workoutNotes,
       exercises,
-      duration,
       lastUpdated: Date.now()
     };
     
@@ -134,7 +133,6 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       setWorkoutDate(parsedData.workoutDate);
       setWorkoutNotes(parsedData.workoutNotes);
       setExercises(parsedData.exercises);
-      setDuration(parsedData.duration);
       
       toast({
         title: "Workout Recovered",
@@ -176,7 +174,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
     if (exercises.length > 0 && autoSaveEnabled) {
       debouncedSaveToLocalStorage();
     }
-  }, [workoutName, workoutDate, workoutNotes, duration, exercises]);
+  }, [workoutName, workoutDate, workoutNotes, exercises]);
   
   // Clear localStorage when workout is submitted successfully
   useEffect(() => {
@@ -206,7 +204,6 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
           name: workoutName,
           date: new Date(workoutDate), // Convert string date to Date object
           notes: workoutNotes || null,
-          duration,
           category: workout?.category || 'Strength'
         };
         
@@ -249,7 +246,6 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
           name: workoutName,
           date: new Date(workoutDate), // Convert string date to Date object
           notes: workoutNotes || null,
-          duration,
           userId,
           category: 'Strength'  // Could be made dynamic in a more complete implementation
         };
@@ -602,8 +598,6 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       {/* Workout Summary */}
       {exercises.length > 0 && (
         <WorkoutSummary 
-          duration={duration}
-          setDuration={setDuration}
           volume={calculateTotalVolume()}
           totalSets={totalSets}
           totalExercises={exercises.length}
