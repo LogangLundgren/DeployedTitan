@@ -22,6 +22,56 @@ export default function Messages() {
     setSelectedThread(threadId);
     setSelectedUser(threadUser);
   };
+  
+  // Check for active thread from contactCoach function
+  useEffect(() => {
+    if (threads && threads.length > 0) {
+      const activeThreadId = sessionStorage.getItem('activeThreadId');
+      const activeThreadUserId = sessionStorage.getItem('activeThreadUserId');
+      
+      if (activeThreadId) {
+        const threadId = parseInt(activeThreadId);
+        
+        // Find the thread in the list
+        const thread = threads.find(t => t.threadId === threadId);
+        
+        if (thread) {
+          // Find the participant who is not the current user
+          const otherParticipant = thread.participants[0];
+          
+          if (otherParticipant) {
+            // Create a User object for the message list
+            const threadUser: User = {
+              id: otherParticipant.userId,
+              username: otherParticipant.username,
+              name: otherParticipant.name || null,
+              email: '',  // These fields aren't needed for our UI purposes
+              password: '',
+              isCoach: false,
+              bio: null,
+              location: null,
+              fitnessLevel: null,
+              experienceYears: null,
+              goals: null,
+              certifications: null,
+              socialMedia: null,
+              coachRegistrationDate: null,
+              stripeCustomerId: null,
+              stripeSubscriptionId: null,
+            };
+            
+            // Set the selected thread and user
+            setSelectedThread(threadId);
+            setSelectedUser(threadUser);
+            
+            // Clear the session storage so it doesn't auto-select next time
+            sessionStorage.removeItem('activeThreadId');
+            sessionStorage.removeItem('activeThreadUserId');
+          }
+        }
+      }
+    }
+  }, [threads]);
 
   if (isLoadingThreads) {
     return (

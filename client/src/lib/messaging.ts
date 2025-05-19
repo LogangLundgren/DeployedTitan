@@ -58,6 +58,18 @@ export async function contactCoach(
     
     const data = await response.json();
     
+    // Store the active thread ID in session storage
+    // This will be used by the Messages component to auto-select the thread
+    sessionStorage.setItem('activeThreadId', data.threadId.toString());
+    
+    // Additionally store the coach user ID for context
+    sessionStorage.setItem('activeThreadUserId', coachUserId.toString());
+    
+    // Invalidate messages queries to refresh data
+    queryClient.invalidateQueries({
+      queryKey: ["/api/messages/threads"],
+    });
+    
     // Navigate to messages page
     setLocation('/messages');
     
