@@ -2,44 +2,20 @@ import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { 
-  Calendar, 
-  Clock, 
-  ChevronRight, 
   Star, 
-  FileText,
-  ShoppingBag,
-  Filter,
-  CalendarCheck,
   PlusCircle,
-  Dumbbell,
-  LayoutGrid,
   Edit,
   Trash2,
   AlertTriangle,
   Eye,
-  BadgeCheck
+  LayoutGrid
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { 
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
@@ -51,15 +27,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface User {
-  id: number;
-  name: string | null;
-  username: string;
-  email: string | null;
-  isCoach: boolean | null;
-  coachRegistrationDate: string | null;
-}
 
 interface WorkoutPlan {
   id: number;
@@ -79,32 +46,8 @@ interface WorkoutPlan {
   featuredImageUrl?: string | null;
 }
 
-interface CoachingService {
-  id: number;
-  title: string;
-  description: string;
-  serviceType: string;
-  durationType: string;
-  price: number;
-}
-
-interface Purchase {
-  id: number;
-  userId: number;
-  planId: number | null;
-  serviceId: number | null;
-  transactionId: string;
-  amount: number;
-  status: string;
-  purchaseDate: Date;
-  planDetails?: WorkoutPlan;
-  serviceDetails?: CoachingService;
-}
-
 export default function MyPlans() {
   const [location, setLocation] = useLocation();
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [planToDelete, setPlanToDelete] = useState<WorkoutPlan | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -135,17 +78,6 @@ export default function MyPlans() {
     enabled: !!userId && !!user?.isCoach
   });
   
-  // Fetch user's purchases
-  const { 
-    data: purchases = [], 
-    isLoading: isPurchasesLoading,
-    error
-  } = useQuery({
-    queryKey: ['/api/purchases/my-purchases'],
-    queryFn: () => fetch('/api/purchases/my-purchases').then(res => res.json()),
-    enabled: !!userId
-  });
-  
   // Delete workout plan mutation
   const deletePlanMutation = useMutation({
     mutationFn: async (planId: number) => {
@@ -173,7 +105,6 @@ export default function MyPlans() {
   // Publish/unpublish workout plan mutation
   const publishPlanMutation = useMutation({
     mutationFn: async ({ planId, isPublished }: { planId: number, isPublished: boolean }) => {
-      console.log("Publishing plan with isPublished =", isPublished);
       // Use the specialized publish endpoint for publishing, and regular update for unpublishing
       if (isPublished) {
         return await apiRequest("POST", `/api/workout-plans/${planId}/publish`, {});
@@ -186,7 +117,6 @@ export default function MyPlans() {
       queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] }); // Also invalidate marketplace plans
       
       // Use the mutation variables to determine the action, not the response data
-      // which might not have the updated values yet
       const isPublishing = variables.isPublished;
       
       toast({
@@ -225,44 +155,7 @@ export default function MyPlans() {
     );
   };
 
-  // Filtered purchases
-  const filteredPurchases = purchases.filter((purchase: Purchase) => {
-    // Filter by status if status filter is active
-    if (statusFilter && purchase.status !== statusFilter) {
-      return false;
-    }
-    
-    // Filter by search query if there is one
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      
-      if (purchase.planDetails) {
-        return (
-          purchase.planDetails.title.toLowerCase().includes(query) ||
-          purchase.planDetails.description.toLowerCase().includes(query) ||
-          purchase.planDetails.category.toLowerCase().includes(query)
-        );
-      }
-      
-      if (purchase.serviceDetails) {
-        return (
-          purchase.serviceDetails.title.toLowerCase().includes(query) ||
-          purchase.serviceDetails.description.toLowerCase().includes(query) ||
-          purchase.serviceDetails.serviceType.toLowerCase().includes(query)
-        );
-      }
-      
-      return false;
-    }
-    
-    return true;
-  });
-
-  // Separate purchases by type
-  const planPurchases = filteredPurchases.filter((p: Purchase) => p.planId !== null);
-  const servicePurchases = filteredPurchases.filter((p: Purchase) => p.serviceId !== null);
-
-  const isLoading = isUserLoading || isPurchasesLoading || (user?.isCoach && (isCoachProfileLoading || isCoachPlansLoading));
+  const isLoading = isUserLoading || (user?.isCoach && (isCoachProfileLoading || isCoachPlansLoading));
 
   return (
     <div className="container mx-auto py-6 px-4 md:px-6">
@@ -283,369 +176,116 @@ export default function MyPlans() {
         </div>
       </div>
 
-      <div>
-          {isLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                <p className="mt-2">Loading your coach plans...</p>
-              </div>
-            ) : coachPlans.length > 0 ? (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Your Workout Plans ({coachPlans.length})</h3>
-                  <Button variant="outline" size="sm" onClick={() => setLocation('/create-plan')}>
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Create New Plan
-                  </Button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {coachPlans.map((plan: WorkoutPlan) => (
-                    <Card key={plan.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-start">
-                          <Badge 
-                            className={`${plan.isPublished ? 'bg-green-500' : 'bg-amber-500'}`}
-                          >
-                            {plan.isPublished ? 'Published' : 'Draft'}
-                          </Badge>
-                          {plan.isFeatured && (
-                            <Badge variant="outline" className="bg-primary/10 text-primary">
-                              Featured
-                            </Badge>
-                          )}
-                        </div>
-                        <CardTitle className="text-lg mt-2">{plan.title}</CardTitle>
-                        <CardDescription className="line-clamp-2">
-                          {plan.description}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          <Badge variant="outline" className="bg-slate-100">
-                            {plan.difficultyLevel}
-                          </Badge>
-                          <Badge variant="outline" className="bg-slate-100">
-                            {plan.category}
-                          </Badge>
-                          <Badge variant="outline" className="bg-slate-100">
-                            {plan.durationWeeks} weeks
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                          <div>
-                            <p className="text-gray-500">Price</p>
-                            <p className="font-medium">${plan.price}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Sales</p>
-                            <p className="font-medium">{plan.sales || 0}</p>
-                          </div>
-                        </div>
-                        <StarRating rating={plan.rating} />
-                      </CardContent>
-                      <Separator />
-                      <CardFooter className="pt-4 pb-4 flex flex-col gap-3">
-                        <div className="flex w-full justify-between items-center">
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => setLocation(`/create-plan?edit=${plan.id}`)}
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                            <Button 
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                              onClick={() => {
-                                setPlanToDelete(plan);
-                                setConfirmDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Delete
-                            </Button>
-                          </div>
-                          <Button 
-                            variant="default" 
-                            size="sm" 
-                            onClick={() => setLocation(`/workout-plans/${plan.id}`)}
-                          >
-                            Preview
-                            <Eye className="ml-1 h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="w-full">
-                          <Button 
-                            variant={plan.isPublished ? "outline" : "default"}
-                            size="sm"
-                            className={`w-full ${plan.isPublished ? 'border-red-500 text-red-500 hover:bg-red-50' : 'bg-green-500 hover:bg-green-600'}`}
-                            onClick={() => publishPlanMutation.mutate({ 
-                              planId: plan.id, 
-                              isPublished: !plan.isPublished 
-                            })}
-                            disabled={publishPlanMutation.isPending}
-                          >
-                            {publishPlanMutation.isPending ? (
-                              <>
-                                <div className="h-4 w-4 mr-1 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                {plan.isPublished ? 'Unpublishing...' : 'Publishing...'}
-                              </>
-                            ) : (
-                              <>
-                                {plan.isPublished ? (
-                                  <>
-                                    <AlertTriangle className="h-4 w-4 mr-1" />
-                                    Unpublish Plan
-                                  </>
-                                ) : (
-                                  <>
-                                    <ChevronRight className="h-4 w-4 mr-1" />
-                                    Publish to Marketplace
-                                  </>
-                                )}
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 border rounded-lg">
-                <Dumbbell className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-xl font-medium mb-2">No Workout Plans</h3>
-                <p className="text-gray-500 mb-6">
-                  You haven't created any workout plans yet.
-                </p>
-                <Button onClick={() => setLocation('/create-plan')}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Create Your First Plan
-                </Button>
-              </div>
-            )}
-          </TabsContent>
+      <div className="mt-6">
+        {isLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+            <p className="mt-2">Loading your coach plans...</p>
+          </div>
+        ) : coachPlans.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {coachPlans.map((plan: WorkoutPlan) => (
+              <Card key={plan.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-lg font-semibold line-clamp-2">{plan.title}</CardTitle>
+                    <Badge variant={plan.isPublished ? "default" : "outline"}>
+                      {plan.isPublished ? "Published" : "Draft"}
+                    </Badge>
+                  </div>
+                  <CardDescription className="line-clamp-2 mt-1">
+                    {plan.category} • {plan.difficultyLevel} • {plan.durationWeeks} weeks
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-2">
+                  <p className="line-clamp-3 text-sm text-gray-600 dark:text-gray-400">{plan.description}</p>
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex items-center">
+                      <span className="font-medium">${plan.price}</span>
+                      {plan.sales > 0 && (
+                        <span className="text-xs text-gray-500 ml-2">
+                          {plan.sales} {plan.sales === 1 ? 'sale' : 'sales'}
+                        </span>
+                      )}
+                    </div>
+                    <StarRating rating={plan.rating} />
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between pt-2 border-t">
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setLocation(`/edit-plan/${plan.id}`)}>
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setPlanToDelete(plan);
+                        setConfirmDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setLocation(`/workout-plans/${plan.id}`)}>
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    <Switch 
+                      id={`publish-${plan.id}`}
+                      checked={plan.isPublished}
+                      onCheckedChange={(isChecked) => {
+                        publishPlanMutation.mutate({
+                          planId: plan.id, 
+                          isPublished: isChecked
+                        });
+                      }}
+                    />
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 border rounded-lg bg-gray-50 dark:bg-gray-900">
+            <LayoutGrid className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-4 text-lg font-medium">No workout plans yet</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Get started by creating your first workout plan for your clients.
+            </p>
+            <Button className="mt-6" onClick={() => setLocation('/create-plan')}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create New Plan
+            </Button>
+          </div>
         )}
-        
-        <TabsContent value="plans">
-          {isLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-              <p className="mt-2">Loading your workout plans...</p>
-            </div>
-          ) : planPurchases && planPurchases.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {planPurchases.map((purchase: Purchase) => (
-                <Card key={purchase.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <Badge 
-                      className={`w-fit mb-2 ${
-                        purchase.status === 'completed' 
-                          ? 'bg-green-500' 
-                          : purchase.status === 'pending' 
-                            ? 'bg-yellow-500' 
-                            : 'bg-red-500'
-                      }`}
-                    >
-                      {purchase.status.charAt(0).toUpperCase() + purchase.status.slice(1)}
-                    </Badge>
-                    <CardTitle className="text-lg">
-                      {purchase.planDetails?.title || "Workout Plan"}
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {purchase.planDetails?.description || "No description available"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow pb-2">
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      <Badge variant="outline" className="bg-slate-100">
-                        {purchase.planDetails?.difficultyLevel || "Unknown difficulty"}
-                      </Badge>
-                      <Badge variant="outline" className="bg-slate-100">
-                        {purchase.planDetails?.category || "Uncategorized"}
-                      </Badge>
-                      <Badge variant="outline" className="bg-slate-100">
-                        {purchase.planDetails?.durationWeeks || "?"} weeks
-                      </Badge>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500 mb-2">
-                      <Calendar className="mr-1 h-4 w-4" />
-                      Purchased on {new Date(purchase.purchaseDate).toLocaleDateString()}
-                    </div>
-                    {purchase.planDetails?.rating !== null && purchase.planDetails?.rating !== undefined && (
-                      <StarRating rating={purchase.planDetails.rating} />
-                    )}
-                  </CardContent>
-                  <Separator />
-                  <CardFooter className="pt-4 pb-4 flex justify-between items-center">
-                    <div className="font-medium">${purchase.amount.toFixed(2)}</div>
-                    <Button 
-                      size="sm"
-                      onClick={() => setLocation(`/purchased-plans/${purchase.planId}`)}
-                    >
-                      View Plan
-                      <ChevronRight className="ml-1 h-4 w-4" />
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 border rounded-lg">
-              <ShoppingBag className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-xl font-medium mb-2">No Workout Plans</h3>
-              <p className="text-gray-500 mb-6">
-                {!user?.isCoach
-                  ? "You haven't purchased any workout plans yet."
-                  : "You haven't purchased any workout plans from other coaches."}
-              </p>
-              <div className="flex flex-col md:flex-row gap-4 justify-center">
-                <Button onClick={() => setLocation('/marketplace')}>
-                  Browse Workout Plans
-                </Button>
-                {!user?.isCoach && (
-                  <Button variant="outline" onClick={() => setLocation('/become-coach')}>
-                    <BadgeCheck className="mr-2 h-4 w-4" />
-                    Become a Coach
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="services">
-          {isLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-              <p className="mt-2">Loading your coaching services...</p>
-            </div>
-          ) : servicePurchases && servicePurchases.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {servicePurchases.map((purchase: Purchase) => (
-                <Card key={purchase.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <Badge 
-                      className={`w-fit mb-2 ${
-                        purchase.status === 'completed' 
-                          ? 'bg-green-500' 
-                          : purchase.status === 'pending' 
-                            ? 'bg-yellow-500' 
-                            : 'bg-red-500'
-                      }`}
-                    >
-                      {purchase.status.charAt(0).toUpperCase() + purchase.status.slice(1)}
-                    </Badge>
-                    <CardTitle className="text-lg">
-                      {purchase.serviceDetails?.title || "Coaching Service"}
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {purchase.serviceDetails?.description || "No description available"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow pb-2">
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      <Badge variant="outline" className="bg-slate-100">
-                        {purchase.serviceDetails?.serviceType || "Unknown type"}
-                      </Badge>
-                      <Badge variant="outline" className="bg-slate-100">
-                        {purchase.serviceDetails?.durationType || "Unspecified duration"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500 mb-2">
-                      <Calendar className="mr-1 h-4 w-4" />
-                      Purchased on {new Date(purchase.purchaseDate).toLocaleDateString()}
-                    </div>
-                  </CardContent>
-                  <Separator />
-                  <CardFooter className="pt-4 pb-4 flex justify-between items-center">
-                    <div className="font-medium">${purchase.amount.toFixed(2)}</div>
-                    <Button 
-                      size="sm"
-                      onClick={() => setLocation(`/coaching-services/${purchase.serviceId}`)}
-                    >
-                      View Service
-                      <ChevronRight className="ml-1 h-4 w-4" />
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 border rounded-lg">
-              <CalendarCheck className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-xl font-medium mb-2">No Coaching Services</h3>
-              <p className="text-gray-500 mb-6">
-                {!user?.isCoach
-                  ? "You haven't purchased any coaching services yet."
-                  : "You haven't purchased any coaching services from other coaches."}
-              </p>
-              <div className="flex flex-col md:flex-row gap-4 justify-center">
-                <Button onClick={() => setLocation('/marketplace')}>
-                  Browse Coaching Services
-                </Button>
-                {!user?.isCoach && (
-                  <Button variant="outline" onClick={() => setLocation('/become-coach')}>
-                    <BadgeCheck className="mr-2 h-4 w-4" />
-                    Become a Coach
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      </div>
 
-      {/* Confirmation Dialog for Deleting Plans */}
+      {/* Delete confirmation dialog */}
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Workout Plan</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              <div className="space-y-2">
-                <p>
-                  Are you sure you want to delete&nbsp;
-                  <span className="font-medium">{planToDelete?.title}</span>?
-                </p>
-                <div className="flex items-center text-amber-600 bg-amber-50 dark:bg-amber-950/20 rounded-md p-3">
-                  <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0" />
-                  <p className="text-sm">
-                    This action cannot be undone. This will permanently delete the workout plan
-                    and all associated data.
-                  </p>
-                </div>
-              </div>
+              This will permanently delete the workout plan "{planToDelete?.title}".
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={deletePlanMutation.isPending}
-              onClick={() => setPlanToDelete(null)}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
               onClick={() => {
                 if (planToDelete) {
                   deletePlanMutation.mutate(planToDelete.id);
                 }
               }}
-              disabled={deletePlanMutation.isPending}
-              className="bg-red-500 hover:bg-red-600 focus:ring-red-500"
+              className="bg-red-600 hover:bg-red-700"
             >
-              {deletePlanMutation.isPending ? (
-                <>
-                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-t-transparent border-white" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete Plan"
-              )}
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
