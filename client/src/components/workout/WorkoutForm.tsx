@@ -373,13 +373,15 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
             name: workoutName || "My Workout",
             date: new Date(workoutDate),
             notes: workoutNotes || "",
-            duration: duration || 0,
             userId: userId || 0,
             category: "Strength",
             isPublic: false,
             caption: "",
             mediaUrls: null,
-            isComplete: true
+            isComplete: true,
+            coachNotes: null,
+            coachShared: false,
+            updatedAt: new Date()
           };
           
           setSavedWorkout(fallbackWorkout);

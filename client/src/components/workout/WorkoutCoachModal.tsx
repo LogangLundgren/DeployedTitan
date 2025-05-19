@@ -71,7 +71,9 @@ export default function WorkoutCoachModal({ workout, isOpen, onClose }: WorkoutC
         `/api/workouts/${workout.id}`,
         {
           isComplete: true,
-          coachNotes: notes || null
+          // We'll use the caption field to store coach notes temporarily
+          // until the schema is updated
+          caption: `COACH_NOTE: ${notes || ""}`
         }
       );
 
@@ -82,13 +84,16 @@ export default function WorkoutCoachModal({ workout, isOpen, onClose }: WorkoutC
       setUploadProgress(50);
       
       // Then share with coach via coach-client endpoint
+      // We'll create a simple notification for the coach
       const shareResponse = await apiRequest(
         "POST",
-        `/api/coach/share-workout`,
+        `/api/notifications/create`,
         {
-          workoutId: workout.id,
-          coachId: coachData.id,
-          notes: notes || null
+          userId: coachData.id,
+          title: "New Workout Shared",
+          message: `Client ${workout.userId} shared a workout: ${workout.name}`,
+          type: "WORKOUT_SHARED",
+          linkUrl: `/workouts/${workout.id}`
         }
       );
       
@@ -140,7 +145,9 @@ export default function WorkoutCoachModal({ workout, isOpen, onClose }: WorkoutC
         "PATCH",
         `/api/workouts/${workout.id}`,
         {
-          isComplete: true
+          isComplete: true,
+          // Add a note in caption if the user entered one
+          caption: notes ? `PERSONAL_NOTE: ${notes}` : undefined
         }
       );
 
