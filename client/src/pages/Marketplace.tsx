@@ -230,6 +230,9 @@ export default function Marketplace() {
             {isOwner && plan.isPublished && (
               <Badge variant="outline" className="border-green-500 text-green-500">Published</Badge>
             )}
+            {plan.price === 0 && (
+              <Badge variant="outline" className="border-blue-500 text-blue-500">Free</Badge>
+            )}
           </div>
           <CardTitle className="text-lg">{plan.title}</CardTitle>
           <CardDescription className="line-clamp-2">
@@ -248,13 +251,31 @@ export default function Marketplace() {
               {plan.durationWeeks} weeks
             </Badge>
           </div>
-          <StarRating rating={plan.rating} />
-          {plan.sales && (
-            <div className="flex items-center mt-2 text-sm text-gray-600">
-              <Users className="h-4 w-4 mr-1" />
-              {plan.sales} sold
+          
+          {/* Client suitability indicators - new for coach focus */}
+          <div className="mt-2 mb-3">
+            <p className="text-sm font-medium text-gray-700">Ideal for clients:</p>
+            <div className="flex flex-wrap gap-1 mt-1">
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                {plan.difficultyLevel} Level
+              </Badge>
+              {plan.goals && JSON.parse(plan.goals).map((goal: string, index: number) => (
+                <Badge key={index} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  {goal}
+                </Badge>
+              ))}
             </div>
-          )}
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <StarRating rating={plan.rating} />
+            {plan.sales && (
+              <div className="flex items-center text-sm text-gray-600">
+                <Users className="h-4 w-4 mr-1" />
+                {plan.sales} clients
+              </div>
+            )}
+          </div>
         </CardContent>
         <Separator />
         <CardFooter className="pt-4 pb-4 flex flex-col gap-2">
@@ -263,14 +284,22 @@ export default function Marketplace() {
             
             {/* Different actions for coach vs users */}
             {isOwner ? (
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => setLocation(`/workout-plans/${plan.id}`)}
-              >
-                Edit Details
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => setLocation(`/workout-plans/${plan.id}`)}
+                >
+                  Edit Plan
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setLocation(`/workout-plans/${plan.id}/assignments`)}
+                >
+                  Assign to Client
+                </Button>
+              </div>
             ) : (
               <div className="flex gap-2">
                 <Button 
@@ -278,7 +307,7 @@ export default function Marketplace() {
                   variant="outline" 
                   onClick={() => setLocation(`/workout-plans/${plan.id}`)}
                 >
-                  View Plan
+                  Preview
                   <Eye className="h-4 w-4 ml-1" />
                 </Button>
                 <Button 
@@ -312,14 +341,41 @@ export default function Marketplace() {
                     }
                   }}
                 >
-                  {plan.price === 0 ? "Get Free Plan" : "Buy Now"}
+                  {plan.price === 0 ? "Get Free Plan" : "Purchase"}
                 </Button>
               </div>
             )}
           </div>
           
-          {/* Contact coach button - only show for non-owners */}
-          {!isOwner && plan.coach && (
+          {/* Additional buttons for coach-centered functionality */}
+          {isOwner ? (
+            <div className="flex gap-2 w-full mt-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="w-1/2"
+                onClick={() => setLocation(`/workout-plans/${plan.id}/analytics`)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                  <path d="M3 3v18h18"/>
+                  <path d="m19 9-5 5-4-4-3 3"/>
+                </svg>
+                Analytics
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="w-1/2"
+                onClick={() => setLocation(`/workout-plans/${plan.id}/fork`)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                  <path d="M7 7 L17 17"/>
+                  <path d="M17 7 L7 17"/>
+                </svg>
+                Customize
+              </Button>
+            </div>
+          ) : (
             <Button 
               size="sm" 
               variant="secondary"
@@ -390,11 +446,24 @@ export default function Marketplace() {
     <div className="container mx-auto py-6 px-4 md:px-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Marketplace</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Coaching Marketplace</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Find workout plans and personal trainers to help you reach your fitness goals
+            Find quality workout plans for your clients or connect with expert coaches
           </p>
         </div>
+        
+        {/* Add create plan button for coaches */}
+        {currentUser?.isCoach && (
+          <Button 
+            onClick={() => setLocation('/create-plan')}
+            className="bg-gradient-to-r from-primary to-primary/80"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Create New Plan
+          </Button>
+        )}
       </div>
 
       <Tabs 
@@ -423,27 +492,6 @@ export default function Marketplace() {
           <Button onClick={handleSearch} className="md:w-auto w-full">
             Search
           </Button>
-        </div>
-
-        {/* Category Filter */}
-        <div className="flex flex-nowrap overflow-x-auto gap-2 mb-8 pb-2 hide-scrollbar">
-          <Button 
-            variant={selectedCategory === null ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedCategory(null)}
-          >
-            All
-          </Button>
-          {categories.map(category => (
-            <Button
-              key={category}
-              variant={selectedCategory === category ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory(category)}
-            >
-              {category}
-            </Button>
-          ))}
         </div>
 
         <TabsContent value="plans">
