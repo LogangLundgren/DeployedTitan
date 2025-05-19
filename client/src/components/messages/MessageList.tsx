@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -44,7 +44,7 @@ export default function MessageList({ threadId, recipientUser }: MessageListProp
   const { user } = useAuth();
   const { toast } = useToast();
   const [message, setMessage] = useState("");
-  const [messagesEndRef, setMessagesEndRef] = useState<HTMLDivElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch messages for the active thread
   const {
@@ -93,9 +93,11 @@ export default function MessageList({ threadId, recipientUser }: MessageListProp
   };
 
   // Scroll to bottom whenever messages change
-  if (messagesEndRef.current) {
-    messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-  }
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   // Show loading state
   if (isLoading) {
@@ -124,9 +126,7 @@ export default function MessageList({ threadId, recipientUser }: MessageListProp
           <AvatarFallback>
             {recipientUser.username.substring(0, 2).toUpperCase()}
           </AvatarFallback>
-          {recipientUser.profilePicture && (
-            <AvatarImage src={recipientUser.profilePicture} />
-          )}
+
         </Avatar>
         <div>
           <h2 className="font-semibold">
@@ -182,7 +182,7 @@ export default function MessageList({ threadId, recipientUser }: MessageListProp
                 </div>
               </div>
             ))}
-            <div ref={(el) => (messagesEndRef.current = el)} />
+            <div ref={messagesEndRef} />
           </div>
         )}
       </ScrollArea>

@@ -66,8 +66,16 @@ export default function MessageThreads({
       email: '',  // These fields aren't needed for our UI purposes
       password: '',
       isCoach: false,
-      profileBio: null,
-      profilePicture: null,
+      bio: null,
+      location: null,
+      fitnessLevel: null,
+      experienceYears: null,
+      goals: null,
+      certifications: null,
+      socialMedia: null,
+      coachRegistrationDate: null,
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
     };
   };
 
