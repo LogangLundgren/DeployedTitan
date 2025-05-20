@@ -242,39 +242,54 @@ export default function MyPlans() {
                     <StarRating rating={plan.rating} />
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-between pt-2 border-t">
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setLocation(`/edit-plan/${plan.id}`)}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => {
-                        setPlanToDelete(plan);
-                        setConfirmDialogOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
-                  </div>
-                  <div className="flex gap-2">
+                <CardFooter className="flex flex-col space-y-3 pt-2 border-t">
+                  {/* First row with Edit and Delete buttons */}
+                  <div className="flex justify-between w-full">
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setLocation(`/edit-plan/${plan.id}`)}>
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setPlanToDelete(plan);
+                          setConfirmDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
                     <Button variant="ghost" size="sm" onClick={() => setLocation(`/workout-plans/${plan.id}`)}>
                       <Eye className="h-4 w-4 mr-1" />
                       View
                     </Button>
-                    <Switch 
-                      id={`publish-${plan.id}`}
-                      checked={plan.isPublished}
-                      onCheckedChange={(isChecked) => {
-                        publishPlanMutation.mutate({
-                          planId: plan.id, 
-                          isPublished: isChecked
-                        });
-                      }}
-                    />
+                  </div>
+                  
+                  {/* Second row with publish/unpublish switch */}
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-2">
+                      <p className="text-sm text-muted-foreground">
+                        {plan.isPublished ? "Published" : "Unpublished"}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <label htmlFor={`publish-${plan.id}`} className="text-sm text-muted-foreground mr-2">
+                        {plan.isPublished ? "Unpublish" : "Publish"} 
+                      </label>
+                      <Switch 
+                        id={`publish-${plan.id}`}
+                        checked={plan.isPublished}
+                        onCheckedChange={(isChecked) => {
+                          publishPlanMutation.mutate({
+                            planId: plan.id, 
+                            isPublished: isChecked
+                          });
+                        }}
+                      />
+                    </div>
                   </div>
                 </CardFooter>
               </Card>
