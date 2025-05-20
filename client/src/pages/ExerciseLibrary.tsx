@@ -69,7 +69,7 @@ export default function ExerciseLibrary() {
   // Get unique categories for filtering
   const categories = [...new Set(exercises.map(exercise => exercise.category))].sort();
 
-  // Mutation for deleting any exercise
+  // Mutation for deleting custom exercises
   const deleteExerciseMutation = useMutation({
     mutationFn: async (exerciseId: number) => {
       const res = await apiRequest("DELETE", `/api/exercises/${exerciseId}`);
@@ -91,6 +91,35 @@ export default function ExerciseLibrary() {
       toast({
         title: "Error",
         description: `Failed to delete exercise: ${error.message}`,
+        variant: "destructive",
+      });
+      setIsDeleteDialogOpen(false);
+    },
+  });
+  
+  // Mutation for hiding global exercises from user's library
+  const hideExerciseMutation = useMutation({
+    mutationFn: async (exerciseId: number) => {
+      const res = await apiRequest("POST", `/api/exercises/${exerciseId}/hide`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to hide exercise");
+      }
+      return exerciseId;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Exercise hidden",
+        description: "The exercise has been hidden from your library.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/exercises/hidden'] });
+      setIsDeleteDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to hide exercise: ${error.message}`,
         variant: "destructive",
       });
       setIsDeleteDialogOpen(false);
