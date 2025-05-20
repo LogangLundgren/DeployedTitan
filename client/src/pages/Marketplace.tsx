@@ -447,19 +447,6 @@ export default function Marketplace() {
             Find quality workout plans for your clients or connect with expert coaches
           </p>
         </div>
-        
-        {/* Add create plan button for coaches */}
-        {currentUser?.isCoach && (
-          <Button 
-            onClick={() => setLocation('/create-plan')}
-            className="bg-gradient-to-r from-primary to-primary/80"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            Create New Plan
-          </Button>
-        )}
       </div>
 
       <Tabs 
