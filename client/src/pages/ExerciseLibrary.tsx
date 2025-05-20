@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   AlertDialog,
@@ -23,11 +24,30 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { Dumbbell, Plus, Trash2, Search, AlertTriangle, X } from 'lucide-react';
+import { 
+  Dumbbell, 
+  Plus, 
+  Trash2, 
+  Search, 
+  AlertTriangle, 
+  X, 
+  Eye, 
+  EyeOff, 
+  Download,
+  ExternalLink
+} from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Exercise } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger 
+} from '@/components/ui/tooltip';
 
 export default function ExerciseLibrary() {
   const { toast } = useToast();
@@ -37,20 +57,24 @@ export default function ExerciseLibrary() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [exerciseToDelete, setExerciseToDelete] = useState<Exercise | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   
   // Fetch all exercises
   const { data: exercises = [], isLoading: isLoadingExercises } = useQuery<Exercise[]>({
-    queryKey: ['/api/exercises'],
+    queryKey: ['/api/exercises', showHidden],
     queryFn: async () => {
-      const response = await fetch('/api/exercises', {
+      // If showHidden is true, use a query parameter to include hidden exercises
+      const url = showHidden 
+        ? '/api/exercises?include_hidden=true' 
+        : '/api/exercises';
+        
+      const response = await fetch(url, {
         credentials: 'include'
       });
       return await response.json();
     },
     enabled: !!user
   });
-
-  // We no longer need to separate standard and custom exercises as we're showing them all together
 
   // Get unique categories for filtering
   const categories = [...new Set(exercises.map(exercise => exercise.category))].sort();
@@ -82,6 +106,84 @@ export default function ExerciseLibrary() {
       setIsDeleteDialogOpen(false);
     },
   });
+  
+  // Mutation for hiding an exercise
+  const hideExerciseMutation = useMutation({
+    mutationFn: async (exerciseId: number) => {
+      const res = await apiRequest("POST", `/api/exercises/${exerciseId}/hide`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to hide exercise");
+      }
+      return exerciseId;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Exercise hidden",
+        description: "The exercise has been hidden from your library.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to hide exercise: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation for unhiding an exercise
+  const unhideExerciseMutation = useMutation({
+    mutationFn: async (exerciseId: number) => {
+      const res = await apiRequest("POST", `/api/exercises/${exerciseId}/unhide`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to unhide exercise");
+      }
+      return exerciseId;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Exercise visible",
+        description: "The exercise is now visible in your library.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to unhide exercise: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation for populating default exercises
+  const populateDefaultsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/exercises/populate-defaults");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to populate default exercises");
+      }
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Default exercises added",
+        description: `Successfully added ${data.added.length} new default exercises to your library.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to add default exercises: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleDeleteClick = (exercise: Exercise) => {
     setExerciseToDelete(exercise);
@@ -92,6 +194,18 @@ export default function ExerciseLibrary() {
     if (exerciseToDelete) {
       deleteExerciseMutation.mutate(exerciseToDelete.id);
     }
+  };
+  
+  const handleHideToggle = (exercise: Exercise) => {
+    if (exercise.isHidden) {
+      unhideExerciseMutation.mutate(exercise.id);
+    } else {
+      hideExerciseMutation.mutate(exercise.id);
+    }
+  };
+  
+  const handlePopulateDefaults = () => {
+    populateDefaultsMutation.mutate();
   };
 
   const resetFilters = () => {
@@ -108,15 +222,37 @@ export default function ExerciseLibrary() {
             Browse standard exercises and manage your custom exercises
           </p>
         </div>
-        <CustomExerciseModal 
-          onExerciseCreated={() => {
-            toast({
-              title: "Exercise created",
-              description: "Your custom exercise has been added to your library.",
-            });
-            queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
-          }} 
-        />
+        <div className="flex gap-2">
+          {user?.isCoach && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-1"
+                    onClick={handlePopulateDefaults}
+                    disabled={populateDefaultsMutation.isPending}
+                  >
+                    <Download size={16} />
+                    {populateDefaultsMutation.isPending ? 'Adding...' : 'Add Default Exercises'}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add comprehensive library of default exercises</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <CustomExerciseModal 
+            onExerciseCreated={() => {
+              toast({
+                title: "Exercise created",
+                description: "Your custom exercise has been added to your library.",
+              });
+              queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
+            }} 
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -156,17 +292,31 @@ export default function ExerciseLibrary() {
         </div>
       </div>
 
-      {(searchQuery || filterCategory !== 'all') && (
-        <div className="flex items-center mb-4 gap-2">
-          <p className="text-sm text-muted-foreground">
-            {searchQuery && <Badge variant="outline" className="mr-2">{`Search: ${searchQuery}`}</Badge>}
-            {filterCategory !== 'all' && <Badge variant="outline">{`Category: ${filterCategory}`}</Badge>}
-          </p>
-          <Button variant="ghost" size="sm" onClick={resetFilters} className="h-7">
-            Clear Filters
-          </Button>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          {(searchQuery || filterCategory !== 'all') && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {searchQuery && <Badge variant="outline" className="mr-2">{`Search: ${searchQuery}`}</Badge>}
+                {filterCategory !== 'all' && <Badge variant="outline">{`Category: ${filterCategory}`}</Badge>}
+              </p>
+              <Button variant="ghost" size="sm" onClick={resetFilters} className="h-7">
+                Clear Filters
+              </Button>
+            </>
+          )}
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <Label htmlFor="show-hidden" className="text-sm">
+            Show hidden exercises
+          </Label>
+          <Switch
+            id="show-hidden"
+            checked={showHidden}
+            onCheckedChange={setShowHidden}
+          />
+        </div>
+      </div>
 
       <div className="mt-4">
         {isLoadingExercises ? (
@@ -185,29 +335,59 @@ export default function ExerciseLibrary() {
               ) &&
               (filterCategory === 'all' || exercise.category === filterCategory)
             ).map((exercise) => (
-              <Card key={exercise.id}>
+              <Card key={exercise.id} className={exercise.isHidden ? "border-dashed opacity-70" : ""}>
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-lg">{exercise.name}</CardTitle>
+                      <div className="flex items-center">
+                        <CardTitle className="text-lg">{exercise.name}</CardTitle>
+                        {exercise.isHidden && (
+                          <Badge variant="outline" className="ml-2 text-xs">Hidden</Badge>
+                        )}
+                      </div>
                       <CardDescription>
                         {exercise.category}
                         {exercise.subcategory && ` • ${exercise.subcategory}`}
                       </CardDescription>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteClick(exercise)}
-                      className="h-8 w-8 text-destructive"
-                    >
-                      <Trash2 size={16} />
-                    </Button>
+                    <div className="flex">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleHideToggle(exercise)}
+                              className="h-8 w-8"
+                              disabled={hideExerciseMutation.isPending || unhideExerciseMutation.isPending}
+                            >
+                              {exercise.isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            {exercise.isHidden ? "Show exercise" : "Hide exercise"}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteClick(exercise)}
+                        className="h-8 w-8 text-destructive"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-sm text-muted-foreground">
-                    {exercise.isCustom ? "Custom exercise" : "Standard exercise"}
+                  <div className="text-sm text-muted-foreground flex justify-between items-center">
+                    <span>{exercise.isCustom ? "Custom exercise" : "Standard exercise"}</span>
+                    {exercise.userId === user?.id && (
+                      <Badge variant="secondary" className="text-xs">
+                        Your exercise
+                      </Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>

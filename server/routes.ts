@@ -727,7 +727,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/exercises", requireAuth, async (req, res) => {
     try {
       const category = req.query.category as string;
+      const includeHidden = req.query.include_hidden === 'true';
+      
       // Get user ID from authenticated user
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
       const userId = req.user.id; 
       let exercises;
       
@@ -738,16 +744,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Filter to show standard exercises (no userId) and user's custom exercises
-      // Also filter out exercises that the user has hidden
+      // Also filter out exercises that the user has hidden (unless includeHidden is true)
       const filteredExercises = exercises.filter(exercise => {
-        // Handle both camelCase and snake_case property names
-        const exerciseUserId = exercise.userId || exercise.user_id;
+        // Handle different property name formats
+        const exerciseUserId = exercise.userId;
         
         // If the exercise is a standard exercise (no userId) or the user's custom exercise
         const isUserExercise = exerciseUserId === null || exerciseUserId === undefined || exerciseUserId === userId;
         
-        // Include only if it's a user exercise and not hidden
-        return isUserExercise && !(exercise.userId === userId && exercise.isHidden);
+        // Include only if:
+        // 1. It's a user exercise, AND
+        // 2. Either we're showing hidden exercises OR it's not hidden
+        return isUserExercise && (includeHidden || !(exercise.userId === userId && exercise.isHidden));
       });
       
       res.status(200).json(filteredExercises);
@@ -844,6 +852,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Unhide exercise error:", error);
       res.status(500).json({ message: "Failed to unhide exercise" });
+    }
+  });
+  
+  // Endpoint to populate default exercises
+  app.post("/api/exercises/populate-defaults", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Only admins/coaches can trigger this
+      if (!req.user.isCoach) {
+        return res.status(403).json({ message: "Only coaches can populate default exercises" });
+      }
+      
+      // Define the comprehensive default exercise library
+      const defaultExercises: InsertExercise[] = [
+        // Chest
+        { name: "Barbell Bench Press", category: "Chest", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Incline Dumbbell Press", category: "Chest", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Chest Fly", category: "Chest", subcategory: "Isolation", isCustom: false, isHidden: false },
+        { name: "Push-Up", category: "Chest", subcategory: "Bodyweight", isCustom: false, isHidden: false },
+        { name: "Cable Crossover", category: "Chest", subcategory: "Isolation", isCustom: false, isHidden: false },
+        
+        // Back
+        { name: "Deadlift", category: "Back", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Barbell Bent-Over Row", category: "Back", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Lat Pulldown", category: "Back", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Pull-Up", category: "Back", subcategory: "Bodyweight", isCustom: false, isHidden: false },
+        { name: "Seated Cable Row", category: "Back", subcategory: "Compound", isCustom: false, isHidden: false },
+        
+        // Shoulders
+        { name: "Overhead Barbell Press", category: "Shoulders", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Dumbbell Lateral Raise", category: "Shoulders", subcategory: "Isolation", isCustom: false, isHidden: false },
+        { name: "Arnold Press", category: "Shoulders", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Front Raise", category: "Shoulders", subcategory: "Isolation", isCustom: false, isHidden: false },
+        { name: "Reverse Pec Deck / Rear Delt Fly", category: "Shoulders", subcategory: "Isolation", isCustom: false, isHidden: false },
+        
+        // Arms
+        { name: "Barbell Curl", category: "Arms", subcategory: "Biceps", isCustom: false, isHidden: false },
+        { name: "Dumbbell Hammer Curl", category: "Arms", subcategory: "Biceps", isCustom: false, isHidden: false },
+        { name: "Preacher Curl", category: "Arms", subcategory: "Biceps", isCustom: false, isHidden: false },
+        { name: "Triceps Pushdown", category: "Arms", subcategory: "Triceps", isCustom: false, isHidden: false },
+        { name: "Overhead Triceps Extension", category: "Arms", subcategory: "Triceps", isCustom: false, isHidden: false },
+        
+        // Lower Body - Quads & Hamstrings
+        { name: "Barbell Back Squat", category: "Legs", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Front Squat", category: "Legs", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Leg Press", category: "Legs", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Leg Extension", category: "Legs", subcategory: "Isolation", isCustom: false, isHidden: false },
+        { name: "Lying Leg Curl", category: "Legs", subcategory: "Isolation", isCustom: false, isHidden: false },
+        
+        // Glutes & Hamstrings
+        { name: "Romanian Deadlift", category: "Legs", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Glute Bridge / Hip Thrust", category: "Legs", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Bulgarian Split Squat", category: "Legs", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Walking Lunge", category: "Legs", subcategory: "Compound", isCustom: false, isHidden: false },
+        { name: "Cable Kickback", category: "Legs", subcategory: "Isolation", isCustom: false, isHidden: false }
+      ];
+      
+      // Check for existing exercises to avoid duplicates
+      const existingExercises = await storage.getExercises();
+      const existingNames = new Set(existingExercises.map(e => e.name.toLowerCase()));
+      
+      // Filter out exercises that already exist
+      const newExercises = defaultExercises.filter(e => !existingNames.has(e.name.toLowerCase()));
+      
+      // Add the new exercises
+      const addedExercises = [];
+      for (const exercise of newExercises) {
+        const added = await storage.createExercise(exercise);
+        addedExercises.push(added);
+      }
+      
+      res.status(200).json({ 
+        message: `Successfully added ${addedExercises.length} new default exercises.`,
+        added: addedExercises
+      });
+    } catch (error) {
+      console.error("Populate default exercises error:", error);
+      res.status(500).json({ message: "Failed to populate default exercises" });
     }
   });
   
