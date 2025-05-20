@@ -770,6 +770,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Route to remove a global exercise from a user's library
+  app.post("/api/exercises/:id/hide", requireAuth, async (req, res) => {
+    try {
+      const exerciseId = parseInt(req.params.id);
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      if (isNaN(exerciseId)) {
+        return res.status(400).json({ message: "Valid exercise ID is required" });
+      }
+      
+      // Check if the exercise exists
+      const exercise = await storage.getExercise(exerciseId);
+      if (!exercise) {
+        return res.status(404).json({ message: "Exercise not found" });
+      }
+      
+      // Check if it's a global exercise (not owned by any user)
+      if (exercise.userId !== null) {
+        return res.status(400).json({ message: "Only global exercises can be hidden" });
+      }
+      
+      // Remove from user's library
+      const success = await storage.removeExerciseFromUserLibrary(exerciseId, userId);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Failed to hide exercise" });
+      }
+      
+      res.status(200).json({ message: "Exercise hidden from your library" });
+    } catch (error) {
+      console.error("Hide exercise error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Route to get the user's hidden exercises
+  app.get("/api/exercises/hidden", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Get the list of exercise IDs that the user has removed
+      const hiddenExerciseIds = await storage.getUserRemovedExercises(userId);
+      
+      res.status(200).json({ hiddenExerciseIds });
+    } catch (error) {
+      console.error("Get hidden exercises error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Workout routes
   app.get("/api/workouts", requireAuth, async (req, res) => {
     try {

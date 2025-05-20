@@ -49,6 +49,20 @@ export default function ExerciseLibrary() {
     },
     enabled: !!user
   });
+  
+  // Fetch user's hidden exercises
+  const { data: hiddenExercisesData } = useQuery({
+    queryKey: ['/api/exercises/hidden'],
+    queryFn: async () => {
+      const response = await fetch('/api/exercises/hidden', {
+        credentials: 'include'
+      });
+      return await response.json();
+    },
+    enabled: !!user
+  });
+  
+  const hiddenExerciseIds = hiddenExercisesData?.hiddenExerciseIds || [];
 
   // We no longer need to separate standard and custom exercises as we're showing them all together
 
