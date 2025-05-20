@@ -3963,24 +3963,75 @@ export class DbStorage implements IStorage {
   
   // Workout operations
   async getWorkouts(userId: number): Promise<Workout[]> {
-    return await db.select().from(workouts).where(eq(workouts.userId, userId));
+    return await db.select({
+      id: workouts.id,
+      name: workouts.name,
+      date: workouts.date,
+      notes: workouts.notes,
+      duration: workouts.duration,
+      userId: workouts.userId,
+      category: workouts.category,
+      isPublic: workouts.isPublic,
+      caption: workouts.caption,
+      mediaUrls: workouts.mediaUrls,
+      isComplete: workouts.isComplete,
+      coachNotes: workouts.coachNotes,
+      coachShared: workouts.coachShared,
+      updatedAt: workouts.updatedAt
+    }).from(workouts).where(eq(workouts.userId, userId));
   }
   
   async getWorkout(id: number): Promise<Workout | undefined> {
-    const result = await db.select().from(workouts).where(eq(workouts.id, id));
+    const result = await db.select({
+      id: workouts.id,
+      name: workouts.name,
+      date: workouts.date,
+      notes: workouts.notes,
+      duration: workouts.duration,
+      userId: workouts.userId,
+      category: workouts.category,
+      isPublic: workouts.isPublic,
+      caption: workouts.caption,
+      mediaUrls: workouts.mediaUrls,
+      isComplete: workouts.isComplete,
+      coachNotes: workouts.coachNotes,
+      coachShared: workouts.coachShared,
+      updatedAt: workouts.updatedAt
+    }).from(workouts).where(eq(workouts.id, id));
     return result.length > 0 ? result[0] : undefined;
   }
   
   async getWorkoutWithDetails(id: number): Promise<WorkoutWithDetails | undefined> {
-    // First, get the workout
-    const workoutResult = await db.select().from(workouts).where(eq(workouts.id, id));
+    // First, get the workout with explicit column selection
+    const workoutResult = await db.select({
+      id: workouts.id,
+      name: workouts.name,
+      date: workouts.date,
+      notes: workouts.notes,
+      duration: workouts.duration,
+      userId: workouts.userId,
+      category: workouts.category,
+      isPublic: workouts.isPublic,
+      caption: workouts.caption,
+      mediaUrls: workouts.mediaUrls,
+      isComplete: workouts.isComplete,
+      coachNotes: workouts.coachNotes,
+      coachShared: workouts.coachShared,
+      updatedAt: workouts.updatedAt
+    }).from(workouts).where(eq(workouts.id, id));
     
     if (workoutResult.length === 0) return undefined;
     const workout = workoutResult[0];
     
-    // Get workout exercises
+    // Get workout exercises with explicit column selection
     const workoutExercisesResult = await db
-      .select()
+      .select({
+        id: workoutExercises.id,
+        workoutId: workoutExercises.workoutId,
+        exerciseId: workoutExercises.exerciseId,
+        order: workoutExercises.order,
+        notes: workoutExercises.notes
+      })
       .from(workoutExercises)
       .where(eq(workoutExercises.workoutId, id))
       .orderBy(workoutExercises.order);
@@ -3988,9 +4039,17 @@ export class DbStorage implements IStorage {
     // Process each workout exercise
     const exercisesWithDetails = await Promise.all(
       workoutExercisesResult.map(async (we: WorkoutExercise) => {
-        // Get exercise details
+        // Get exercise details with explicit column selection
         const exerciseResult = await db
-          .select()
+          .select({
+            id: exercises.id,
+            name: exercises.name,
+            category: exercises.category,
+            subcategory: exercises.subcategory,
+            userId: exercises.userId,
+            isCustom: exercises.isCustom,
+            createdAt: exercises.createdAt
+          })
           .from(exercises)
           .where(eq(exercises.id, we.exerciseId));
         
@@ -4058,9 +4117,24 @@ export class DbStorage implements IStorage {
   }
   
   async getRecentWorkouts(userId: number, limit: number): Promise<WorkoutWithDetails[]> {
-    // Get workouts for the user, sorted by date
+    // Get workouts for the user, sorted by date with explicit column selection
     const workoutResults = await db
-      .select()
+      .select({
+        id: workouts.id,
+        name: workouts.name,
+        date: workouts.date,
+        notes: workouts.notes,
+        duration: workouts.duration,
+        userId: workouts.userId,
+        category: workouts.category,
+        isPublic: workouts.isPublic,
+        caption: workouts.caption,
+        mediaUrls: workouts.mediaUrls,
+        isComplete: workouts.isComplete,
+        coachNotes: workouts.coachNotes,
+        coachShared: workouts.coachShared,
+        updatedAt: workouts.updatedAt
+      })
       .from(workouts)
       .where(eq(workouts.userId, userId))
       .orderBy(desc(workouts.date))
@@ -4075,10 +4149,24 @@ export class DbStorage implements IStorage {
   }
   
   async getCommunityWorkouts(limit: number = 50): Promise<WorkoutWithDetails[]> {
-    // Get public workouts from all users, sorted by date
-    // Use a much higher default limit to ensure we get all workouts
+    // Get public workouts from all users, sorted by date with explicit column selection
     const workoutResults = await db
-      .select()
+      .select({
+        id: workouts.id,
+        name: workouts.name,
+        date: workouts.date,
+        notes: workouts.notes,
+        duration: workouts.duration,
+        userId: workouts.userId,
+        category: workouts.category,
+        isPublic: workouts.isPublic,
+        caption: workouts.caption,
+        mediaUrls: workouts.mediaUrls,
+        isComplete: workouts.isComplete,
+        coachNotes: workouts.coachNotes,
+        coachShared: workouts.coachShared,
+        updatedAt: workouts.updatedAt
+      })
       .from(workouts)
       .where(eq(workouts.isPublic, true))
       .orderBy(desc(workouts.date))

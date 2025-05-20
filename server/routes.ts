@@ -739,11 +739,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Filter to show standard exercises (no userId) and user's custom exercises
       const filteredExercises = exercises.filter(exercise => {
-        // Handle both camelCase and snake_case property names
-        const exerciseUserId = exercise.userId || exercise.user_id;
-        
-        // Include all standard exercises (those without a userId) and the user's custom exercises
-        return exerciseUserId === null || exerciseUserId === undefined || exerciseUserId === userId;
+        // With our proper column selection in the storage.ts queries, 
+        // we can now consistently use camelCase property names
+        return exercise.userId === null || exercise.userId === undefined || exercise.userId === userId;
       });
       
       res.status(200).json(filteredExercises);
