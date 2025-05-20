@@ -28,6 +28,7 @@ import {
   insertGoalSchema,
   insertMilestoneSchema,
   insertCommentSchema,
+  type InsertExercise,
   insertLikeSchema,
   insertCoachProfileSchema,
   insertCoachingServiceSchema,
@@ -868,7 +869,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Define the comprehensive default exercise library
-      const defaultExercises: InsertExercise[] = [
+      const defaultExercises = [
         // Chest
         { name: "Barbell Bench Press", category: "Chest", subcategory: "Compound", isCustom: false, isHidden: false },
         { name: "Incline Dumbbell Press", category: "Chest", subcategory: "Compound", isCustom: false, isHidden: false },
