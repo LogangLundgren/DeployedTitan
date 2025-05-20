@@ -503,11 +503,7 @@ export class MemStorage implements IStorage {
     return this.exercises.get(id);
   }
   
-  async findExerciseByReferenceId(referenceId: number, userId: number): Promise<Exercise | undefined> {
-    return Array.from(this.exercises.values()).find(
-      (exercise) => exercise.referenceId === referenceId && exercise.userId === userId
-    );
-  }
+
   
   async createExercise(insertExercise: InsertExercise): Promise<Exercise> {
     const id = this.exerciseCurrentId++;
