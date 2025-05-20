@@ -1,11 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
-import { Trash2, UserX, Bug, Lightbulb, MousePointer, MessageSquare } from "lucide-react";
+import { Trash2, UserX, Bug, Lightbulb, MousePointer, MessageSquare, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +25,10 @@ interface FeedbackItem {
 
 // Component to display feedback list
 function FeedbackList() {
+  const queryClient = useQueryClient();
+  
   // Fetch feedback from API
-  const { data: feedbackItems = [], isLoading, error } = useQuery({
+  const { data: feedbackItems = [], isLoading, error, refetch } = useQuery({
     queryKey: ['/api/feedback'],
     queryFn: async () => {
       const res = await apiRequest('GET', '/api/feedback');
@@ -34,8 +36,15 @@ function FeedbackList() {
         throw new Error('Failed to fetch feedback');
       }
       return await res.json() as FeedbackItem[];
-    }
+    },
+    refetchInterval: 3000, // Auto-refresh every 3 seconds
+    refetchOnWindowFocus: true // Refresh when window gets focus
   });
+  
+  // Manual refresh function
+  const handleRefresh = () => {
+    refetch();
+  };
 
   // Function to render icon based on feedback type
   const getFeedbackIcon = (type: string) => {
@@ -129,6 +138,7 @@ export default function Admin() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("users");
   
   // Check if user is authorized
   useEffect(() => {
@@ -224,7 +234,16 @@ export default function Admin() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
       
-      <Tabs defaultValue="users">
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(value) => {
+          setActiveTab(value);
+          // Refresh feedback data when switching to feedback tab
+          if (value === "feedback") {
+            queryClient.invalidateQueries({ queryKey: ['/api/feedback'] });
+          }
+        }}
+      >
         <TabsList className="mb-6">
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
@@ -307,11 +326,22 @@ export default function Admin() {
         
         <TabsContent value="feedback">
           <Card>
-            <CardHeader>
-              <CardTitle>User Feedback</CardTitle>
-              <CardDescription>
-                View feedback submitted by users.
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>User Feedback</CardTitle>
+                <CardDescription>
+                  View feedback submitted by users.
+                </CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/feedback'] })}
+                className="ml-auto"
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Refresh
+              </Button>
             </CardHeader>
             <CardContent>
               <FeedbackList />
