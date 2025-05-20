@@ -5212,6 +5212,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Delete feedback endpoint (Admin only)
+  app.delete("/api/feedback/:id", requireAuth, async (req, res) => {
+    // Check if user is admin (Logan Main)
+    if (!req.user || req.user.username !== "Logan Main") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid feedback ID" });
+      }
+      
+      const success = await storage.deleteFeedback(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Feedback not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting feedback:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Direct messaging routes
   
   // Get all message threads for the current user

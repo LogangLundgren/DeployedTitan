@@ -26,6 +26,7 @@ interface FeedbackItem {
 // Component to display feedback list
 function FeedbackList() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Fetch feedback from API
   const { data: feedbackItems = [], isLoading, error, refetch } = useQuery({
@@ -41,9 +42,36 @@ function FeedbackList() {
     refetchOnWindowFocus: true // Refresh when window gets focus
   });
   
-  // Manual refresh function
-  const handleRefresh = () => {
-    refetch();
+  // Delete feedback mutation
+  const deleteFeedbackMutation = useMutation({
+    mutationFn: async (feedbackId: number) => {
+      const res = await apiRequest('DELETE', `/api/feedback/${feedbackId}`);
+      if (!res.ok) {
+        throw new Error('Failed to delete feedback');
+      }
+      return feedbackId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/feedback'] });
+      toast({
+        title: "Feedback Deleted",
+        description: "The feedback has been successfully deleted."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete feedback: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Handle feedback deletion with confirmation
+  const handleDeleteFeedback = (feedbackId: number) => {
+    if (confirm('Are you sure you want to delete this feedback?')) {
+      deleteFeedbackMutation.mutate(feedbackId);
+    }
   };
 
   // Function to render icon based on feedback type
@@ -119,9 +147,21 @@ function FeedbackList() {
                 </span>
               )}
             </div>
-            <span className="text-xs text-muted-foreground">
-              {format(new Date(item.timestamp), "MMM d, yyyy 'at' h:mm a")}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground mr-2">
+                {format(new Date(item.timestamp), "MMM d, yyyy 'at' h:mm a")}
+              </span>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => handleDeleteFeedback(item.id)}
+                disabled={deleteFeedbackMutation.isPending}
+                className="text-destructive hover:text-destructive/90 hover:bg-destructive/10 h-8 w-8 p-0"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Delete</span>
+              </Button>
+            </div>
           </div>
           <p className="mt-2 whitespace-pre-wrap">{item.content}</p>
           <div className="mt-3 text-xs text-muted-foreground">
