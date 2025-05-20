@@ -4998,6 +4998,24 @@ export class DbStorage implements IStorage {
       return [];
     }
   }
+  
+  // MemStorage implementation of deleteFeedback
+  async deleteFeedback(id: number): Promise<boolean> {
+    try {
+      const { feedbacks } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const result = await db
+        .delete(feedbacks)
+        .where(eq(feedbacks.id, id))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting feedback:", error);
+      return false;
+    }
+  }
 
   async getUserSuggestion(id: number): Promise<UserSuggestion | undefined> {
     try {
