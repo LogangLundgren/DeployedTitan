@@ -3854,15 +3854,40 @@ export class DbStorage implements IStorage {
   
   // Exercise operations
   async getExercises(): Promise<Exercise[]> {
-    return await db.select().from(exercises);
+    // Use aliased select to avoid column naming issues
+    return await db.select({
+      id: exercises.id,
+      name: exercises.name,
+      category: exercises.category,
+      subcategory: exercises.subcategory,
+      userId: exercises.userId,
+      isCustom: exercises.isCustom,
+      createdAt: exercises.createdAt
+    }).from(exercises);
   }
   
   async getExercisesByCategory(category: string): Promise<Exercise[]> {
-    return await db.select().from(exercises).where(eq(exercises.category, category));
+    return await db.select({
+      id: exercises.id,
+      name: exercises.name,
+      category: exercises.category,
+      subcategory: exercises.subcategory,
+      userId: exercises.userId,
+      isCustom: exercises.isCustom,
+      createdAt: exercises.createdAt
+    }).from(exercises).where(eq(exercises.category, category));
   }
   
   async getExercise(id: number): Promise<Exercise | undefined> {
-    const result = await db.select().from(exercises).where(eq(exercises.id, id));
+    const result = await db.select({
+      id: exercises.id,
+      name: exercises.name,
+      category: exercises.category,
+      subcategory: exercises.subcategory,
+      userId: exercises.userId,
+      isCustom: exercises.isCustom,
+      createdAt: exercises.createdAt
+    }).from(exercises).where(eq(exercises.id, id));
     return result[0];
   }
   
