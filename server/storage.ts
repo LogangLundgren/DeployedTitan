@@ -498,6 +498,10 @@ export class MemStorage implements IStorage {
     return this.exercises.get(id);
   }
   
+  async getExerciseById(id: number): Promise<Exercise | undefined> {
+    return this.exercises.get(id);
+  }
+  
   async createExercise(insertExercise: InsertExercise): Promise<Exercise> {
     const id = this.exerciseCurrentId++;
     const exercise: Exercise = { 
@@ -505,10 +509,27 @@ export class MemStorage implements IStorage {
       id,
       subcategory: insertExercise.subcategory ?? null,
       userId: insertExercise.userId ?? null,
-      isCustom: insertExercise.isCustom ?? null
+      isCustom: insertExercise.isCustom ?? null,
+      isHidden: insertExercise.isHidden ?? false
     };
     this.exercises.set(id, exercise);
     return exercise;
+  }
+  
+  async updateExercise(id: number, exerciseUpdate: Partial<Exercise>): Promise<Exercise | undefined> {
+    const exercise = this.exercises.get(id);
+    
+    if (!exercise) {
+      return undefined;
+    }
+    
+    const updatedExercise = {
+      ...exercise,
+      ...exerciseUpdate
+    };
+    
+    this.exercises.set(id, updatedExercise);
+    return updatedExercise;
   }
   
   async deleteExercise(id: number): Promise<boolean> {
@@ -516,6 +537,13 @@ export class MemStorage implements IStorage {
       return false;
     }
     return this.exercises.delete(id);
+  }
+  
+  async deleteFeedback(id: number): Promise<boolean> {
+    if (!this.feedbacks.has(id)) {
+      return false;
+    }
+    return this.feedbacks.delete(id);
   }
   
   // Workout methods
@@ -3822,9 +3850,29 @@ export class DbStorage implements IStorage {
     return result[0];
   }
   
+  async getExerciseById(id: number): Promise<Exercise | undefined> {
+    const result = await db.select().from(exercises).where(eq(exercises.id, id));
+    return result[0];
+  }
+  
   async createExercise(exercise: InsertExercise): Promise<Exercise> {
     const result = await db.insert(exercises).values(exercise).returning();
     return result[0];
+  }
+  
+  async updateExercise(id: number, exerciseUpdate: Partial<Exercise>): Promise<Exercise | undefined> {
+    try {
+      const result = await db
+        .update(exercises)
+        .set(exerciseUpdate)
+        .where(eq(exercises.id, id))
+        .returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Update exercise error:", error);
+      return undefined;
+    }
   }
   
   async deleteExercise(id: number): Promise<boolean> {
