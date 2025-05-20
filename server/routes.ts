@@ -4232,6 +4232,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Exercise not found" });
       }
       
+      // For global exercises, we create a "removed" record instead of actually deleting
+      // This allows users to hide global exercises from their library
+      if (!exercise.isCustom && (exercise.userId === null || exercise.userId === undefined)) {
+        // Track this global exercise as removed for this user
+        await storage.removeExerciseFromUserLibrary(exerciseId, req.user.id);
+        return res.status(204).end();
+      }
+      
+      // For custom exercises, delete them as usual
+      // Only delete if the user is the owner of the custom exercise
+      if (exercise.isCustom && exercise.userId !== req.user.id) {
+        return res.status(403).json({ message: "You can only delete your own custom exercises" });
+      }
+      
       // Delete the exercise
       const deleted = await storage.deleteExercise(exerciseId);
       
