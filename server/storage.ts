@@ -52,7 +52,6 @@ export interface IStorage {
   getExercisesByCategory(category: string): Promise<Exercise[]>;
   getExercise(id: number): Promise<Exercise | undefined>;
   getExerciseById(id: number): Promise<Exercise | undefined>;
-  findExerciseByReferenceId(referenceId: number, userId: number): Promise<Exercise | undefined>;
   createExercise(exercise: InsertExercise): Promise<Exercise>;
   updateExercise(id: number, exercise: Partial<Exercise>): Promise<Exercise | undefined>;
   deleteExercise(id: number): Promise<boolean>;
@@ -513,8 +512,7 @@ export class MemStorage implements IStorage {
       subcategory: insertExercise.subcategory ?? null,
       userId: insertExercise.userId ?? null,
       isCustom: insertExercise.isCustom ?? null,
-      isHidden: insertExercise.isHidden ?? false,
-      referenceId: insertExercise.referenceId ?? null
+      isHidden: insertExercise.isHidden ?? false
     };
     this.exercises.set(id, exercise);
     return exercise;
