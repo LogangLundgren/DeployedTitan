@@ -52,6 +52,7 @@ export interface IStorage {
   getExercisesByCategory(category: string): Promise<Exercise[]>;
   getExercise(id: number): Promise<Exercise | undefined>;
   getExerciseById(id: number): Promise<Exercise | undefined>;
+  findExerciseByReferenceId(referenceId: number, userId: number): Promise<Exercise | undefined>;
   createExercise(exercise: InsertExercise): Promise<Exercise>;
   updateExercise(id: number, exercise: Partial<Exercise>): Promise<Exercise | undefined>;
   deleteExercise(id: number): Promise<boolean>;
@@ -502,6 +503,12 @@ export class MemStorage implements IStorage {
     return this.exercises.get(id);
   }
   
+  async findExerciseByReferenceId(referenceId: number, userId: number): Promise<Exercise | undefined> {
+    return Array.from(this.exercises.values()).find(
+      (exercise) => exercise.referenceId === referenceId && exercise.userId === userId
+    );
+  }
+  
   async createExercise(insertExercise: InsertExercise): Promise<Exercise> {
     const id = this.exerciseCurrentId++;
     const exercise: Exercise = { 
@@ -510,7 +517,8 @@ export class MemStorage implements IStorage {
       subcategory: insertExercise.subcategory ?? null,
       userId: insertExercise.userId ?? null,
       isCustom: insertExercise.isCustom ?? null,
-      isHidden: insertExercise.isHidden ?? false
+      isHidden: insertExercise.isHidden ?? false,
+      referenceId: insertExercise.referenceId ?? null
     };
     this.exercises.set(id, exercise);
     return exercise;
@@ -3852,6 +3860,15 @@ export class DbStorage implements IStorage {
   
   async getExerciseById(id: number): Promise<Exercise | undefined> {
     const result = await db.select().from(exercises).where(eq(exercises.id, id));
+    return result[0];
+  }
+  
+  async findExerciseByReferenceId(referenceId: number, userId: number): Promise<Exercise | undefined> {
+    const result = await db.select().from(exercises)
+      .where(and(
+        eq(exercises.referenceId, referenceId),
+        eq(exercises.userId, userId)
+      ));
     return result[0];
   }
   
