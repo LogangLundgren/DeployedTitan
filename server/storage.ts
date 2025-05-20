@@ -4653,30 +4653,27 @@ export class DbStorage implements IStorage {
     // Check if we have any users
     const userCount = await db.select().from(users);
     
-    if (userCount.length === 0) {
-      console.log('No users found in database. Initializing default exercises only.');
+    // Import the global exercises list
+    const { globalExercises } = await import('./global-exercises');
+    
+    // Check if we need to add global exercises
+    const exerciseCount = await db.select({ id: exercises.id }).from(exercises).where(eq(exercises.isCustom, false));
+    
+    if (exerciseCount.length === 0) {
+      console.log('No global exercises found in database. Adding comprehensive exercise library...');
       
-      // Add default exercises
-      const defaultExercises: InsertExercise[] = [
-        { name: 'Bench Press', category: 'Chest', subcategory: 'Strength', isCustom: false, userId: null },
-        { name: 'Incline Dumbbell Press', category: 'Chest', subcategory: 'Hypertrophy', isCustom: false, userId: null },
-        { name: 'Barbell Squat', category: 'Legs', subcategory: 'Compound', isCustom: false, userId: null },
-        { name: 'Cable Fly', category: 'Chest', subcategory: 'Isolation', isCustom: false, userId: null },
-        { name: 'Lat Pulldown', category: 'Back', subcategory: 'Compound', isCustom: false, userId: null },
-        { name: 'Overhead Press', category: 'Shoulders', subcategory: 'Compound', isCustom: false, userId: null },
-        { name: 'Deadlift', category: 'Back', subcategory: 'Compound', isCustom: false, userId: null },
-        { name: 'Bicep Curl', category: 'Arms', subcategory: 'Isolation', isCustom: false, userId: null },
-        { name: 'Tricep Extension', category: 'Arms', subcategory: 'Isolation', isCustom: false, userId: null },
-        { name: 'Leg Press', category: 'Legs', subcategory: 'Compound', isCustom: false, userId: null },
-        { name: 'Plank', category: 'Core', subcategory: 'Isometric', isCustom: false, userId: null },
-        { name: 'Russian Twist', category: 'Core', subcategory: 'Rotational', isCustom: false, userId: null }
-      ];
-      
-      for (const exercise of defaultExercises) {
-        await this.createExercise(exercise);
+      // Add all global exercises from our comprehensive list
+      for (const exercise of globalExercises) {
+        await this.createExercise(exercise as InsertExercise);
       }
       
-      // No sample workouts - let users create their own
+      console.log(`Added ${globalExercises.length} global exercises to the database.`);
+    } else {
+      console.log(`Found ${exerciseCount.length} global exercises already in the database.`);
+    }
+    
+    if (userCount.length === 0) {
+      console.log('No users found in database. Database initialization complete.');
     }
   }
   

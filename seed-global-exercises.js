@@ -1,7 +1,10 @@
-import { Exercise } from "@shared/schema";
+// This script seeds the database with the comprehensive global exercise library
+import { db } from './server/db.js';
+import { exercises } from './shared/schema.js';
+import { eq, and } from 'drizzle-orm';
 
-// Comprehensive global exercise library as requested by the user
-export const globalExercises: Omit<Exercise, 'id'>[] = [
+// Comprehensive global exercise library
+const globalExercises = [
   // Chest
   { name: 'Barbell Bench Press', category: 'Chest', subcategory: null, isCustom: false, userId: null },
   { name: 'Incline Dumbbell Press', category: 'Chest', subcategory: null, isCustom: false, userId: null },
@@ -44,3 +47,44 @@ export const globalExercises: Omit<Exercise, 'id'>[] = [
   { name: 'Walking Lunge', category: 'Lower Body', subcategory: 'Quads', isCustom: false, userId: null },
   { name: 'Cable Kickback', category: 'Lower Body', subcategory: 'Glutes', isCustom: false, userId: null },
 ];
+
+async function seedGlobalExercises() {
+  try {
+    console.log('Checking for existing global exercises...');
+    const existingExercises = await db.select().from(exercises).where(eq(exercises.isCustom, false));
+    
+    if (existingExercises.length > 0) {
+      console.log(`Found ${existingExercises.length} existing global exercises.`);
+      
+      // Optional: Delete existing global exercises if you want to start fresh
+      // Uncomment the following line to clear existing global exercises
+      // await db.delete(exercises).where(eq(exercises.isCustom, false));
+      // console.log('Deleted existing global exercises.');
+    }
+    
+    console.log('Adding new global exercises...');
+    for (const exercise of globalExercises) {
+      // Check if this exercise already exists
+      const existing = await db.select()
+        .from(exercises)
+        .where(eq(exercises.name, exercise.name))
+        .where(eq(exercises.category, exercise.category))
+        .where(eq(exercises.isCustom, false));
+      
+      if (existing.length === 0) {
+        await db.insert(exercises).values(exercise);
+        console.log(`Added: ${exercise.name} (${exercise.category})`);
+      } else {
+        console.log(`Skipped duplicate: ${exercise.name} (${exercise.category})`);
+      }
+    }
+    
+    console.log('Global exercise library seeding completed successfully!');
+  } catch (error) {
+    console.error('Error seeding global exercises:', error);
+  } finally {
+    process.exit(0);
+  }
+}
+
+seedGlobalExercises();
