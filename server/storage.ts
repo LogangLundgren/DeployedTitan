@@ -4057,9 +4057,19 @@ export class DbStorage implements IStorage {
           throw new Error(`Exercise with ID ${we.exerciseId} not found`);
         }
         
-        // Get sets for this workout exercise
+        // Get sets for this workout exercise with explicit column selection
         const setsResult = await db
-          .select()
+          .select({
+            id: sets.id,
+            workoutExerciseId: sets.workoutExerciseId,
+            weight: sets.weight,
+            reps: sets.reps,
+            order: sets.order,
+            completed: sets.completed,
+            duration: sets.duration,
+            distance: sets.distance,
+            notes: sets.notes
+          })
           .from(sets)
           .where(eq(sets.workoutExerciseId, we.id))
           .orderBy(sets.order);
@@ -4085,16 +4095,27 @@ export class DbStorage implements IStorage {
       });
     });
     
-    // Get comments for this workout
+    // Get comments for this workout with explicit column selection
     const commentsResult = await db
-      .select()
+      .select({
+        id: comments.id,
+        workoutId: comments.workoutId,
+        userId: comments.userId,
+        text: comments.text,
+        createdAt: comments.createdAt
+      })
       .from(comments)
       .where(eq(comments.workoutId, id))
       .orderBy(asc(comments.createdAt));
     
-    // Get likes for this workout
+    // Get likes for this workout with explicit column selection
     const likesResult = await db
-      .select()
+      .select({
+        id: likes.id,
+        workoutId: likes.workoutId,
+        userId: likes.userId,
+        createdAt: likes.createdAt
+      })
       .from(likes)
       .where(eq(likes.workoutId, id));
     

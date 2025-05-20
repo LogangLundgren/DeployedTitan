@@ -3,18 +3,18 @@ import { Exercise } from "@shared/schema";
 // Comprehensive global exercise library as requested by the user
 export const globalExercises: Omit<Exercise, 'id'>[] = [
   // Chest
-  { name: 'Barbell Bench Press', category: 'Chest', subcategory: null, isCustom: false, userId: null },
-  { name: 'Incline Dumbbell Press', category: 'Chest', subcategory: null, isCustom: false, userId: null },
-  { name: 'Chest Fly (Machine or Dumbbell)', category: 'Chest', subcategory: null, isCustom: false, userId: null },
-  { name: 'Push-Up', category: 'Chest', subcategory: null, isCustom: false, userId: null },
-  { name: 'Cable Crossover', category: 'Chest', subcategory: null, isCustom: false, userId: null },
+  { name: 'Barbell Bench Press', category: 'Chest', subcategory: null, isCustom: false, userId: null, createdAt: new Date() },
+  { name: 'Incline Dumbbell Press', category: 'Chest', subcategory: null, isCustom: false, userId: null, createdAt: new Date() },
+  { name: 'Chest Fly (Machine or Dumbbell)', category: 'Chest', subcategory: null, isCustom: false, userId: null, createdAt: new Date() },
+  { name: 'Push-Up', category: 'Chest', subcategory: null, isCustom: false, userId: null, createdAt: new Date() },
+  { name: 'Cable Crossover', category: 'Chest', subcategory: null, isCustom: false, userId: null, createdAt: new Date() },
   
   // Back
-  { name: 'Deadlift', category: 'Back', subcategory: null, isCustom: false, userId: null },
-  { name: 'Barbell Bent-Over Row', category: 'Back', subcategory: null, isCustom: false, userId: null },
-  { name: 'Lat Pulldown', category: 'Back', subcategory: null, isCustom: false, userId: null },
-  { name: 'Pull-Up', category: 'Back', subcategory: null, isCustom: false, userId: null },
-  { name: 'Seated Cable Row', category: 'Back', subcategory: null, isCustom: false, userId: null },
+  { name: 'Deadlift', category: 'Back', subcategory: null, isCustom: false, userId: null, createdAt: new Date() },
+  { name: 'Barbell Bent-Over Row', category: 'Back', subcategory: null, isCustom: false, userId: null, createdAt: new Date() },
+  { name: 'Lat Pulldown', category: 'Back', subcategory: null, isCustom: false, userId: null, createdAt: new Date() },
+  { name: 'Pull-Up', category: 'Back', subcategory: null, isCustom: false, userId: null, createdAt: new Date() },
+  { name: 'Seated Cable Row', category: 'Back', subcategory: null, isCustom: false, userId: null, createdAt: new Date() },
   
   // Shoulders
   { name: 'Overhead Barbell Press (Military Press)', category: 'Shoulders', subcategory: null, isCustom: false, userId: null },
