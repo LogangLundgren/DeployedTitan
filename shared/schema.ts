@@ -642,3 +642,19 @@ export const insertFeedbackSchema = createInsertSchema(feedbacks).omit({
 });
 export type Feedback = typeof feedbacks.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+
+// Removed Exercises schema (to track which global exercises a user has removed from their library)
+export const removedExercises = pgTable("removed_exercises", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  exerciseId: integer("exercise_id").references(() => exercises.id, { onDelete: "cascade" }).notNull(),
+  removedAt: timestamp("removed_at").defaultNow().notNull(),
+});
+
+export const insertRemovedExerciseSchema = createInsertSchema(removedExercises).pick({
+  userId: true,
+  exerciseId: true,
+});
+
+export type RemovedExercise = typeof removedExercises.$inferSelect;
+export type InsertRemovedExercise = z.infer<typeof insertRemovedExerciseSchema>;

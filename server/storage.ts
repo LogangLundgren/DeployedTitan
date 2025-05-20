@@ -53,6 +53,8 @@ export interface IStorage {
   getExercise(id: number): Promise<Exercise | undefined>;
   createExercise(exercise: InsertExercise): Promise<Exercise>;
   deleteExercise(id: number): Promise<boolean>;
+  removeExerciseFromUserLibrary(exerciseId: number, userId: number): Promise<boolean>;
+  getUserRemovedExercises(userId: number): Promise<number[]>;
   
   // Workout operations
   getWorkouts(userId: number): Promise<Workout[]>;
