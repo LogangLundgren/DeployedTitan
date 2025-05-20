@@ -13,6 +13,7 @@ import {
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
   follows, type Follow, type InsertFollow,
+  removedExercises, type RemovedExercise, type InsertRemovedExercise,
   coachProfiles, type CoachProfile, type InsertCoachProfile,
   workoutPlans, type WorkoutPlan, type InsertWorkoutPlan,
   workoutPlanDays, type WorkoutPlanDay, type InsertWorkoutPlanDay,
@@ -3856,16 +3857,22 @@ export class DbStorage implements IStorage {
   
   // Exercise operations
   async getExercises(): Promise<Exercise[]> {
-    // Use aliased select to avoid column naming issues
-    return await db.select({
-      id: exercises.id,
-      name: exercises.name,
-      category: exercises.category,
-      subcategory: exercises.subcategory,
-      userId: exercises.userId,
-      isCustom: exercises.isCustom,
-      createdAt: exercises.createdAt
-    }).from(exercises);
+    try {
+      // Use aliased select to match database schema to code fields
+      return await db.select({
+        id: exercises.id,
+        name: exercises.name,
+        category: exercises.category,
+        subcategory: exercises.subcategory,
+        userId: exercises.userId,
+        isCustom: exercises.isCustom,
+        createdAt: exercises.createdAt
+      }).from(exercises);
+    } catch (error) {
+      console.error("Error getting exercises:", error);
+      // Return empty array on error instead of crashing
+      return [];
+    }
   }
   
   async getExercisesByCategory(category: string): Promise<Exercise[]> {
