@@ -744,17 +744,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         exercises = await storage.getExercises();
       }
       
+      // Check for user-specific hidden exercise markers
+      const hiddenExerciseIds = new Set();
+      
+      // First, collect all user-specific hidden exercise references
+      exercises.forEach(exercise => {
+        if (exercise.userId === userId && exercise.isHidden && exercise.referenceId) {
+          hiddenExerciseIds.add(exercise.referenceId);
+        }
+      });
+      
       // Filter to show appropriate exercises based on visibility settings
       const filteredExercises = exercises.filter(exercise => {
         // If it's a system exercise (null userId) or the user's own exercise
         const isSystemOrUserExercise = exercise.userId === null || exercise.userId === userId;
         
-        // Check if the exercise is hidden
-        const isHidden = !!exercise.isHidden;
+        // Check if the exercise is hidden directly or via a user-specific hidden marker
+        const isHidden = !!exercise.isHidden || hiddenExerciseIds.has(exercise.id);
         
         // Logic for showing exercises:
         // 1. Always show user's own exercises (if not hidden or includeHidden is true)
-        // 2. Always show system exercises (if not hidden or includeHidden is true)
+        // 2. Always show system exercises (if not hidden or if there's no user-specific override marker)
         // 3. Never show other users' exercises
         
         // If the exercise is hidden and we're not including hidden exercises, filter it out
@@ -809,14 +819,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if this is a default exercise (no userId)
       if (!exercise.userId) {
-        // For default exercises, create a user-specific "hidden" version
+        // First check if we already have a user-specific version of this exercise
+        const existingHidden = await storage.findExerciseByReferenceId(exerciseId, userId);
+        
+        if (existingHidden) {
+          // If we already have a user-specific version, just make sure it's hidden
+          const updatedExercise = await storage.updateExercise(existingHidden.id, { isHidden: true });
+          return res.status(200).json(updatedExercise);
+        }
+        
+        // For default exercises, create a user-specific "hidden" version with a reference to the original
         const hiddenExercise = await storage.createExercise({
           name: exercise.name,
           category: exercise.category,
           subcategory: exercise.subcategory,
           userId: userId,
           isCustom: false,
-          isHidden: true
+          isHidden: true,
+          referenceId: exerciseId // Store reference to the original exercise
         });
         
         return res.status(200).json(hiddenExercise);
