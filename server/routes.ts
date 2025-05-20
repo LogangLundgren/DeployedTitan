@@ -739,9 +739,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Filter to show standard exercises (no userId) and user's custom exercises
       const filteredExercises = exercises.filter(exercise => {
-        // With our proper column selection in the storage.ts queries, 
-        // we can now consistently use camelCase property names
-        return exercise.userId === null || exercise.userId === undefined || exercise.userId === userId;
+        // Handle both camelCase and snake_case property names
+        const exerciseUserId = exercise.userId || exercise.user_id;
+        
+        // Include all standard exercises (those without a userId) and the user's custom exercises
+        return exerciseUserId === null || exerciseUserId === undefined || exerciseUserId === userId;
       });
       
       res.status(200).json(filteredExercises);
@@ -764,64 +766,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(exercise);
     } catch (error) {
       console.error("Create exercise error:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-  
-  // Route to remove a global exercise from a user's library
-  app.post("/api/exercises/:id/hide", requireAuth, async (req, res) => {
-    try {
-      const exerciseId = parseInt(req.params.id);
-      const userId = req.user?.id;
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-      
-      if (isNaN(exerciseId)) {
-        return res.status(400).json({ message: "Valid exercise ID is required" });
-      }
-      
-      // Check if the exercise exists
-      const exercise = await storage.getExercise(exerciseId);
-      if (!exercise) {
-        return res.status(404).json({ message: "Exercise not found" });
-      }
-      
-      // Check if it's a global exercise (not owned by any user)
-      if (exercise.userId !== null) {
-        return res.status(400).json({ message: "Only global exercises can be hidden" });
-      }
-      
-      // Remove from user's library
-      const success = await storage.removeExerciseFromUserLibrary(exerciseId, userId);
-      
-      if (!success) {
-        return res.status(500).json({ message: "Failed to hide exercise" });
-      }
-      
-      res.status(200).json({ message: "Exercise hidden from your library" });
-    } catch (error) {
-      console.error("Hide exercise error:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-  
-  // Route to get the user's hidden exercises
-  app.get("/api/exercises/hidden", requireAuth, async (req, res) => {
-    try {
-      const userId = req.user?.id;
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-      
-      // Get the list of exercise IDs that the user has removed
-      const hiddenExerciseIds = await storage.getUserRemovedExercises(userId);
-      
-      res.status(200).json({ hiddenExerciseIds });
-    } catch (error) {
-      console.error("Get hidden exercises error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -4286,20 +4230,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!exercise) {
         return res.status(404).json({ message: "Exercise not found" });
-      }
-      
-      // For global exercises, we create a "removed" record instead of actually deleting
-      // This allows users to hide global exercises from their library
-      if (!exercise.isCustom && (exercise.userId === null || exercise.userId === undefined)) {
-        // Track this global exercise as removed for this user
-        await storage.removeExerciseFromUserLibrary(exerciseId, req.user.id);
-        return res.status(204).end();
-      }
-      
-      // For custom exercises, delete them as usual
-      // Only delete if the user is the owner of the custom exercise
-      if (exercise.isCustom && exercise.userId !== req.user.id) {
-        return res.status(403).json({ message: "You can only delete your own custom exercises" });
       }
       
       // Delete the exercise

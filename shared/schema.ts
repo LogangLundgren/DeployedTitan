@@ -48,7 +48,6 @@ export const exercises = pgTable("exercises", {
   subcategory: text("subcategory"),
   userId: integer("user_id").references(() => users.id),
   isCustom: boolean("is_custom").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertExerciseSchema = createInsertSchema(exercises).pick({
@@ -642,19 +641,3 @@ export const insertFeedbackSchema = createInsertSchema(feedbacks).omit({
 });
 export type Feedback = typeof feedbacks.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
-
-// Removed Exercises schema (to track which global exercises a user has removed from their library)
-export const removedExercises = pgTable("removed_exercises", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-  exerciseId: integer("exercise_id").references(() => exercises.id, { onDelete: "cascade" }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertRemovedExerciseSchema = createInsertSchema(removedExercises).pick({
-  userId: true,
-  exerciseId: true,
-});
-
-export type RemovedExercise = typeof removedExercises.$inferSelect;
-export type InsertRemovedExercise = z.infer<typeof insertRemovedExerciseSchema>;

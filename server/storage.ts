@@ -53,8 +53,6 @@ export interface IStorage {
   getExercise(id: number): Promise<Exercise | undefined>;
   createExercise(exercise: InsertExercise): Promise<Exercise>;
   deleteExercise(id: number): Promise<boolean>;
-  removeExerciseFromUserLibrary(exerciseId: number, userId: number): Promise<boolean>;
-  getUserRemovedExercises(userId: number): Promise<number[]>;
   
   // Workout operations
   getWorkouts(userId: number): Promise<Workout[]>;
@@ -228,7 +226,6 @@ export class MemStorage implements IStorage {
   private mediaFiles: Map<number, MediaFile>;
   private comments: Map<number, Comment>;
   private likes: Map<number, Like>;
-  private removedExercises: Map<string, {userId: number, exerciseId: number}>;
   private follows: Map<number, Follow>;
   private coachProfiles: Map<number, CoachProfile>;
   private workoutPlans: Map<number, WorkoutPlan>;
@@ -239,7 +236,6 @@ export class MemStorage implements IStorage {
   private reviews: Map<number, Review>;
   private userSuggestions: Map<number, UserSuggestion>;
   private feedbacks: Map<number, Feedback>;
-  private removedExercises: Map<string, { userId: number, exerciseId: number }>;
   
   private userCurrentId: number;
   private exerciseCurrentId: number;
@@ -289,7 +285,6 @@ export class MemStorage implements IStorage {
     this.reviews = new Map();
     this.userSuggestions = new Map();
     this.feedbacks = new Map();
-    this.removedExercises = new Map();
     
     this.userCurrentId = 1;
     this.exerciseCurrentId = 1;
@@ -508,8 +503,7 @@ export class MemStorage implements IStorage {
       id,
       subcategory: insertExercise.subcategory ?? null,
       userId: insertExercise.userId ?? null,
-      isCustom: insertExercise.isCustom ?? null,
-      createdAt: insertExercise.createdAt ?? new Date()
+      isCustom: insertExercise.isCustom ?? null
     };
     this.exercises.set(id, exercise);
     return exercise;
@@ -520,47 +514,6 @@ export class MemStorage implements IStorage {
       return false;
     }
     return this.exercises.delete(id);
-  }
-  
-  async removeExerciseFromUserLibrary(exerciseId: number, userId: number): Promise<boolean> {
-    try {
-      // Generate a unique key to track this removal
-      const removalKey = `${userId}-${exerciseId}`;
-      
-      // Check if already removed
-      if (this.removedExercises.has(removalKey)) {
-        return true;
-      }
-      
-      // Store the removal record
-      this.removedExercises.set(removalKey, {
-        userId,
-        exerciseId
-      });
-      
-      return true;
-    } catch (error) {
-      console.error("Error removing exercise from user library:", error);
-      return false;
-    }
-  }
-  
-  async getUserRemovedExercises(userId: number): Promise<number[]> {
-    try {
-      const removedExerciseIds: number[] = [];
-      
-      // Iterate through all removal records to find ones for this user
-      for (const [key, removal] of this.removedExercises.entries()) {
-        if (removal.userId === userId) {
-          removedExerciseIds.push(removal.exerciseId);
-        }
-      }
-      
-      return removedExerciseIds;
-    } catch (error) {
-      console.error("Error getting user removed exercises:", error);
-      return [];
-    }
   }
   
   // Workout methods
@@ -3855,40 +3808,15 @@ export class DbStorage implements IStorage {
   
   // Exercise operations
   async getExercises(): Promise<Exercise[]> {
-    // Use aliased select to avoid column naming issues
-    return await db.select({
-      id: exercises.id,
-      name: exercises.name,
-      category: exercises.category,
-      subcategory: exercises.subcategory,
-      userId: exercises.userId,
-      isCustom: exercises.isCustom,
-      createdAt: exercises.createdAt
-    }).from(exercises);
+    return await db.select().from(exercises);
   }
   
   async getExercisesByCategory(category: string): Promise<Exercise[]> {
-    return await db.select({
-      id: exercises.id,
-      name: exercises.name,
-      category: exercises.category,
-      subcategory: exercises.subcategory,
-      userId: exercises.userId,
-      isCustom: exercises.isCustom,
-      createdAt: exercises.createdAt
-    }).from(exercises).where(eq(exercises.category, category));
+    return await db.select().from(exercises).where(eq(exercises.category, category));
   }
   
   async getExercise(id: number): Promise<Exercise | undefined> {
-    const result = await db.select({
-      id: exercises.id,
-      name: exercises.name,
-      category: exercises.category,
-      subcategory: exercises.subcategory,
-      userId: exercises.userId,
-      isCustom: exercises.isCustom,
-      createdAt: exercises.createdAt
-    }).from(exercises).where(eq(exercises.id, id));
+    const result = await db.select().from(exercises).where(eq(exercises.id, id));
     return result[0];
   }
   
@@ -3914,125 +3842,26 @@ export class DbStorage implements IStorage {
     }
   }
   
-  async removeExerciseFromUserLibrary(exerciseId: number, userId: number): Promise<boolean> {
-    try {
-      // Check if this exercise is already removed for this user
-      const existing = await db
-        .select()
-        .from(schema.removedExercises)
-        .where(
-          and(
-            eq(schema.removedExercises.exerciseId, exerciseId),
-            eq(schema.removedExercises.userId, userId)
-          )
-        );
-      
-      // If it's already been removed, no need to do it again
-      if (existing.length > 0) {
-        return true;
-      }
-      
-      // Add a record to mark this exercise as removed for this user
-      const result = await db
-        .insert(schema.removedExercises)
-        .values({
-          exerciseId,
-          userId,
-        })
-        .returning();
-      
-      return result.length > 0;
-    } catch (error) {
-      console.error("Error removing exercise from user library:", error);
-      return false;
-    }
-  }
-  
-  async getUserRemovedExercises(userId: number): Promise<number[]> {
-    try {
-      const result = await db
-        .select({ exerciseId: schema.removedExercises.exerciseId })
-        .from(schema.removedExercises)
-        .where(eq(schema.removedExercises.userId, userId));
-      
-      return result.map(row => row.exerciseId);
-    } catch (error) {
-      console.error("Error getting user removed exercises:", error);
-      return [];
-    }
-  }
-  
   // Workout operations
   async getWorkouts(userId: number): Promise<Workout[]> {
-    return await db.select({
-      id: workouts.id,
-      name: workouts.name,
-      date: workouts.date,
-      notes: workouts.notes,
-      duration: workouts.duration,
-      userId: workouts.userId,
-      category: workouts.category,
-      isPublic: workouts.isPublic,
-      caption: workouts.caption,
-      mediaUrls: workouts.mediaUrls,
-      isComplete: workouts.isComplete,
-      coachNotes: workouts.coachNotes,
-      coachShared: workouts.coachShared,
-      updatedAt: workouts.updatedAt
-    }).from(workouts).where(eq(workouts.userId, userId));
+    return await db.select().from(workouts).where(eq(workouts.userId, userId));
   }
   
   async getWorkout(id: number): Promise<Workout | undefined> {
-    const result = await db.select({
-      id: workouts.id,
-      name: workouts.name,
-      date: workouts.date,
-      notes: workouts.notes,
-      duration: workouts.duration,
-      userId: workouts.userId,
-      category: workouts.category,
-      isPublic: workouts.isPublic,
-      caption: workouts.caption,
-      mediaUrls: workouts.mediaUrls,
-      isComplete: workouts.isComplete,
-      coachNotes: workouts.coachNotes,
-      coachShared: workouts.coachShared,
-      updatedAt: workouts.updatedAt
-    }).from(workouts).where(eq(workouts.id, id));
+    const result = await db.select().from(workouts).where(eq(workouts.id, id));
     return result.length > 0 ? result[0] : undefined;
   }
   
   async getWorkoutWithDetails(id: number): Promise<WorkoutWithDetails | undefined> {
-    // First, get the workout with explicit column selection
-    const workoutResult = await db.select({
-      id: workouts.id,
-      name: workouts.name,
-      date: workouts.date,
-      notes: workouts.notes,
-      duration: workouts.duration,
-      userId: workouts.userId,
-      category: workouts.category,
-      isPublic: workouts.isPublic,
-      caption: workouts.caption,
-      mediaUrls: workouts.mediaUrls,
-      isComplete: workouts.isComplete,
-      coachNotes: workouts.coachNotes,
-      coachShared: workouts.coachShared,
-      updatedAt: workouts.updatedAt
-    }).from(workouts).where(eq(workouts.id, id));
+    // First, get the workout
+    const workoutResult = await db.select().from(workouts).where(eq(workouts.id, id));
     
     if (workoutResult.length === 0) return undefined;
     const workout = workoutResult[0];
     
-    // Get workout exercises with explicit column selection
+    // Get workout exercises
     const workoutExercisesResult = await db
-      .select({
-        id: workoutExercises.id,
-        workoutId: workoutExercises.workoutId,
-        exerciseId: workoutExercises.exerciseId,
-        order: workoutExercises.order,
-        notes: workoutExercises.notes
-      })
+      .select()
       .from(workoutExercises)
       .where(eq(workoutExercises.workoutId, id))
       .orderBy(workoutExercises.order);
@@ -4040,17 +3869,9 @@ export class DbStorage implements IStorage {
     // Process each workout exercise
     const exercisesWithDetails = await Promise.all(
       workoutExercisesResult.map(async (we: WorkoutExercise) => {
-        // Get exercise details with explicit column selection
+        // Get exercise details
         const exerciseResult = await db
-          .select({
-            id: exercises.id,
-            name: exercises.name,
-            category: exercises.category,
-            subcategory: exercises.subcategory,
-            userId: exercises.userId,
-            isCustom: exercises.isCustom,
-            createdAt: exercises.createdAt
-          })
+          .select()
           .from(exercises)
           .where(eq(exercises.id, we.exerciseId));
         
@@ -4058,19 +3879,9 @@ export class DbStorage implements IStorage {
           throw new Error(`Exercise with ID ${we.exerciseId} not found`);
         }
         
-        // Get sets for this workout exercise with explicit column selection
+        // Get sets for this workout exercise
         const setsResult = await db
-          .select({
-            id: sets.id,
-            workoutExerciseId: sets.workoutExerciseId,
-            weight: sets.weight,
-            reps: sets.reps,
-            order: sets.order,
-            completed: sets.completed,
-            duration: sets.duration,
-            distance: sets.distance,
-            notes: sets.notes
-          })
+          .select()
           .from(sets)
           .where(eq(sets.workoutExerciseId, we.id))
           .orderBy(sets.order);
@@ -4096,27 +3907,16 @@ export class DbStorage implements IStorage {
       });
     });
     
-    // Get comments for this workout with explicit column selection
+    // Get comments for this workout
     const commentsResult = await db
-      .select({
-        id: comments.id,
-        workoutId: comments.workoutId,
-        userId: comments.userId,
-        text: comments.text,
-        createdAt: comments.createdAt
-      })
+      .select()
       .from(comments)
       .where(eq(comments.workoutId, id))
       .orderBy(asc(comments.createdAt));
     
-    // Get likes for this workout with explicit column selection
+    // Get likes for this workout
     const likesResult = await db
-      .select({
-        id: likes.id,
-        workoutId: likes.workoutId,
-        userId: likes.userId,
-        createdAt: likes.createdAt
-      })
+      .select()
       .from(likes)
       .where(eq(likes.workoutId, id));
     
@@ -4139,24 +3939,9 @@ export class DbStorage implements IStorage {
   }
   
   async getRecentWorkouts(userId: number, limit: number): Promise<WorkoutWithDetails[]> {
-    // Get workouts for the user, sorted by date with explicit column selection
+    // Get workouts for the user, sorted by date
     const workoutResults = await db
-      .select({
-        id: workouts.id,
-        name: workouts.name,
-        date: workouts.date,
-        notes: workouts.notes,
-        duration: workouts.duration,
-        userId: workouts.userId,
-        category: workouts.category,
-        isPublic: workouts.isPublic,
-        caption: workouts.caption,
-        mediaUrls: workouts.mediaUrls,
-        isComplete: workouts.isComplete,
-        coachNotes: workouts.coachNotes,
-        coachShared: workouts.coachShared,
-        updatedAt: workouts.updatedAt
-      })
+      .select()
       .from(workouts)
       .where(eq(workouts.userId, userId))
       .orderBy(desc(workouts.date))
@@ -4171,24 +3956,10 @@ export class DbStorage implements IStorage {
   }
   
   async getCommunityWorkouts(limit: number = 50): Promise<WorkoutWithDetails[]> {
-    // Get public workouts from all users, sorted by date with explicit column selection
+    // Get public workouts from all users, sorted by date
+    // Use a much higher default limit to ensure we get all workouts
     const workoutResults = await db
-      .select({
-        id: workouts.id,
-        name: workouts.name,
-        date: workouts.date,
-        notes: workouts.notes,
-        duration: workouts.duration,
-        userId: workouts.userId,
-        category: workouts.category,
-        isPublic: workouts.isPublic,
-        caption: workouts.caption,
-        mediaUrls: workouts.mediaUrls,
-        isComplete: workouts.isComplete,
-        coachNotes: workouts.coachNotes,
-        coachShared: workouts.coachShared,
-        updatedAt: workouts.updatedAt
-      })
+      .select()
       .from(workouts)
       .where(eq(workouts.isPublic, true))
       .orderBy(desc(workouts.date))
@@ -4788,27 +4559,30 @@ export class DbStorage implements IStorage {
     // Check if we have any users
     const userCount = await db.select().from(users);
     
-    // Import the global exercises list
-    const { globalExercises } = await import('./global-exercises');
-    
-    // Check if we need to add global exercises
-    const exerciseCount = await db.select({ id: exercises.id }).from(exercises).where(eq(exercises.isCustom, false));
-    
-    if (exerciseCount.length === 0) {
-      console.log('No global exercises found in database. Adding comprehensive exercise library...');
+    if (userCount.length === 0) {
+      console.log('No users found in database. Initializing default exercises only.');
       
-      // Add all global exercises from our comprehensive list
-      for (const exercise of globalExercises) {
-        await this.createExercise(exercise as InsertExercise);
+      // Add default exercises
+      const defaultExercises: InsertExercise[] = [
+        { name: 'Bench Press', category: 'Chest', subcategory: 'Strength', isCustom: false, userId: null },
+        { name: 'Incline Dumbbell Press', category: 'Chest', subcategory: 'Hypertrophy', isCustom: false, userId: null },
+        { name: 'Barbell Squat', category: 'Legs', subcategory: 'Compound', isCustom: false, userId: null },
+        { name: 'Cable Fly', category: 'Chest', subcategory: 'Isolation', isCustom: false, userId: null },
+        { name: 'Lat Pulldown', category: 'Back', subcategory: 'Compound', isCustom: false, userId: null },
+        { name: 'Overhead Press', category: 'Shoulders', subcategory: 'Compound', isCustom: false, userId: null },
+        { name: 'Deadlift', category: 'Back', subcategory: 'Compound', isCustom: false, userId: null },
+        { name: 'Bicep Curl', category: 'Arms', subcategory: 'Isolation', isCustom: false, userId: null },
+        { name: 'Tricep Extension', category: 'Arms', subcategory: 'Isolation', isCustom: false, userId: null },
+        { name: 'Leg Press', category: 'Legs', subcategory: 'Compound', isCustom: false, userId: null },
+        { name: 'Plank', category: 'Core', subcategory: 'Isometric', isCustom: false, userId: null },
+        { name: 'Russian Twist', category: 'Core', subcategory: 'Rotational', isCustom: false, userId: null }
+      ];
+      
+      for (const exercise of defaultExercises) {
+        await this.createExercise(exercise);
       }
       
-      console.log(`Added ${globalExercises.length} global exercises to the database.`);
-    } else {
-      console.log(`Found ${exerciseCount.length} global exercises already in the database.`);
-    }
-    
-    if (userCount.length === 0) {
-      console.log('No users found in database. Database initialization complete.');
+      // No sample workouts - let users create their own
     }
   }
   

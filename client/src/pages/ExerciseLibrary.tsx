@@ -49,27 +49,13 @@ export default function ExerciseLibrary() {
     },
     enabled: !!user
   });
-  
-  // Fetch user's hidden exercises
-  const { data: hiddenExercisesData } = useQuery({
-    queryKey: ['/api/exercises/hidden'],
-    queryFn: async () => {
-      const response = await fetch('/api/exercises/hidden', {
-        credentials: 'include'
-      });
-      return await response.json();
-    },
-    enabled: !!user
-  });
-  
-  const hiddenExerciseIds = hiddenExercisesData?.hiddenExerciseIds || [];
 
   // We no longer need to separate standard and custom exercises as we're showing them all together
 
   // Get unique categories for filtering
   const categories = [...new Set(exercises.map(exercise => exercise.category))].sort();
 
-  // Mutation for deleting custom exercises
+  // Mutation for deleting any exercise
   const deleteExerciseMutation = useMutation({
     mutationFn: async (exerciseId: number) => {
       const res = await apiRequest("DELETE", `/api/exercises/${exerciseId}`);
@@ -96,35 +82,6 @@ export default function ExerciseLibrary() {
       setIsDeleteDialogOpen(false);
     },
   });
-  
-  // Mutation for hiding global exercises from user's library
-  const hideExerciseMutation = useMutation({
-    mutationFn: async (exerciseId: number) => {
-      const res = await apiRequest("POST", `/api/exercises/${exerciseId}/hide`);
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to hide exercise");
-      }
-      return exerciseId;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Exercise hidden",
-        description: "The exercise has been hidden from your library.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/exercises'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/exercises/hidden'] });
-      setIsDeleteDialogOpen(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to hide exercise: ${error.message}`,
-        variant: "destructive",
-      });
-      setIsDeleteDialogOpen(false);
-    },
-  });
 
   const handleDeleteClick = (exercise: Exercise) => {
     setExerciseToDelete(exercise);
@@ -133,13 +90,7 @@ export default function ExerciseLibrary() {
 
   const confirmDelete = () => {
     if (exerciseToDelete) {
-      // If it's a custom exercise, delete it
-      // If it's a global exercise, hide it from the user's library
-      if (exerciseToDelete.userId !== null) {
-        deleteExerciseMutation.mutate(exerciseToDelete.id);
-      } else {
-        hideExerciseMutation.mutate(exerciseToDelete.id);
-      }
+      deleteExerciseMutation.mutate(exerciseToDelete.id);
     }
   };
 
@@ -227,48 +178,40 @@ export default function ExerciseLibrary() {
           </div>
         ) : exercises.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {exercises
-              // Filter out hidden exercises
-              .filter(exercise => !hiddenExerciseIds.includes(exercise.id))
-              // Apply search and category filters
-              .filter(exercise => 
-                (searchQuery === '' || 
-                  exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  exercise.category.toLowerCase().includes(searchQuery.toLowerCase())
-                ) &&
-                (filterCategory === 'all' || exercise.category === filterCategory)
-              )
-              .map((exercise) => (
-                <Card key={exercise.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{exercise.name}</CardTitle>
-                        <CardDescription>
-                          {exercise.category}
-                          {exercise.subcategory && ` • ${exercise.subcategory}`}
-                        </CardDescription>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteClick(exercise)}
-                        className="h-8 w-8 text-destructive"
-                        title={exercise.userId !== null ? "Delete exercise" : "Hide exercise"}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
+            {exercises.filter(exercise => 
+              (searchQuery === '' || 
+                exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                exercise.category.toLowerCase().includes(searchQuery.toLowerCase())
+              ) &&
+              (filterCategory === 'all' || exercise.category === filterCategory)
+            ).map((exercise) => (
+              <Card key={exercise.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg">{exercise.name}</CardTitle>
+                      <CardDescription>
+                        {exercise.category}
+                        {exercise.subcategory && ` • ${exercise.subcategory}`}
+                      </CardDescription>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-muted-foreground">
-                      {exercise.userId !== null 
-                        ? "Custom exercise" 
-                        : "Global exercise"}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteClick(exercise)}
+                      className="h-8 w-8 text-destructive"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground">
+                    {exercise.isCustom ? "Custom exercise" : "Standard exercise"}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : (
           <div className="text-center py-16 border border-dashed rounded-lg">
@@ -304,21 +247,11 @@ export default function ExerciseLibrary() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              {exerciseToDelete?.userId !== null ? "Delete Exercise" : "Hide Exercise"}
+              Delete Exercise
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {exerciseToDelete?.userId !== null ? (
-                <>
-                  Are you sure you want to delete &quot;{exerciseToDelete?.name}&quot;? 
-                  This will permanently remove it from your exercise library.
-                </>
-              ) : (
-                <>
-                  Are you sure you want to hide &quot;{exerciseToDelete?.name}&quot;? 
-                  This will remove it from your personal exercise library, but it will remain 
-                  in the global library for other users.
-                </>
-              )}
+              Are you sure you want to delete &quot;{exerciseToDelete?.name}&quot;? 
+              This will permanently remove it from your exercise library.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -326,11 +259,9 @@ export default function ExerciseLibrary() {
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteExerciseMutation.isPending || hideExerciseMutation.isPending}
+              disabled={deleteExerciseMutation.isPending}
             >
-              {deleteExerciseMutation.isPending || hideExerciseMutation.isPending ? 
-                "Processing..." : 
-                exerciseToDelete?.userId !== null ? "Delete Exercise" : "Hide Exercise"}
+              {deleteExerciseMutation.isPending ? "Deleting..." : "Delete Exercise"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
