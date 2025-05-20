@@ -744,24 +744,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         exercises = await storage.getExercises();
       }
       
-      // Filter to show standard exercises (no userId) and user's custom exercises
-      // Also filter out exercises that the user has hidden (unless includeHidden is true)
+      // Filter to show appropriate exercises based on visibility settings
       const filteredExercises = exercises.filter(exercise => {
-        // Handle different property name formats
-        const exerciseUserId = exercise.userId;
+        // If it's a system exercise (null userId) or the user's own exercise
+        const isSystemOrUserExercise = exercise.userId === null || exercise.userId === userId;
         
-        // If the exercise is a standard exercise (no userId) or the user's custom exercise
-        const isUserExercise = exerciseUserId === null || exerciseUserId === undefined || exerciseUserId === userId;
+        // Check if the exercise is hidden
+        const isHidden = !!exercise.isHidden;
         
-        // For hidden exercises:
-        // 1. If it's a standard exercise with isHidden=true, don't show it unless includeHidden is true
-        // 2. If it's a user's custom exercise with isHidden=true, don't show it unless includeHidden is true
-        if (exercise.isHidden && !includeHidden) {
+        // Logic for showing exercises:
+        // 1. Always show user's own exercises (if not hidden or includeHidden is true)
+        // 2. Always show system exercises (if not hidden or includeHidden is true)
+        // 3. Never show other users' exercises
+        
+        // If the exercise is hidden and we're not including hidden exercises, filter it out
+        if (isHidden && !includeHidden) {
           return false;
         }
         
-        // Otherwise include if it's a user exercise
-        return isUserExercise;
+        // Only include the exercise if it's a system exercise or belongs to the user
+        return isSystemOrUserExercise;
       });
       
       res.status(200).json(filteredExercises);
