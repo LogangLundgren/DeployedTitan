@@ -3903,21 +3903,54 @@ export class DbStorage implements IStorage {
   }
   
   async getExercise(id: number): Promise<Exercise | undefined> {
-    const result = await db.select({
-      id: exercises.id,
-      name: exercises.name,
-      category: exercises.category,
-      subcategory: exercises.subcategory,
-      userId: exercises.userId,
-      isCustom: exercises.isCustom,
-      createdAt: exercises.createdAt
-    }).from(exercises).where(eq(exercises.id, id));
-    return result[0];
+    try {
+      const result = await db.select({
+        id: exercises.id,
+        name: exercises.name,
+        category: exercises.category,
+        subcategory: exercises.subcategory,
+        userId: exercises.userId,
+        isCustom: exercises.isCustom
+      }).from(exercises).where(eq(exercises.id, id));
+      
+      if (result.length === 0) {
+        return undefined;
+      }
+      
+      // Add createdAt to match expected schema
+      return {
+        ...result[0],
+        createdAt: new Date()
+      };
+    } catch (error) {
+      console.error(`Error getting exercise ${id}:`, error);
+      return undefined;
+    }
   }
   
   async createExercise(exercise: InsertExercise): Promise<Exercise> {
-    const result = await db.insert(exercises).values(exercise).returning();
-    return result[0];
+    try {
+      // Don't include createdAt in the insert since the column doesn't exist in DB
+      const result = await db
+        .insert(exercises)
+        .values({
+          name: exercise.name,
+          category: exercise.category,
+          subcategory: exercise.subcategory,
+          userId: exercise.userId,
+          isCustom: exercise.isCustom
+        })
+        .returning();
+      
+      // Add createdAt to the returned object to match expected schema
+      return {
+        ...result[0],
+        createdAt: new Date()
+      };
+    } catch (error) {
+      console.error("Error creating exercise:", error);
+      throw error;
+    }
   }
   
   async deleteExercise(id: number): Promise<boolean> {
