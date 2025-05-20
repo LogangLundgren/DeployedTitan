@@ -520,6 +520,47 @@ export class MemStorage implements IStorage {
     return this.exercises.delete(id);
   }
   
+  async removeExerciseFromUserLibrary(exerciseId: number, userId: number): Promise<boolean> {
+    try {
+      // Generate a unique key to track this removal
+      const removalKey = `${userId}-${exerciseId}`;
+      
+      // Check if already removed
+      if (this.removedExercises.has(removalKey)) {
+        return true;
+      }
+      
+      // Store the removal record
+      this.removedExercises.set(removalKey, {
+        userId,
+        exerciseId
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Error removing exercise from user library:", error);
+      return false;
+    }
+  }
+  
+  async getUserRemovedExercises(userId: number): Promise<number[]> {
+    try {
+      const removedExerciseIds: number[] = [];
+      
+      // Iterate through all removal records to find ones for this user
+      for (const [key, removal] of this.removedExercises.entries()) {
+        if (removal.userId === userId) {
+          removedExerciseIds.push(removal.exerciseId);
+        }
+      }
+      
+      return removedExerciseIds;
+    } catch (error) {
+      console.error("Error getting user removed exercises:", error);
+      return [];
+    }
+  }
+  
   // Workout methods
   async getWorkouts(userId: number): Promise<Workout[]> {
     return Array.from(this.workouts.values()).filter(
