@@ -13,7 +13,6 @@ import {
   comments, type Comment, type InsertComment,
   likes, type Like, type InsertLike,
   follows, type Follow, type InsertFollow,
-  removedExercises, type RemovedExercise, type InsertRemovedExercise,
   coachProfiles, type CoachProfile, type InsertCoachProfile,
   workoutPlans, type WorkoutPlan, type InsertWorkoutPlan,
   workoutPlanDays, type WorkoutPlanDay, type InsertWorkoutPlanDay,
@@ -504,14 +503,13 @@ export class MemStorage implements IStorage {
   
   async createExercise(insertExercise: InsertExercise): Promise<Exercise> {
     const id = this.exerciseCurrentId++;
-    // Create a complete exercise object with all required fields
     const exercise: Exercise = { 
       ...insertExercise, 
       id,
       subcategory: insertExercise.subcategory ?? null,
       userId: insertExercise.userId ?? null,
       isCustom: insertExercise.isCustom ?? null,
-      createdAt: new Date() // Always set the current date for consistency
+      createdAt: insertExercise.createdAt ?? new Date()
     };
     this.exercises.set(id, exercise);
     return exercise;
@@ -3857,100 +3855,46 @@ export class DbStorage implements IStorage {
   
   // Exercise operations
   async getExercises(): Promise<Exercise[]> {
-    try {
-      // Map database fields to code fields (createdAt doesn't exist in DB)
-      const result = await db.select({
-        id: exercises.id,
-        name: exercises.name,
-        category: exercises.category,
-        subcategory: exercises.subcategory,
-        userId: exercises.userId,
-        isCustom: exercises.isCustom
-      }).from(exercises);
-      
-      // Add createdAt field with current date to match expected schema
-      return result.map(exercise => ({
-        ...exercise,
-        createdAt: new Date() // Add default date since it's missing in DB
-      }));
-    } catch (error) {
-      console.error("Error getting exercises:", error);
-      // Return empty array on error instead of crashing
-      return [];
-    }
+    // Use aliased select to avoid column naming issues
+    return await db.select({
+      id: exercises.id,
+      name: exercises.name,
+      category: exercises.category,
+      subcategory: exercises.subcategory,
+      userId: exercises.userId,
+      isCustom: exercises.isCustom,
+      createdAt: exercises.createdAt
+    }).from(exercises);
   }
   
   async getExercisesByCategory(category: string): Promise<Exercise[]> {
-    try {
-      const result = await db.select({
-        id: exercises.id,
-        name: exercises.name,
-        category: exercises.category,
-        subcategory: exercises.subcategory,
-        userId: exercises.userId,
-        isCustom: exercises.isCustom
-      }).from(exercises).where(eq(exercises.category, category));
-      
-      // Add createdAt field with current date to match expected schema
-      return result.map(exercise => ({
-        ...exercise,
-        createdAt: new Date() // Add default date since it's missing in DB
-      }));
-    } catch (error) {
-      console.error(`Error getting exercises for category ${category}:`, error);
-      return [];
-    }
+    return await db.select({
+      id: exercises.id,
+      name: exercises.name,
+      category: exercises.category,
+      subcategory: exercises.subcategory,
+      userId: exercises.userId,
+      isCustom: exercises.isCustom,
+      createdAt: exercises.createdAt
+    }).from(exercises).where(eq(exercises.category, category));
   }
   
   async getExercise(id: number): Promise<Exercise | undefined> {
-    try {
-      const result = await db.select({
-        id: exercises.id,
-        name: exercises.name,
-        category: exercises.category,
-        subcategory: exercises.subcategory,
-        userId: exercises.userId,
-        isCustom: exercises.isCustom
-      }).from(exercises).where(eq(exercises.id, id));
-      
-      if (result.length === 0) {
-        return undefined;
-      }
-      
-      // Add createdAt to match expected schema
-      return {
-        ...result[0],
-        createdAt: new Date()
-      };
-    } catch (error) {
-      console.error(`Error getting exercise ${id}:`, error);
-      return undefined;
-    }
+    const result = await db.select({
+      id: exercises.id,
+      name: exercises.name,
+      category: exercises.category,
+      subcategory: exercises.subcategory,
+      userId: exercises.userId,
+      isCustom: exercises.isCustom,
+      createdAt: exercises.createdAt
+    }).from(exercises).where(eq(exercises.id, id));
+    return result[0];
   }
   
   async createExercise(exercise: InsertExercise): Promise<Exercise> {
-    try {
-      // Don't include createdAt in the insert since the column doesn't exist in DB
-      const result = await db
-        .insert(exercises)
-        .values({
-          name: exercise.name,
-          category: exercise.category,
-          subcategory: exercise.subcategory,
-          userId: exercise.userId,
-          isCustom: exercise.isCustom
-        })
-        .returning();
-      
-      // Add createdAt to the returned object to match expected schema
-      return {
-        ...result[0],
-        createdAt: new Date()
-      };
-    } catch (error) {
-      console.error("Error creating exercise:", error);
-      throw error;
-    }
+    const result = await db.insert(exercises).values(exercise).returning();
+    return result[0];
   }
   
   async deleteExercise(id: number): Promise<boolean> {
@@ -3972,25 +3916,32 @@ export class DbStorage implements IStorage {
   
   async removeExerciseFromUserLibrary(exerciseId: number, userId: number): Promise<boolean> {
     try {
-      // Insert into our newly created hidden_exercises table
-      console.log(`Hiding exercise ${exerciseId} for user ${userId}`);
+      // Check if this exercise is already removed for this user
+      const existing = await db
+        .select()
+        .from(schema.removedExercises)
+        .where(
+          and(
+            eq(schema.removedExercises.exerciseId, exerciseId),
+            eq(schema.removedExercises.userId, userId)
+          )
+        );
       
-      // Check if this exercise is already hidden for this user
-      const existing = await db.execute(
-        sql`SELECT id FROM hidden_exercises WHERE user_id = ${userId} AND exercise_id = ${exerciseId}`
-      );
-      
-      // If it's already hidden, no need to do it again
-      if (existing.rows.length > 0) {
+      // If it's already been removed, no need to do it again
+      if (existing.length > 0) {
         return true;
       }
       
-      // Insert a new record to hide this exercise for this user
-      await db.execute(
-        sql`INSERT INTO hidden_exercises (user_id, exercise_id) VALUES (${userId}, ${exerciseId})`
-      );
+      // Add a record to mark this exercise as removed for this user
+      const result = await db
+        .insert(schema.removedExercises)
+        .values({
+          exerciseId,
+          userId,
+        })
+        .returning();
       
-      return true;
+      return result.length > 0;
     } catch (error) {
       console.error("Error removing exercise from user library:", error);
       return false;
@@ -3999,14 +3950,12 @@ export class DbStorage implements IStorage {
   
   async getUserRemovedExercises(userId: number): Promise<number[]> {
     try {
-      console.log(`Getting hidden exercises for user ${userId}`);
-      // Query the hidden_exercises table we just created
-      const result = await db.execute(
-        sql`SELECT exercise_id FROM hidden_exercises WHERE user_id = ${userId}`
-      );
+      const result = await db
+        .select({ exerciseId: schema.removedExercises.exerciseId })
+        .from(schema.removedExercises)
+        .where(eq(schema.removedExercises.userId, userId));
       
-      // Extract exercise IDs from the result
-      return result.rows.map(row => parseInt(row.exercise_id));
+      return result.map(row => row.exerciseId);
     } catch (error) {
       console.error("Error getting user removed exercises:", error);
       return [];
@@ -4109,7 +4058,7 @@ export class DbStorage implements IStorage {
           throw new Error(`Exercise with ID ${we.exerciseId} not found`);
         }
         
-        // Get sets for this workout exercise with explicit column selection matching the schema
+        // Get sets for this workout exercise with explicit column selection
         const setsResult = await db
           .select({
             id: sets.id,
@@ -4117,6 +4066,9 @@ export class DbStorage implements IStorage {
             weight: sets.weight,
             reps: sets.reps,
             order: sets.order,
+            completed: sets.completed,
+            duration: sets.duration,
+            distance: sets.distance,
             notes: sets.notes
           })
           .from(sets)
@@ -4144,21 +4096,20 @@ export class DbStorage implements IStorage {
       });
     });
     
-    // Get comments for this workout with explicit column selection matching the schema
+    // Get comments for this workout with explicit column selection
     const commentsResult = await db
       .select({
         id: comments.id,
         workoutId: comments.workoutId,
         userId: comments.userId,
-        content: comments.content,
-        createdAt: comments.createdAt,
-        updatedAt: comments.updatedAt
+        text: comments.text,
+        createdAt: comments.createdAt
       })
       .from(comments)
       .where(eq(comments.workoutId, id))
       .orderBy(asc(comments.createdAt));
     
-    // Get likes for this workout with explicit column selection matching the schema
+    // Get likes for this workout with explicit column selection
     const likesResult = await db
       .select({
         id: likes.id,
