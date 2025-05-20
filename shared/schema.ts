@@ -48,6 +48,7 @@ export const exercises = pgTable("exercises", {
   subcategory: text("subcategory"),
   userId: integer("user_id").references(() => users.id),
   isCustom: boolean("is_custom").default(false),
+  isHidden: boolean("is_hidden").default(false), // Add isHidden field for users to hide exercises
 });
 
 export const insertExerciseSchema = createInsertSchema(exercises).pick({
@@ -56,6 +57,7 @@ export const insertExerciseSchema = createInsertSchema(exercises).pick({
   subcategory: true,
   userId: true,
   isCustom: true,
+  isHidden: true,
 });
 
 export const workouts = pgTable("workouts", {
