@@ -4058,7 +4058,7 @@ export class DbStorage implements IStorage {
           throw new Error(`Exercise with ID ${we.exerciseId} not found`);
         }
         
-        // Get sets for this workout exercise with explicit column selection
+        // Get sets for this workout exercise with explicit column selection matching the schema
         const setsResult = await db
           .select({
             id: sets.id,
@@ -4066,9 +4066,6 @@ export class DbStorage implements IStorage {
             weight: sets.weight,
             reps: sets.reps,
             order: sets.order,
-            completed: sets.completed,
-            duration: sets.duration,
-            distance: sets.distance,
             notes: sets.notes
           })
           .from(sets)
