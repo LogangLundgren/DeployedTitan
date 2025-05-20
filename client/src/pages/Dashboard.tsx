@@ -197,15 +197,18 @@ function UserFeedbackForm() {
     setIsSubmitting(true);
     
     try {
-      // Send the feedback to the server using the user suggestions API
-      const response = await fetch('/api/user-suggestions', {
+      // Send the feedback to the server using the feedback API
+      const response = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
-          subject: subject || "General Feedback",
+          type: 'feature',
           content: feedback,
-          category: "Feature Request"
+          userId: user.id,
+          username: user.username,
+          path: window.location.pathname,
+          userAgent: navigator.userAgent,
+          timestamp: new Date().toISOString()
         }),
       });
       
