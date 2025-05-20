@@ -503,13 +503,14 @@ export class MemStorage implements IStorage {
   
   async createExercise(insertExercise: InsertExercise): Promise<Exercise> {
     const id = this.exerciseCurrentId++;
+    // Create a complete exercise object with all required fields
     const exercise: Exercise = { 
       ...insertExercise, 
       id,
       subcategory: insertExercise.subcategory ?? null,
       userId: insertExercise.userId ?? null,
       isCustom: insertExercise.isCustom ?? null,
-      createdAt: insertExercise.createdAt ?? new Date()
+      createdAt: new Date() // Always set the current date for consistency
     };
     this.exercises.set(id, exercise);
     return exercise;
@@ -4093,20 +4094,21 @@ export class DbStorage implements IStorage {
       });
     });
     
-    // Get comments for this workout with explicit column selection
+    // Get comments for this workout with explicit column selection matching the schema
     const commentsResult = await db
       .select({
         id: comments.id,
         workoutId: comments.workoutId,
         userId: comments.userId,
-        text: comments.text,
-        createdAt: comments.createdAt
+        content: comments.content,
+        createdAt: comments.createdAt,
+        updatedAt: comments.updatedAt
       })
       .from(comments)
       .where(eq(comments.workoutId, id))
       .orderBy(asc(comments.createdAt));
     
-    // Get likes for this workout with explicit column selection
+    // Get likes for this workout with explicit column selection matching the schema
     const likesResult = await db
       .select({
         id: likes.id,
