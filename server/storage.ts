@@ -51,7 +51,9 @@ export interface IStorage {
   getExercises(): Promise<Exercise[]>;
   getExercisesByCategory(category: string): Promise<Exercise[]>;
   getExercise(id: number): Promise<Exercise | undefined>;
+  getExerciseById(id: number): Promise<Exercise | undefined>;
   createExercise(exercise: InsertExercise): Promise<Exercise>;
+  updateExercise(id: number, exercise: Partial<Exercise>): Promise<Exercise | undefined>;
   deleteExercise(id: number): Promise<boolean>;
   
   // Workout operations

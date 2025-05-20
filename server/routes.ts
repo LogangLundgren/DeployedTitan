@@ -738,12 +738,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Filter to show standard exercises (no userId) and user's custom exercises
+      // Also filter out exercises that the user has hidden
       const filteredExercises = exercises.filter(exercise => {
         // Handle both camelCase and snake_case property names
         const exerciseUserId = exercise.userId || exercise.user_id;
         
-        // Include all standard exercises (those without a userId) and the user's custom exercises
-        return exerciseUserId === null || exerciseUserId === undefined || exerciseUserId === userId;
+        // If the exercise is a standard exercise (no userId) or the user's custom exercise
+        const isUserExercise = exerciseUserId === null || exerciseUserId === undefined || exerciseUserId === userId;
+        
+        // Include only if it's a user exercise and not hidden
+        return isUserExercise && !(exercise.userId === userId && exercise.isHidden);
       });
       
       res.status(200).json(filteredExercises);
@@ -767,6 +771,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Create exercise error:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Hide exercise endpoint
+  app.post("/api/exercises/:id/hide", requireAuth, async (req, res) => {
+    try {
+      const exerciseId = parseInt(req.params.id);
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Get the exercise
+      const exercise = await storage.getExerciseById(exerciseId);
+      
+      if (!exercise) {
+        return res.status(404).json({ message: "Exercise not found" });
+      }
+      
+      // Check if this is a default exercise (no userId)
+      if (!exercise.userId) {
+        // For default exercises, create a user-specific "hidden" version
+        const hiddenExercise = await storage.createExercise({
+          name: exercise.name,
+          category: exercise.category,
+          subcategory: exercise.subcategory,
+          userId: userId,
+          isCustom: false,
+          isHidden: true
+        });
+        
+        return res.status(200).json(hiddenExercise);
+      } else if (exercise.userId === userId) {
+        // For user's own exercises, update to hide it
+        const updatedExercise = await storage.updateExercise(exerciseId, { isHidden: true });
+        return res.status(200).json(updatedExercise);
+      } else {
+        return res.status(403).json({ message: "Not authorized to hide this exercise" });
+      }
+    } catch (error) {
+      console.error("Hide exercise error:", error);
+      res.status(500).json({ message: "Failed to hide exercise" });
+    }
+  });
+  
+  // Unhide exercise endpoint
+  app.post("/api/exercises/:id/unhide", requireAuth, async (req, res) => {
+    try {
+      const exerciseId = parseInt(req.params.id);
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Get the exercise
+      const exercise = await storage.getExerciseById(exerciseId);
+      
+      if (!exercise) {
+        return res.status(404).json({ message: "Exercise not found" });
+      }
+      
+      // Only user's own exercises can be unhidden
+      if (exercise.userId === userId) {
+        const updatedExercise = await storage.updateExercise(exerciseId, { isHidden: false });
+        return res.status(200).json(updatedExercise);
+      } else {
+        return res.status(403).json({ message: "Not authorized to unhide this exercise" });
+      }
+    } catch (error) {
+      console.error("Unhide exercise error:", error);
+      res.status(500).json({ message: "Failed to unhide exercise" });
     }
   });
   
