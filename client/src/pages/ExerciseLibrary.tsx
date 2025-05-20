@@ -39,7 +39,7 @@ export default function ExerciseLibrary() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   // Fetch all exercises
-  const { data: exercises = [], isLoading: isLoadingExercises } = useQuery<Exercise[]>({
+  const { data: exercisesResponse, isLoading: isLoadingExercises } = useQuery({
     queryKey: ['/api/exercises'],
     queryFn: async () => {
       const response = await fetch('/api/exercises', {
@@ -49,6 +49,9 @@ export default function ExerciseLibrary() {
     },
     enabled: !!user
   });
+  
+  // Ensure exercises is always an array even if API returns invalid data
+  const exercises = Array.isArray(exercisesResponse) ? exercisesResponse : [];
   
   // Fetch user's hidden exercises
   const { data: hiddenExercisesData } = useQuery({
