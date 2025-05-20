@@ -40,17 +40,16 @@ export default function ManageExercisesModal({ exercises, onExerciseDeleted }: M
   const [exerciseToDelete, setExerciseToDelete] = useState<Exercise | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // Filter exercises to only show custom exercises belonging to the current user
-  const customExercises = exercises.filter(exercise => 
-    (exercise.isCustom || exercise.userId === user?.id) && 
-    (exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-     exercise.category.toLowerCase().includes(searchQuery.toLowerCase()))
+  // Filter exercises to show all exercises in the user's library that match the search
+  const filteredExercises = exercises.filter(exercise => 
+    exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    exercise.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Mutation for deleting a custom exercise
+  // Mutation for deleting any exercise from the user's library
   const deleteExerciseMutation = useMutation({
     mutationFn: async (exerciseId: number) => {
-      const res = await apiRequest("DELETE", `/api/exercises/custom/${exerciseId}`);
+      const res = await apiRequest("DELETE", `/api/exercises/${exerciseId}`);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || "Failed to delete exercise");
@@ -60,7 +59,7 @@ export default function ManageExercisesModal({ exercises, onExerciseDeleted }: M
     onSuccess: () => {
       toast({
         title: "Exercise deleted",
-        description: "The custom exercise has been removed from your library.",
+        description: "The exercise has been removed from your library.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
       setIsDeleteDialogOpen(false);
@@ -101,9 +100,9 @@ export default function ManageExercisesModal({ exercises, onExerciseDeleted }: M
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Manage Custom Exercises</DialogTitle>
+            <DialogTitle>Manage Exercise Library</DialogTitle>
             <DialogDescription>
-              View and delete custom exercises from your personal exercise library.
+              View and remove exercises from your personal exercise library.
             </DialogDescription>
           </DialogHeader>
           
@@ -116,16 +115,21 @@ export default function ManageExercisesModal({ exercises, onExerciseDeleted }: M
             />
             
             <div className="max-h-[300px] overflow-y-auto">
-              {customExercises.length > 0 ? (
+              {filteredExercises.length > 0 ? (
                 <div className="space-y-2">
-                  {customExercises.map((exercise) => (
+                  {filteredExercises.map((exercise) => (
                     <div
                       key={exercise.id}
                       className="flex items-center justify-between p-3 bg-muted rounded-md"
                     >
                       <div>
                         <div className="font-medium">{exercise.name}</div>
-                        <div className="text-sm text-muted-foreground">{exercise.category}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {exercise.category}
+                          {exercise.isCustom || exercise.userId === user?.id ? 
+                            <span className="ml-2 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">Custom</span> : 
+                            <span className="ml-2 text-xs bg-secondary/20 text-secondary-foreground px-1.5 py-0.5 rounded-full">Global</span>}
+                        </div>
                       </div>
                       <Button
                         variant="ghost"
