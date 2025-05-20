@@ -508,7 +508,8 @@ export class MemStorage implements IStorage {
       id,
       subcategory: insertExercise.subcategory ?? null,
       userId: insertExercise.userId ?? null,
-      isCustom: insertExercise.isCustom ?? null
+      isCustom: insertExercise.isCustom ?? null,
+      createdAt: insertExercise.createdAt ?? new Date()
     };
     this.exercises.set(id, exercise);
     return exercise;
