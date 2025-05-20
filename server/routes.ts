@@ -753,10 +753,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // If the exercise is a standard exercise (no userId) or the user's custom exercise
         const isUserExercise = exerciseUserId === null || exerciseUserId === undefined || exerciseUserId === userId;
         
-        // Include only if:
-        // 1. It's a user exercise, AND
-        // 2. Either we're showing hidden exercises OR it's not hidden
-        return isUserExercise && (includeHidden || !(exercise.userId === userId && exercise.isHidden));
+        // For hidden exercises:
+        // 1. If it's a standard exercise with isHidden=true, don't show it unless includeHidden is true
+        // 2. If it's a user's custom exercise with isHidden=true, don't show it unless includeHidden is true
+        if (exercise.isHidden && !includeHidden) {
+          return false;
+        }
+        
+        // Otherwise include if it's a user exercise
+        return isUserExercise;
       });
       
       res.status(200).json(filteredExercises);
