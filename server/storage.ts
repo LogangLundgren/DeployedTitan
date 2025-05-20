@@ -238,6 +238,7 @@ export class MemStorage implements IStorage {
   private reviews: Map<number, Review>;
   private userSuggestions: Map<number, UserSuggestion>;
   private feedbacks: Map<number, Feedback>;
+  private removedExercises: Map<string, { userId: number, exerciseId: number }>;
   
   private userCurrentId: number;
   private exerciseCurrentId: number;
@@ -287,6 +288,7 @@ export class MemStorage implements IStorage {
     this.reviews = new Map();
     this.userSuggestions = new Map();
     this.feedbacks = new Map();
+    this.removedExercises = new Map();
     
     this.userCurrentId = 1;
     this.exerciseCurrentId = 1;
@@ -3841,6 +3843,54 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Delete exercise error:", error);
       return false;
+    }
+  }
+  
+  async removeExerciseFromUserLibrary(exerciseId: number, userId: number): Promise<boolean> {
+    try {
+      // Check if this exercise is already removed for this user
+      const existing = await db
+        .select()
+        .from(removedExercises)
+        .where(
+          and(
+            eq(removedExercises.exerciseId, exerciseId),
+            eq(removedExercises.userId, userId)
+          )
+        );
+      
+      // If it's already been removed, no need to do it again
+      if (existing.length > 0) {
+        return true;
+      }
+      
+      // Add a record to mark this exercise as removed for this user
+      const result = await db
+        .insert(removedExercises)
+        .values({
+          exerciseId,
+          userId,
+        })
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error removing exercise from user library:", error);
+      return false;
+    }
+  }
+  
+  async getUserRemovedExercises(userId: number): Promise<number[]> {
+    try {
+      const result = await db
+        .select({ exerciseId: removedExercises.exerciseId })
+        .from(removedExercises)
+        .where(eq(removedExercises.userId, userId));
+      
+      return result.map(row => row.exerciseId);
+    } catch (error) {
+      console.error("Error getting user removed exercises:", error);
+      return [];
     }
   }
   
