@@ -228,6 +228,7 @@ export class MemStorage implements IStorage {
   private mediaFiles: Map<number, MediaFile>;
   private comments: Map<number, Comment>;
   private likes: Map<number, Like>;
+  private removedExercises: Map<string, {userId: number, exerciseId: number}>;
   private follows: Map<number, Follow>;
   private coachProfiles: Map<number, CoachProfile>;
   private workoutPlans: Map<number, WorkoutPlan>;

@@ -648,7 +648,7 @@ export const removedExercises = pgTable("removed_exercises", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   exerciseId: integer("exercise_id").references(() => exercises.id, { onDelete: "cascade" }).notNull(),
-  removedAt: timestamp("removed_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertRemovedExerciseSchema = createInsertSchema(removedExercises).pick({
