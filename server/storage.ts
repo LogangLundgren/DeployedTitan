@@ -206,6 +206,7 @@ export interface IStorage {
   // Feedback operations
   saveFeedback(feedback: Feedback): Promise<Feedback>;
   getFeedback(): Promise<Feedback[]>;
+  deleteFeedback(id: number): Promise<boolean>;
   
   // DB-specific method
   initialize?(): Promise<void>;
