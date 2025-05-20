@@ -3972,11 +3972,24 @@ export class DbStorage implements IStorage {
   
   async removeExerciseFromUserLibrary(exerciseId: number, userId: number): Promise<boolean> {
     try {
-      // The removed_exercises table doesn't exist in the database
-      // We'll log the request but return true to prevent errors
-      console.log(`Removing exercise ${exerciseId} for user ${userId}`);
+      // Insert into our newly created hidden_exercises table
+      console.log(`Hiding exercise ${exerciseId} for user ${userId}`);
       
-      // Return true to make the UI behave as expected
+      // Check if this exercise is already hidden for this user
+      const existing = await db.execute(
+        sql`SELECT id FROM hidden_exercises WHERE user_id = ${userId} AND exercise_id = ${exerciseId}`
+      );
+      
+      // If it's already hidden, no need to do it again
+      if (existing.rows.length > 0) {
+        return true;
+      }
+      
+      // Insert a new record to hide this exercise for this user
+      await db.execute(
+        sql`INSERT INTO hidden_exercises (user_id, exercise_id) VALUES (${userId}, ${exerciseId})`
+      );
+      
       return true;
     } catch (error) {
       console.error("Error removing exercise from user library:", error);
@@ -3986,10 +3999,14 @@ export class DbStorage implements IStorage {
   
   async getUserRemovedExercises(userId: number): Promise<number[]> {
     try {
-      // Since the removed_exercises table appears to be missing, return empty array for now
-      // This prevents errors when trying to access a non-existent table
       console.log(`Getting hidden exercises for user ${userId}`);
-      return [];
+      // Query the hidden_exercises table we just created
+      const result = await db.execute(
+        sql`SELECT exercise_id FROM hidden_exercises WHERE user_id = ${userId}`
+      );
+      
+      // Extract exercise IDs from the result
+      return result.rows.map(row => parseInt(row.exercise_id));
     } catch (error) {
       console.error("Error getting user removed exercises:", error);
       return [];
