@@ -3893,11 +3893,11 @@ export class DbStorage implements IStorage {
       // Check if this exercise is already removed for this user
       const existing = await db
         .select()
-        .from(removedExercises)
+        .from(schema.removedExercises)
         .where(
           and(
-            eq(removedExercises.exerciseId, exerciseId),
-            eq(removedExercises.userId, userId)
+            eq(schema.removedExercises.exerciseId, exerciseId),
+            eq(schema.removedExercises.userId, userId)
           )
         );
       
@@ -3908,7 +3908,7 @@ export class DbStorage implements IStorage {
       
       // Add a record to mark this exercise as removed for this user
       const result = await db
-        .insert(removedExercises)
+        .insert(schema.removedExercises)
         .values({
           exerciseId,
           userId,
@@ -3925,9 +3925,9 @@ export class DbStorage implements IStorage {
   async getUserRemovedExercises(userId: number): Promise<number[]> {
     try {
       const result = await db
-        .select({ exerciseId: removedExercises.exerciseId })
-        .from(removedExercises)
-        .where(eq(removedExercises.userId, userId));
+        .select({ exerciseId: schema.removedExercises.exerciseId })
+        .from(schema.removedExercises)
+        .where(eq(schema.removedExercises.userId, userId));
       
       return result.map(row => row.exerciseId);
     } catch (error) {
