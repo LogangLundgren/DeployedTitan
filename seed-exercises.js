@@ -1,5 +1,11 @@
 // Script to seed the database with a comprehensive global exercise library
-import { pool } from './server/db.js';
+import 'dotenv/config';
+import pkg from 'pg';
+const { Pool } = pkg;
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
 
 async function seedExercises() {
   console.log('Starting to seed global exercise library...');
@@ -82,4 +88,12 @@ async function seedExercises() {
   }
 }
 
-seedExercises();
+// Set createdAt field for all exercises
+const now = new Date();
+for (const exercise of globalExercises) {
+  exercise.createdAt = now;
+}
+
+seedExercises()
+  .then(() => console.log('Done seeding exercises!'))
+  .catch(err => console.error('Error:', err));
