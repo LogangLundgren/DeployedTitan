@@ -49,19 +49,19 @@ export default function CoachDashboard() {
     enabled: !!user?.isCoach,
   });
 
-  // Mock data for demonstration (replace with real data from backend)
-  const mockAnalytics = {
-    totalClients: clients.length || 12,
-    activeClients: 9,
-    monthlyRevenue: 2400,
-    revenueGrowth: 12.5,
-    averageRating: 4.8,
-    totalRatings: 47,
-    completedWorkouts: 156,
-    workoutGrowth: 23,
-    messagesSent: 89,
-    plansSold: 8,
-    clientRetention: 85
+  // Use real analytics data from backend with proper fallbacks
+  const analyticsData = {
+    totalClients: analytics?.totalClients || (Array.isArray(clients) ? clients.length : 0),
+    activeClients: analytics?.activeClients || 0,
+    monthlyRevenue: analytics?.monthlyRevenue || 0,
+    revenueGrowth: analytics?.revenueGrowth || 0,
+    averageRating: analytics?.averageRating || 0,
+    totalRatings: analytics?.totalRatings || 0,
+    completedWorkouts: analytics?.completedWorkouts || 0,
+    workoutGrowth: analytics?.workoutGrowth || 0,
+    messagesSent: analytics?.messagesSent || 0,
+    plansSold: analytics?.plansSold || 0,
+    clientRetention: analytics?.clientRetention || 0
   };
 
   if (!user?.isCoach) {
@@ -107,9 +107,9 @@ export default function CoachDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockAnalytics.totalClients}</div>
+            <div className="text-2xl font-bold">{analyticsData.totalClients}</div>
             <p className="text-xs text-muted-foreground">
-              {mockAnalytics.activeClients} active this week
+              {analyticsData.activeClients} active this week
             </p>
           </CardContent>
         </Card>
@@ -120,10 +120,10 @@ export default function CoachDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${mockAnalytics.monthlyRevenue}</div>
+            <div className="text-2xl font-bold">${analyticsData.monthlyRevenue}</div>
             <p className="text-xs text-green-600 flex items-center">
               <ArrowUp className="h-3 w-3 mr-1" />
-              +{mockAnalytics.revenueGrowth}% from last month
+              +{analyticsData.revenueGrowth}% from last month
             </p>
           </CardContent>
         </Card>
@@ -134,9 +134,9 @@ export default function CoachDashboard() {
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockAnalytics.averageRating}/5</div>
+            <div className="text-2xl font-bold">{analyticsData.averageRating}/5</div>
             <p className="text-xs text-muted-foreground">
-              Based on {mockAnalytics.totalRatings} reviews
+              Based on {analyticsData.totalRatings} reviews
             </p>
           </CardContent>
         </Card>
@@ -147,10 +147,10 @@ export default function CoachDashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockAnalytics.completedWorkouts}</div>
+            <div className="text-2xl font-bold">{analyticsData.completedWorkouts}</div>
             <p className="text-xs text-green-600 flex items-center">
               <ArrowUp className="h-3 w-3 mr-1" />
-              +{mockAnalytics.workoutGrowth}% this month
+              +{analyticsData.workoutGrowth}% this month
             </p>
           </CardContent>
         </Card>
@@ -237,7 +237,7 @@ export default function CoachDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {clients.length > 0 ? clients.slice(0, 6).map((client: any, index: number) => (
+                {Array.isArray(clients) && clients.length > 0 ? clients.slice(0, 6).map((client: any, index: number) => (
                   <div key={client.id || index} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -293,9 +293,9 @@ export default function CoachDashboard() {
                 <div>
                   <div className="flex justify-between text-sm mb-2">
                     <span>Client Retention Rate</span>
-                    <span>{mockAnalytics.clientRetention}%</span>
+                    <span>{analyticsData.clientRetention}%</span>
                   </div>
-                  <Progress value={mockAnalytics.clientRetention} className="h-2" />
+                  <Progress value={analyticsData.clientRetention} className="h-2" />
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-2">
@@ -314,12 +314,12 @@ export default function CoachDashboard() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Plans Sold This Month</span>
-                  <Badge>{mockAnalytics.plansSold}</Badge>
+                  <Badge>{analyticsData.plansSold}</Badge>
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Messages Sent</span>
-                  <Badge variant="outline">{mockAnalytics.messagesSent}</Badge>
+                  <Badge variant="outline">{analyticsData.messagesSent}</Badge>
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center">
@@ -340,15 +340,15 @@ export default function CoachDashboard() {
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-sm text-muted-foreground">This Month</p>
-                  <p className="text-2xl font-bold">${mockAnalytics.monthlyRevenue}</p>
+                  <p className="text-2xl font-bold">${analyticsData.monthlyRevenue}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Last Month</p>
-                  <p className="text-lg">${Math.round(mockAnalytics.monthlyRevenue / 1.125)}</p>
+                  <p className="text-lg">${Math.round(analyticsData.monthlyRevenue / 1.125)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Growth</p>
-                  <p className="text-lg text-green-600">+{mockAnalytics.revenueGrowth}%</p>
+                  <p className="text-lg text-green-600">+{analyticsData.revenueGrowth}%</p>
                 </div>
               </CardContent>
             </Card>
