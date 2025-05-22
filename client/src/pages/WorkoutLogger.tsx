@@ -492,10 +492,11 @@ export default function WorkoutLogger() {
               >
                 <div className="flex items-center gap-2">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2v20"/>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.29 7 12 12 20.71 7"></polyline>
+                    <line x1="12" y1="22" x2="12" y2="12"></line>
                   </svg>
-                  Programs
+                  Programs & Plans
                 </div>
               </TabsTrigger>
               <TabsTrigger 
@@ -536,19 +537,7 @@ export default function WorkoutLogger() {
                   Exercises
                 </div>
               </TabsTrigger>
-              <TabsTrigger 
-                value="plans"
-                className="h-12 px-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none data-[state=active]:text-primary"
-              >
-                <div className="flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                    <polyline points="3.29 7 12 12 20.71 7"></polyline>
-                    <line x1="12" y1="22" x2="12" y2="12"></line>
-                  </svg>
-                  My Plans
-                </div>
-              </TabsTrigger>
+
             </TabsList>
           </div>
           
@@ -578,8 +567,9 @@ export default function WorkoutLogger() {
                   </div>
                 </div>
               ) : (
-                // When no workout is started, show the template selector
+                // Combined Programs & Plans view
                 <div>
+                  {/* Programs Section */}
                   <div className="p-4 flex justify-between items-center border-b">
                     <h3 className="text-lg font-semibold">Your Workout Programs</h3>
                     <div className="flex gap-2">
@@ -687,6 +677,13 @@ export default function WorkoutLogger() {
                           </form>
                         </DialogContent>
                       </Dialog>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => window.location.href = '/marketplace'}
+                      >
+                        Browse Marketplace
+                      </Button>
                     </div>
                   </div>
                   <div>
@@ -694,6 +691,19 @@ export default function WorkoutLogger() {
                       userId={user?.id}
                       onWorkoutCreated={handleWorkoutCreated} 
                     />
+                  </div>
+
+                  {/* Purchased Plans Section */}
+                  <div className="border-t">
+                    <div className="p-4 border-b">
+                      <h3 className="text-lg font-semibold">Your Purchased Plans</h3>
+                    </div>
+                    <div className="p-4">
+                      <PurchasedWorkoutPlans 
+                        onWorkoutCreated={handleWorkoutCreated}
+                        updateTab={updateActiveTab}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
