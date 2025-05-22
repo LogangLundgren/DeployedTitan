@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Star, 
   PlusCircle,
@@ -76,6 +77,16 @@ export default function MyPlans() {
     queryKey: ['/api/workout-plans/my-plans'],
     queryFn: () => fetch('/api/workout-plans/my-plans').then(res => res.json()),
     enabled: !!userId && !!user?.isCoach
+  });
+
+  // Fetch purchased programs for regular users
+  const { 
+    data: purchasedPlans = [], 
+    isLoading: isPurchasedPlansLoading 
+  } = useQuery({
+    queryKey: ['/api/purchases/my-purchases'],
+    queryFn: () => fetch('/api/purchases/my-purchases').then(res => res.json()),
+    enabled: !!userId
   });
   
   // Delete workout plan mutation
