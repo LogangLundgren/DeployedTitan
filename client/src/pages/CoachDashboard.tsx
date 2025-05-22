@@ -24,12 +24,21 @@ import {
   ArrowUp,
   ArrowDown
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { format, subDays, startOfWeek, endOfWeek } from "date-fns";
 
 export default function CoachDashboard() {
   const { user } = useAuth();
   const [dateRange, setDateRange] = useState("week");
+  const [location, setLocation] = useLocation();
+
+  // Function to start conversation with a client
+  const startConversationWithClient = (clientId: number, clientName: string) => {
+    // Store client info for the Messages component to pick up
+    sessionStorage.setItem('startConversationWithUser', clientId.toString());
+    sessionStorage.setItem('startConversationWithUserName', clientName);
+    setLocation('/messages');
+  };
 
   // Fetch coach analytics data
   const { data: analytics, isLoading: isLoadingAnalytics } = useQuery({
@@ -175,12 +184,7 @@ export default function CoachDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {[
-                  { type: "workout", user: "Sarah M.", action: "completed Push Day workout", time: "2 hours ago" },
-                  { type: "message", user: "Mike R.", action: "sent you a message", time: "4 hours ago" },
-                  { type: "purchase", user: "Emma L.", action: "purchased your Strength Program", time: "1 day ago" },
-                  { type: "review", user: "John D.", action: "left a 5-star review", time: "2 days ago" },
-                ].map((activity, index) => (
+                {Array.isArray(recentActivity) && recentActivity.length > 0 ? recentActivity.map((activity: any, index: number) => (
                   <div key={index} className="flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full ${
                       activity.type === "workout" ? "bg-green-500" :
@@ -190,12 +194,17 @@ export default function CoachDashboard() {
                     }`} />
                     <div className="flex-1">
                       <p className="text-sm">
-                        <span className="font-medium">{activity.user}</span> {activity.action}
+                        <span className="font-medium">{activity.userName || activity.user}</span> {activity.action || activity.description}
                       </p>
-                      <p className="text-xs text-muted-foreground">{activity.time}</p>
+                      <p className="text-xs text-muted-foreground">{activity.time || activity.timestamp}</p>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Clock className="h-8 w-8 mx-auto mb-2" />
+                    <p>No recent activity</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -252,10 +261,21 @@ export default function CoachDashboard() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-green-600">Active</Badge>
-                      <Button size="sm" variant="outline" asChild>
-                        <Link href={`/messages?user=${client.id}`}>Message</Link>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => startConversationWithClient(client.id, client.name || client.username)}
+                      >
+                        Message
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        asChild
+                      >
+                        <Link href={`/client-management/${client.id}`}>Manage</Link>
                       </Button>
                     </div>
                   </div>

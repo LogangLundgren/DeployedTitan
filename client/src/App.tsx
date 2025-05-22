@@ -45,6 +45,7 @@ import { FeedbackWidget } from "./components/FeedbackWidget";
 import { initializeErrorMonitoring } from "./lib/errorMonitoring";
 import Admin from "./pages/Admin"; // New Admin page
 import CoachDashboard from "./pages/CoachDashboard";
+import ClientManagement from "./pages/ClientManagement";
 
 function Router() {
   const { user } = useAuth();
@@ -100,6 +101,7 @@ function Router() {
             <ProtectedRoute path="/users/:userId" component={UserProfile} />
             <ProtectedRoute path="/my-plans" component={MyPlans} />
             <ProtectedRoute path="/coach-dashboard" component={CoachDashboard} />
+            <ProtectedRoute path="/client-management/:id" component={ClientManagement} />
             <ProtectedRoute path="/become-coach" component={BecomeCoach} />
             <ProtectedRoute path="/create-plan" component={CreatePlan} />
             <ProtectedRoute path="/edit-plan/:id" component={CreatePlan} />
