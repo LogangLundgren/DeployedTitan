@@ -223,26 +223,6 @@ export default function ExerciseLibrary() {
           </p>
         </div>
         <div className="flex gap-2">
-          {user?.isCoach && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center gap-1"
-                    onClick={handlePopulateDefaults}
-                    disabled={populateDefaultsMutation.isPending}
-                  >
-                    <Download size={16} />
-                    {populateDefaultsMutation.isPending ? 'Adding...' : 'Add Default Exercises'}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Add comprehensive library of default exercises</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
           <CustomExerciseModal 
             onExerciseCreated={() => {
               toast({
