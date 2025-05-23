@@ -51,14 +51,20 @@ export default function ClientManagement() {
   // Fetch client's workout history (this comes from their actual workouts)
   const { data: clientWorkouts = [], isLoading: isLoadingWorkouts } = useQuery({
     queryKey: ["/api/workouts", "client", clientId],
-    queryFn: () => fetch(`/api/workouts?userId=${clientId}`).then(res => res.json()),
+    queryFn: () => {
+      console.log(`Fetching workouts for client ID: ${clientId}`);
+      return fetch(`/api/workouts?userId=${clientId}`).then(res => res.json());
+    },
     enabled: !!user?.isCoach && !!clientId,
   });
 
   // Fetch client's analytics data (same as what they see on their analytics page)
   const { data: clientAnalytics, isLoading: isLoadingAnalytics } = useQuery({
     queryKey: ["/api/analytics", "client", clientId],
-    queryFn: () => fetch(`/api/analytics?userId=${clientId}`).then(res => res.json()),
+    queryFn: () => {
+      console.log(`Fetching analytics for client ID: ${clientId}`);
+      return fetch(`/api/analytics?userId=${clientId}`).then(res => res.json());
+    },
     enabled: !!user?.isCoach && !!clientId,
   });
 
