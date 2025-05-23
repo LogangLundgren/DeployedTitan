@@ -947,11 +947,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Workout routes
   app.get("/api/workouts", requireAuth, async (req, res) => {
     try {
-      // Use the authenticated user's ID from req.user
-      const userId = req.user.id;
+      const { userId: clientUserId } = req.query;
+      const currentUserId = req.user.id;
+      
+      // If no clientUserId is provided, return current user's workouts
+      let targetUserId = currentUserId;
+      
+      // If clientUserId is provided, verify the current user is a coach
+      if (clientUserId) {
+        if (!req.user.isCoach) {
+          return res.status(403).json({ message: "Only coaches can view client workouts" });
+        }
+        targetUserId = parseInt(clientUserId as string);
+        
+        if (isNaN(targetUserId)) {
+          return res.status(400).json({ message: "Invalid client user ID" });
+        }
+      }
       
       // We should return full workout details when getting all workouts
-      const workoutBasics = await storage.getWorkouts(userId);
+      const workoutBasics = await storage.getWorkouts(targetUserId);
       
       // Get full details for each workout
       const workoutsWithDetails = await Promise.all(
@@ -2042,6 +2057,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({ message: "All notifications marked as read" });
     } catch (error) {
       console.error("Mark all notifications as read error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Analytics endpoint - supports viewing client data for coaches
+  app.get("/api/analytics", requireAuth, async (req, res) => {
+    try {
+      const { userId: clientUserId } = req.query;
+      const currentUserId = req.user.id;
+      
+      // If no clientUserId is provided, return current user's analytics
+      let targetUserId = currentUserId;
+      
+      // If clientUserId is provided, verify the current user is a coach
+      if (clientUserId) {
+        if (!req.user.isCoach) {
+          return res.status(403).json({ message: "Only coaches can view client analytics" });
+        }
+        targetUserId = parseInt(clientUserId as string);
+        
+        if (isNaN(targetUserId)) {
+          return res.status(400).json({ message: "Invalid client user ID" });
+        }
+      }
+      
+      // Generate mock analytics data for the target user
+      const analyticsData = {
+        totalWorkouts: Math.floor(Math.random() * 50) + 10,
+        currentStreak: Math.floor(Math.random() * 14) + 1,
+        longestStreak: Math.floor(Math.random() * 20) + 5,
+        averageWorkoutsPerWeek: (Math.random() * 3 + 2).toFixed(1),
+        totalVolume: Math.floor(Math.random() * 50000) + 10000,
+        strengthGains: Math.floor(Math.random() * 30) + 15,
+        topExercises: [
+          { name: "Bench Press", count: Math.floor(Math.random() * 20) + 10 },
+          { name: "Squat", count: Math.floor(Math.random() * 18) + 8 },
+          { name: "Deadlift", count: Math.floor(Math.random() * 15) + 5 }
+        ],
+        weeklyProgress: Array.from({length: 12}, (_, i) => ({
+          week: `Week ${i + 1}`,
+          workouts: Math.floor(Math.random() * 6) + 1,
+          volume: Math.floor(Math.random() * 5000) + 2000
+        }))
+      };
+      
+      res.status(200).json(analyticsData);
+    } catch (error) {
+      console.error("Get analytics error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
