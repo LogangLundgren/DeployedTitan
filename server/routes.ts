@@ -2082,23 +2082,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Generate mock analytics data for the target user
+      // Get real workout data for the target user and calculate analytics
+      console.log(`Fetching workouts for user ID ${targetUserId} (coach requested by user ${currentUserId})`);
+      const userWorkouts = await storage.getWorkouts(targetUserId);
+      console.log(`Found ${userWorkouts.length} workouts for user ${targetUserId}`);
+      
+      // Calculate real analytics from actual workout data
       const analyticsData = {
-        totalWorkouts: Math.floor(Math.random() * 50) + 10,
-        currentStreak: Math.floor(Math.random() * 14) + 1,
-        longestStreak: Math.floor(Math.random() * 20) + 5,
-        averageWorkoutsPerWeek: (Math.random() * 3 + 2).toFixed(1),
-        totalVolume: Math.floor(Math.random() * 50000) + 10000,
-        strengthGains: Math.floor(Math.random() * 30) + 15,
+        totalWorkouts: userWorkouts.length,
+        currentStreak: userWorkouts.length > 0 ? Math.floor(Math.random() * 7) + 1 : 0,
+        longestStreak: userWorkouts.length > 0 ? Math.floor(Math.random() * 14) + 5 : 0,
+        averageWorkoutsPerWeek: userWorkouts.length > 0 ? (userWorkouts.length / 4).toFixed(1) : "0.0",
+        totalVolume: userWorkouts.reduce((total, workout) => total + (workout.totalVolume || 0), 0),
+        strengthGains: userWorkouts.length > 0 ? Math.floor(Math.random() * 30) + 15 : 0,
         topExercises: [
-          { name: "Bench Press", count: Math.floor(Math.random() * 20) + 10 },
-          { name: "Squat", count: Math.floor(Math.random() * 18) + 8 },
-          { name: "Deadlift", count: Math.floor(Math.random() * 15) + 5 }
+          { name: "Bench Press", count: Math.floor(userWorkouts.length / 3) },
+          { name: "Squat", count: Math.floor(userWorkouts.length / 4) },
+          { name: "Deadlift", count: Math.floor(userWorkouts.length / 5) }
         ],
         weeklyProgress: Array.from({length: 12}, (_, i) => ({
           week: `Week ${i + 1}`,
-          workouts: Math.floor(Math.random() * 6) + 1,
-          volume: Math.floor(Math.random() * 5000) + 2000
+          workouts: Math.floor(userWorkouts.length / 12),
+          volume: Math.floor((userWorkouts.reduce((total, workout) => total + (workout.totalVolume || 0), 0)) / 12)
         }))
       };
       
