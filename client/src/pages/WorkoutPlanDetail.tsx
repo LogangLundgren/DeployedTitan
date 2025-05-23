@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -27,6 +30,18 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import PlanForkModal from '@/components/workout/PlanForkModal';
+
+// Form schema for editing workout plan details
+const editPlanSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  price: z.number().min(0, "Price must be 0 or greater"),
+  durationWeeks: z.number().min(1, "Duration must be at least 1 week"),
+  difficultyLevel: z.enum(["Beginner", "Intermediate", "Advanced"]),
+  category: z.string().min(1, "Category is required"),
+  goals: z.string(),
+  equipment: z.string(),
+});
 import {
   Tabs,
   TabsContent,
@@ -37,6 +52,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import {
   Dialog,
   DialogContent,
@@ -171,10 +191,27 @@ export default function WorkoutPlanDetail() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [addTemplateDialogOpen, setAddTemplateDialogOpen] = useState(false);
   const [forkModalOpen, setForkModalOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const planId = parseInt(params.id);
   const { user } = useAuth();
+
+  // Initialize form for editing plan details
+  const form = useForm<z.infer<typeof editPlanSchema>>({
+    resolver: zodResolver(editPlanSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      price: 0,
+      durationWeeks: 1,
+      difficultyLevel: "Beginner",
+      category: "",
+      goals: "",
+      equipment: "",
+    },
+  });
 
   const { 
     data: plan, 
@@ -342,6 +379,74 @@ export default function WorkoutPlanDetail() {
       });
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  // Handle plan editing
+  const handleEditPlan = async (values: z.infer<typeof editPlanSchema>) => {
+    if (!plan || !plan.id) return;
+    
+    try {
+      setIsUpdating(true);
+      
+      // Convert string fields back to arrays for goals and equipment
+      const updateData = {
+        ...values,
+        goals: values.goals ? values.goals.split(',').map(g => g.trim()).filter(g => g) : [],
+        equipment: values.equipment ? values.equipment.split(',').map(e => e.trim()).filter(e => e) : [],
+      };
+      
+      const response = await fetch(`/api/workout-plans/${plan.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update workout plan');
+      }
+      
+      toast({
+        title: "Success",
+        description: `"${values.title}" has been updated successfully.`,
+      });
+      
+      // Invalidate queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', planId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/my-plans'] });
+      
+      setEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating workout plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update workout plan. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Open edit dialog and populate form with current plan data
+  const openEditDialog = () => {
+    if (plan) {
+      form.reset({
+        title: plan.title,
+        description: plan.description,
+        price: plan.price,
+        durationWeeks: plan.durationWeeks,
+        difficultyLevel: plan.difficultyLevel as "Beginner" | "Intermediate" | "Advanced",
+        category: plan.category,
+        goals: plan.goals ? plan.goals.join(', ') : '',
+        equipment: plan.equipment ? plan.equipment.join(', ') : '',
+      });
+      setEditDialogOpen(true);
     }
   };
 
