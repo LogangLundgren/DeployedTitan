@@ -132,7 +132,7 @@ export default function ClientManagement() {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => startConversationWithClient(parseInt(clientId), client?.name || client?.username)}
+                onClick={() => startConversationWithClient(parseInt(clientId || '0'), client?.name || client?.username || 'Client')}
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Message Client
