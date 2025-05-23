@@ -149,6 +149,10 @@ export default function WorkoutDetail() {
         "DELETE",
         `/api/comments/${commentId}`
       );
+      // Don't try to parse JSON for 204 responses
+      if (response.status === 204) {
+        return { success: true };
+      }
       return await response.json();
     },
     onSuccess: () => {

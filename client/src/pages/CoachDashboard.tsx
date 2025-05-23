@@ -165,10 +165,10 @@ export default function CoachDashboard() {
         </Card>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs defaultValue="clients" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="clients">Client Management</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
         </TabsList>
