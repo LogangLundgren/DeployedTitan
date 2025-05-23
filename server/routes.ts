@@ -947,6 +947,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Workout routes
   app.get("/api/workouts", requireAuth, async (req, res) => {
     try {
+      console.log(`=== WORKOUTS REQUEST ===`);
+      console.log(`Query params:`, req.query);
+      console.log(`User making request:`, req.user.id);
+      
       const { userId: clientUserId } = req.query;
       const currentUserId = req.user.id;
       
