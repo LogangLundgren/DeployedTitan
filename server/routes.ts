@@ -979,6 +979,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter out any undefined results
       const validWorkouts = workoutsWithDetails.filter(workout => workout !== undefined) as WorkoutWithDetails[];
       
+      console.log(`Returning ${validWorkouts.length} valid workouts for user ${targetUserId}`);
+      
+      // Prevent caching for client-specific data
+      if (clientUserId) {
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+      
       res.status(200).json(validWorkouts);
     } catch (error) {
       console.error("Get workouts error:", error);

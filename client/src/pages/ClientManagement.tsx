@@ -53,9 +53,15 @@ export default function ClientManagement() {
     queryKey: ["/api/workouts", "client", clientId],
     queryFn: () => {
       console.log(`Fetching workouts for client ID: ${clientId}`);
-      return fetch(`/api/workouts?userId=${clientId}`).then(res => res.json());
+      return fetch(`/api/workouts?userId=${clientId}&_t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      }).then(res => res.json());
     },
     enabled: !!user?.isCoach && !!clientId,
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache results
   });
 
   // Fetch client's analytics data (same as what they see on their analytics page)
