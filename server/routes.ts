@@ -966,12 +966,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // We should return full workout details when getting all workouts
+      console.log(`Fetching workouts for target user ID: ${targetUserId} (requested by coach ${currentUserId})`);
       const workoutBasics = await storage.getWorkouts(targetUserId);
+      console.log(`Found ${workoutBasics.length} basic workouts for user ${targetUserId}`);
       
       // Get full details for each workout
       const workoutsWithDetails = await Promise.all(
         workoutBasics.map(workout => storage.getWorkoutWithDetails(workout.id))
       );
+      console.log(`Processed ${workoutsWithDetails.length} workouts with details`);
       
       // Filter out any undefined results
       const validWorkouts = workoutsWithDetails.filter(workout => workout !== undefined) as WorkoutWithDetails[];
