@@ -169,7 +169,6 @@ export default function CoachDashboard() {
         <TabsList>
           <TabsTrigger value="clients">Client Management</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
         </TabsList>
 
@@ -296,60 +295,7 @@ export default function CoachDashboard() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Client Engagement</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Workout Completion Rate</span>
-                    <span>87%</span>
-                  </div>
-                  <Progress value={87} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Client Retention Rate</span>
-                    <span>{analyticsData.clientRetention}%</span>
-                  </div>
-                  <Progress value={analyticsData.clientRetention} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Message Response Rate</span>
-                    <span>94%</span>
-                  </div>
-                  <Progress value={94} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Performance Metrics</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Plans Sold This Month</span>
-                  <Badge>{analyticsData.plansSold}</Badge>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Messages Sent</span>
-                  <Badge variant="outline">{analyticsData.messagesSent}</Badge>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Average Session Duration</span>
-                  <Badge variant="outline">47 min</Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
 
         <TabsContent value="revenue" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

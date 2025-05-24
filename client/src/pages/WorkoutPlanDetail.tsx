@@ -794,15 +794,6 @@ export default function WorkoutPlanDetail() {
                       Edit Plan Details
                     </Button>
                     
-                    <Button 
-                      className="w-full mb-2" 
-                      variant="outline"
-                      onClick={() => setAddTemplateDialogOpen(true)}
-                    >
-                      <Plus className="mr-2 h-5 w-5" />
-                      Add Workout Template
-                    </Button>
-                    
                     {user.isCoach && plan && (
                       <>
                         <Button 
