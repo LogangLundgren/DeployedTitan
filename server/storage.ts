@@ -1232,7 +1232,7 @@ export class MemStorage implements IStorage {
         title: "New Like",
         message: `Someone liked your workout: ${workout.name}`,
         type: "social",
-        link: `/workouts/${workout.id}`
+        link: `/workout/${workout.id}`
       });
     }
     
@@ -4685,7 +4685,7 @@ export class DbStorage implements IStorage {
             title: "New Comment",
             message: `Someone commented on your workout: ${workout.name}`,
             type: "social",
-            link: `/workouts/${workout.id}`
+            link: `/workout/${workout.id}`
           });
         }
       }
@@ -4815,7 +4815,7 @@ export class DbStorage implements IStorage {
             title: "New Like",
             message: `Someone liked your workout: ${workout.name}`,
             type: "social",
-            link: `/workouts/${workout.id}`
+            link: `/workout/${workout.id}`
           });
         }
       }

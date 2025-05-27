@@ -1237,7 +1237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: "Workout Completed",
           message: `You've completed your ${workoutName} workout! Great job!`,
           type: "success",
-          link: `/workouts/${id}` // Direct link to the completed workout
+          link: `/workout/${id}` // Direct link to the completed workout
         });
       }
       
@@ -1310,7 +1310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: "Workout Completed",
           message: `You've completed your ${workoutName} workout! Great job!`,
           type: "success",
-          link: `/workouts/${id}` // Direct link to the completed workout
+          link: `/workout/${id}` // Direct link to the completed workout
         });
       }
       
