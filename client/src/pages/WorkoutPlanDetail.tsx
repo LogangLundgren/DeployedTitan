@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
@@ -219,9 +219,27 @@ export default function WorkoutPlanDetail() {
     error 
   } = useQuery({
     queryKey: ['/api/workout-plans', planId],
-    queryFn: () => fetch(`/api/workout-plans/${planId}`).then(res => res.json()),
+    queryFn: async () => {
+      const res = await fetch(`/api/workout-plans/${planId}`);
+      if (!res.ok) {
+        throw new Error('Workout plan not found');
+      }
+      return res.json();
+    },
     enabled: !isNaN(planId)
   });
+
+  // Redirect to marketplace if plan not found
+  useEffect(() => {
+    if (error && error.message === 'Workout plan not found') {
+      toast({
+        title: "Plan Not Found",
+        description: "This workout plan no longer exists. Redirecting to marketplace.",
+        variant: "destructive",
+      });
+      setTimeout(() => setLocation('/marketplace'), 2000);
+    }
+  }, [error, setLocation, toast]);
 
   const { 
     data: reviews = [], 
@@ -511,7 +529,7 @@ export default function WorkoutPlanDetail() {
             }`}
           />
         ))}
-        <span className="ml-2 text-sm">({rating.toFixed(1)})</span>
+        <span className="ml-2 text-sm">({rating?.toFixed(1) || '0.0'})</span>
       </div>
     );
   };
@@ -749,7 +767,7 @@ export default function WorkoutPlanDetail() {
           <div className="sticky top-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl font-bold">${plan.price.toFixed(2)}</CardTitle>
+                <CardTitle className="text-2xl font-bold">${plan?.price?.toFixed(2) || '0.00'}</CardTitle>
                 {plan.isSoldOut ? (
                   <Badge variant="destructive">Sold Out</Badge>
                 ) : null}
@@ -944,7 +962,7 @@ export default function WorkoutPlanDetail() {
           <div className="space-y-4 py-4">
             <div className="flex justify-between items-center">
               <span className="font-medium">{plan.title}</span>
-              <span className="font-bold">${plan.price.toFixed(2)}</span>
+              <span className="font-bold">${plan?.price?.toFixed(2) || '0.00'}</span>
             </div>
             
             <Separator />
