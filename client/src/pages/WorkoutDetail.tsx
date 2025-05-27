@@ -212,10 +212,10 @@ export default function WorkoutDetail() {
       <Button 
         variant="outline" 
         className="mb-6" 
-        onClick={() => setLocation('/social')}
+        onClick={() => setLocation('/workouts')}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Feed
+        Back to Workouts
       </Button>
       
       <Card className="mb-8">
