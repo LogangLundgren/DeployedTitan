@@ -969,7 +969,7 @@ export default function WorkoutPlanDetail() {
             
             <div className="flex justify-between items-center font-bold">
               <span>Total</span>
-              <span>${plan.price.toFixed(2)}</span>
+              <span>${plan?.price?.toFixed(2) || '0.00'}</span>
             </div>
           </div>
           
