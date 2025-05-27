@@ -586,33 +586,7 @@ export default function Marketplace() {
             </div>
           )}
 
-          {/* Specializations */}
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-4 flex items-center">
-              <TrendingUp className="mr-2 h-6 w-6 text-blue-500" />
-              Popular Specializations
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[
-                "Weight Loss", "Muscle Gain", "Strength Training", "Nutrition",
-                "Competition Prep", "Injury Rehabilitation", "Functional Training", "Online Coaching"
-              ].map((specialization) => (
-                <Button 
-                  key={specialization} 
-                  variant="outline" 
-                  className="h-20 text-lg justify-start px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  onClick={() => {
-                    setSearchQuery(specialization);
-                    setActiveTab("coaches");
-                    refetchSearchCoaches();
-                  }}
-                >
-                  <span>{specialization}</span>
-                  <ChevronRight className="ml-auto h-5 w-5" />
-                </Button>
-              ))}
-            </div>
-          </div>
+
         </TabsContent>
       </Tabs>
 
