@@ -143,11 +143,7 @@ export default function AddExerciseModal({ isOpen, onClose, exercises, onAddExer
             )}
           </div>
           
-          <div className="border-t mt-4 pt-4">
-            <CustomExerciseModal 
-              onExerciseCreated={handleExerciseActionCompleted}
-            />
-          </div>
+
         </div>
         
         <div className="border-t p-4 flex justify-between gap-3">
