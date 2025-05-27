@@ -420,7 +420,7 @@ export default function Marketplace() {
           </div>
           <Button 
             size="sm" 
-            onClick={() => setLocation(`/coach-profile/${coach.id}`)}
+            onClick={() => setLocation(`/users/${coach.userId}`)}
           >
             View Profile
             <Eye className="h-4 w-4 ml-1" />

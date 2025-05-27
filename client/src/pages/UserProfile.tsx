@@ -262,6 +262,24 @@ export default function UserProfile() {
     }
   };
   
+  // Query coach's workout plans if they are a coach
+  const { data: coachPlans = [], isLoading: plansLoading } = useQuery({
+    queryKey: [`/api/coaches/${parsedUserId}/plans`],
+    queryFn: async () => {
+      if (!userProfile?.isCoach) return [];
+      
+      try {
+        const response = await fetch(`/api/workout-plans?coachUserId=${parsedUserId}&publishedOnly=true`);
+        if (!response.ok) return [];
+        return response.json();
+      } catch (error) {
+        console.error("Error fetching coach plans:", error);
+        return [];
+      }
+    },
+    enabled: !!userProfile?.isCoach,
+  });
+
   // Query public goals for this specific user
   const { data: userGoals = [], isLoading: goalsLoading } = useQuery({
     queryKey: [`/api/users/${parsedUserId}/goals/public`],
@@ -675,32 +693,98 @@ export default function UserProfile() {
               <TabsContent value="programs">
                 <h2 className="text-xl font-semibold mb-4">Available Programs</h2>
                 
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <div className="rounded-full bg-primary/10 p-6 mb-4">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="text-primary"
-                      >
-                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                        <line x1="3" x2="21" y1="9" y2="9" />
-                        <line x1="9" x2="9" y1="21" y2="9" />
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-medium mb-2">No Programs Available</h3>
-                    <p className="text-center text-muted-foreground">
-                      {userProfile.name} hasn't published any programs yet.
-                    </p>
-                  </CardContent>
-                </Card>
+                {plansLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[...Array(3)].map((_, i) => (
+                      <Card key={i} className="animate-pulse">
+                        <CardHeader className="h-32 bg-gray-100"></CardHeader>
+                        <CardContent className="h-32 py-4">
+                          <div className="h-4 bg-gray-100 mb-2 rounded"></div>
+                          <div className="h-4 bg-gray-100 w-3/4 rounded mb-2"></div>
+                          <div className="h-4 bg-gray-100 w-1/2 rounded"></div>
+                        </CardContent>
+                        <CardFooter className="h-16 bg-gray-50"></CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                ) : coachPlans.length === 0 ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <div className="rounded-full bg-primary/10 p-6 mb-4">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-primary"
+                        >
+                          <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                          <line x1="3" x2="21" y1="9" y2="9" />
+                          <line x1="9" x2="9" y1="21" y2="9" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium mb-2">No Programs Available</h3>
+                      <p className="text-center text-muted-foreground">
+                        {userProfile.name} hasn't published any programs yet.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {coachPlans.map((plan: any) => (
+                      <Card key={plan.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                        <CardHeader className="pb-4">
+                          <div className="flex justify-between items-start">
+                            <Badge variant="outline">{plan.category || "Program"}</Badge>
+                            {plan.isPublished && (
+                              <Badge className="bg-green-500 text-white">Published</Badge>
+                            )}
+                          </div>
+                          <CardTitle className="text-lg mt-2">{plan.title}</CardTitle>
+                          <CardDescription className="text-sm line-clamp-3">
+                            {plan.description || "A comprehensive workout program designed to help you reach your fitness goals."}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Duration:</span>
+                              <span className="font-medium">{plan.durationWeeks} weeks</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Difficulty:</span>
+                              <span className="font-medium">{plan.difficultyLevel || "Intermediate"}</span>
+                            </div>
+                            {plan.goals && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Goals:</span>
+                                <span className="font-medium text-right">{plan.goals}</span>
+                              </div>
+                            )}
+                            <div className="pt-2">
+                              <div className="text-2xl font-bold text-primary">
+                                {plan.price === 0 ? "Free" : `$${plan.price.toFixed(2)}`}
+                              </div>
+                              <div className="text-xs text-muted-foreground">One-time purchase</div>
+                            </div>
+                          </div>
+                        </CardContent>
+                        <CardFooter className="pt-0">
+                          <Link href={`/workout-plans/${plan.id}`} className="w-full">
+                            <Button className="w-full">
+                              View Program
+                            </Button>
+                          </Link>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
             )}
           </Tabs>

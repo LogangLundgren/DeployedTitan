@@ -616,7 +616,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
         >
           {saveWorkoutMutation.isPending ? "Saving..." : workoutId ? "Update Workout" : "Save Workout"}
         </Button>
-        <Button variant="outline">
+        <Button variant="outline" onClick={() => window.location.href = '/workouts'}>
           Cancel
         </Button>
       </div>

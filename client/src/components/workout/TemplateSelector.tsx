@@ -120,8 +120,8 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
         <p className="text-muted-foreground max-w-md mb-6">
           You haven't created any workout templates yet. Templates make it easy to quickly start a workout with predefined exercises.
         </p>
-        <Button onClick={() => location.assign('/workouts?tab=templates')}>
-          Create Your First Template
+        <Button onClick={() => location.assign('/marketplace')}>
+          Browse Workout Plans
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>

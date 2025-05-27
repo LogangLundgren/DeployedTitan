@@ -136,12 +136,6 @@ export default function CustomExerciseModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant={buttonVariant}>
-          <Plus className="mr-2 h-4 w-4" />
-          Custom Exercise
-        </Button>
-      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create Custom Exercise</DialogTitle>
