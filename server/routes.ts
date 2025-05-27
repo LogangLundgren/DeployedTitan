@@ -5586,6 +5586,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const message = await storage.sendMessage(threadId, senderId, content);
+      
+      // Get the recipient (other participant in the thread)
+      const allParticipants = await db
+        .select()
+        .from(messageParticipants)
+        .where(eq(messageParticipants.threadId, threadId));
+      
+      const recipient = allParticipants.find(p => p.userId !== senderId);
+      
+      if (recipient) {
+        // Get sender's name for the notification
+        const sender = await storage.getUser(senderId);
+        const senderName = sender?.name || sender?.username || 'Someone';
+        
+        // Create notification for the recipient
+        await storage.createNotification({
+          userId: recipient.userId,
+          title: 'New Message',
+          message: `${senderName} sent you a message: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+          type: 'info',
+          link: '/messages'
+        });
+      }
+      
       res.status(201).json(message);
     } catch (error) {
       console.error("Error sending message:", error);

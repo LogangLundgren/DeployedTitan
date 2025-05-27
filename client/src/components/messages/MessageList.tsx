@@ -245,35 +245,6 @@ export default function MessageList({ threadId, recipientUser }: MessageListProp
 
       {/* Enhanced Message Input */}
       <div className="p-4 border-t">
-        {/* Coach Templates Dropdown */}
-        {user?.isCoach && (
-          <div className="mb-3">
-            <DropdownMenu open={showTemplates} onOpenChange={setShowTemplates}>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="mb-2">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Quick Templates
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-80">
-                {COACH_TEMPLATES.map((template, index) => (
-                  <DropdownMenuItem
-                    key={index}
-                    onClick={() => handleTemplateSelect(template)}
-                    className="cursor-pointer p-3"
-                  >
-                    <div>
-                      <div className="font-medium text-sm">{template.title}</div>
-                      <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {template.content}
-                      </div>
-                    </div>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
         
         <form onSubmit={handleSendMessage} className="space-y-2">
           <div className="flex gap-2">
