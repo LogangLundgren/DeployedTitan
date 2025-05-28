@@ -5,6 +5,8 @@ import { db } from "./db";
 import Stripe from "stripe";
 import { hashPassword, verifyPassword, requireAuth, requireAuthWithUser, requireOwnership } from "./auth";
 import { randomBytes } from "crypto";
+import nodemailer from "nodemailer";
+import { sendPasswordResetEmail } from "./emailService";
 import { eq, and, or, like, isNotNull, inArray } from "drizzle-orm";
 import { handleBase64Upload, serveUploads } from "./fileUpload";
 import * as path from "path";
@@ -192,20 +194,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store token in database
       await storage.createPasswordResetToken(user.id, resetToken, expiresAt);
 
-      // Log reset link to console for admin to share with user
-      const resetUrl = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
+      // Generate reset URL
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
       
-      console.log('\n🔐 PASSWORD RESET REQUEST 🔐');
-      console.log('================================');
-      console.log(`User: ${user.username} (${user.email})`);
-      console.log(`Reset Link: ${resetUrl}`);
-      console.log(`Token expires in 15 minutes`);
-      console.log('================================\n');
+      // Try to send email automatically
+      const emailSent = await sendPasswordResetEmail(
+        user.email!,
+        user.username,
+        resetToken,
+        baseUrl
+      );
+
+      if (emailSent) {
+        console.log(`✅ Password reset email sent automatically to ${user.email}`);
+      } else {
+        // Fallback to console logging if email fails
+        const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+        console.log('\n🔐 PASSWORD RESET REQUEST (Email Failed - Manual Sharing Required) 🔐');
+        console.log('================================');
+        console.log(`User: ${user.username} (${user.email})`);
+        console.log(`Reset Link: ${resetUrl}`);
+        console.log(`Token expires in 15 minutes`);
+        console.log('================================\n');
+      }
 
       res.status(200).json({ 
         message: "If an account with that email exists, you will receive reset instructions.",
-        // For development/testing, include token in response
-        ...(process.env.NODE_ENV !== 'production' && { resetToken, resetUrl })
+        // For development/testing, include additional info
+        ...(process.env.NODE_ENV !== 'production' && { 
+          resetToken, 
+          emailSent,
+          resetUrl: `${baseUrl}/reset-password?token=${resetToken}`
+        })
       });
 
     } catch (error) {
