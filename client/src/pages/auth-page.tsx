@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -166,6 +166,14 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
+                      
+                      <div className="flex justify-end">
+                        <Link href="/forgot-password">
+                          <Button variant="link" className="text-sm p-0 h-auto text-primary hover:underline">
+                            Forgot your password?
+                          </Button>
+                        </Link>
+                      </div>
                       
                       <Button 
                         type="submit" 

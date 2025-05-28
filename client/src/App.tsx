@@ -46,6 +46,8 @@ import { initializeErrorMonitoring } from "./lib/errorMonitoring";
 import Admin from "./pages/Admin"; // New Admin page
 import CoachDashboard from "./pages/CoachDashboard";
 import ClientManagement from "./pages/ClientManagement";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 function Router() {
   const { user } = useAuth();
@@ -85,6 +87,8 @@ function Router() {
           <Switch>
             {/* Public routes */}
             <Route path="/auth" component={AuthPage} />
+            <Route path="/forgot-password" component={ForgotPassword} />
+            <Route path="/reset-password" component={ResetPassword} />
             
             {/* Protected routes */}
             <ProtectedRoute path="/" component={Dashboard} />
