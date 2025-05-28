@@ -21,6 +21,7 @@ import {
   purchases, type Purchase, type InsertPurchase,
   reviews, type Review, type InsertReview,
   userSuggestions, type UserSuggestion, type InsertUserSuggestion,
+  passwordResetTokens, type PasswordResetToken, type InsertPasswordResetToken,
   type WorkoutWithDetails, type TemplateWithExercises
 } from "@shared/schema";
 import { eq, desc, and, asc, sql, or, isNull, isNotNull, inArray, like, notLike, count } from 'drizzle-orm';
