@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import Stripe from "stripe";
 import { hashPassword, verifyPassword, requireAuth, requireAuthWithUser, requireOwnership } from "./auth";
+import { randomBytes } from "crypto";
 import { eq, and, or, like, isNotNull, inArray } from "drizzle-orm";
 import { handleBase64Upload, serveUploads } from "./fileUpload";
 import * as path from "path";
@@ -163,6 +164,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Password reset endpoints - Console-based system
+  app.post("/api/auth/forgot-password", async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if email exists for security
+        return res.status(200).json({ 
+          message: "If an account with that email exists, you will receive reset instructions." 
+        });
+      }
+
+      // Generate secure reset token
+      const resetToken = randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      // Store token in database
+      await storage.createPasswordResetToken(user.id, resetToken, expiresAt);
+
+      // Log reset link to console for admin to share with user
+      const resetUrl = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
+      
+      console.log('\n🔐 PASSWORD RESET REQUEST 🔐');
+      console.log('================================');
+      console.log(`User: ${user.username} (${user.email})`);
+      console.log(`Reset Link: ${resetUrl}`);
+      console.log(`Token expires in 15 minutes`);
+      console.log('================================\n');
+
+      res.status(200).json({ 
+        message: "If an account with that email exists, you will receive reset instructions.",
+        // For development/testing, include token in response
+        ...(process.env.NODE_ENV !== 'production' && { resetToken, resetUrl })
+      });
+
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req: Request, res: Response) => {
+    try {
+      const { token, newPassword } = req.body;
+      
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      // Verify token
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+
+      // Check if token is expired
+      if (new Date() > resetToken.expiresAt) {
+        return res.status(400).json({ message: "Reset token has expired" });
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update user password
+      const updatedUser = await storage.updateUserPassword(resetToken.userId, hashedPassword);
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to update password" });
+      }
+
+      // Mark token as used
+      await storage.markTokenAsUsed(token);
+
+      console.log(`✅ Password successfully reset for user: ${updatedUser.username}`);
+
+      res.status(200).json({ 
+        message: "Password reset successful. You can now log in with your new password." 
+      });
+
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/auth/verify-reset-token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: "Token is required" });
+      }
+
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken) {
+        return res.status(400).json({ message: "Invalid token", valid: false });
+      }
+
+      if (new Date() > resetToken.expiresAt) {
+        return res.status(400).json({ message: "Token has expired", valid: false });
+      }
+
+      res.status(200).json({ message: "Token is valid", valid: true });
+
+    } catch (error) {
+      console.error("Verify token error:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
   
