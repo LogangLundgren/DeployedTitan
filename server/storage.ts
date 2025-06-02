@@ -5080,13 +5080,16 @@ export class DbStorage implements IStorage {
         params.push(limit);
       }
       
+      console.log("SEARCH DEBUG - SQL query:", sql);
+      console.log("SEARCH DEBUG - Params:", params);
+      
       const result = await pool.query(sql, params);
       
       if (!result || !result.rows) {
         return [];
       }
       
-      // Convert from snake_case to camelCase
+      // Convert from snake_case to camelCase and add missing fork fields
       const plans = result.rows.map(row => ({
         id: row.id,
         coachId: row.coach_id,
@@ -5106,9 +5109,14 @@ export class DbStorage implements IStorage {
         updatedAt: row.updated_at,
         sales: row.sales,
         rating: row.rating,
-        ratingsCount: row.ratings_count
+        ratingsCount: row.ratings_count,
+        // Add missing fork fields with default values
+        parentPlanId: null,
+        clientId: null,
+        isForked: false
       }));
       
+      console.log("SEARCH DEBUG - Found plans:", plans.length);
       return plans;
     } catch (error) {
       console.error("Error searching workout plans:", error);
