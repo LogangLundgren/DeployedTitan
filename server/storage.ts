@@ -4924,29 +4924,75 @@ export class DbStorage implements IStorage {
   
   async searchCoaches(query: string, category?: string, limit?: number): Promise<CoachProfile[]> {
     try {
-      // Fetch all coaches - in a real app, you would use full-text search
-      let coaches = await db.select().from(coachProfiles);
+      // Use raw SQL to join with users table to search by name as well
+      const { pool } = await import('./db');
       
-      // Perform search filtering in application (since we don't have full FTS)
-      coaches = coaches.filter(coach => {
-        const titleMatch = coach.title.toLowerCase().includes(query.toLowerCase());
-        const specialtiesMatch = coach.specialties.toLowerCase().includes(query.toLowerCase());
-        const biographyMatch = coach.biography.toLowerCase().includes(query.toLowerCase());
-        
-        return titleMatch || specialtiesMatch || biographyMatch;
-      });
+      let sql = `
+        SELECT 
+          cp.id, cp.user_id, cp.title, cp.experience, cp.specialties, 
+          cp.biography, cp.hourly_rate, cp.rating, cp.ratings_count,
+          cp.is_verified, cp.is_available_for_hire, cp.created_at, cp.updated_at,
+          u.username, u.name
+        FROM coach_profiles cp
+        JOIN users u ON cp.user_id = u.id
+        WHERE 1=1
+      `;
       
-      // Apply category filter if provided (matching against specialties)
+      const params: any[] = [];
+      
+      // Add search filter that includes user name, username, and coach profile fields
+      if (query) {
+        sql += ` AND (
+          LOWER(cp.title) LIKE $${params.length + 1} OR 
+          LOWER(cp.specialties) LIKE $${params.length + 1} OR 
+          LOWER(cp.biography) LIKE $${params.length + 1} OR
+          LOWER(u.name) LIKE $${params.length + 1} OR
+          LOWER(u.username) LIKE $${params.length + 1}
+        )`;
+        params.push(`%${query.toLowerCase()}%`);
+      }
+      
+      // Add category filter (match against specialties)
       if (category) {
-        coaches = coaches.filter(coach => 
-          coach.specialties.toLowerCase().includes(category.toLowerCase())
-        );
+        sql += ` AND LOWER(cp.specialties) LIKE $${params.length + 1}`;
+        params.push(`%${category.toLowerCase()}%`);
       }
       
-      // Apply limit if provided
+      sql += ` ORDER BY cp.created_at DESC`;
+      
+      // Add limit
       if (limit && limit > 0) {
-        coaches = coaches.slice(0, limit);
+        sql += ` LIMIT $${params.length + 1}`;
+        params.push(limit);
       }
+      
+      const result = await pool.query(sql, params);
+      
+      if (!result || !result.rows) {
+        return [];
+      }
+      
+      // Convert from snake_case to camelCase
+      const coaches = result.rows.map(row => ({
+        id: row.id,
+        userId: row.user_id,
+        title: row.title,
+        experience: row.experience,
+        specialties: row.specialties,
+        biography: row.biography,
+        hourlyRate: row.hourly_rate,
+        rating: row.rating,
+        ratingsCount: row.ratings_count,
+        isVerified: row.is_verified,
+        isAvailableForHire: row.is_available_for_hire,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        // Include user data for display
+        user: {
+          username: row.username,
+          name: row.name
+        }
+      }));
       
       return coaches;
     } catch (error) {
@@ -4995,32 +5041,73 @@ export class DbStorage implements IStorage {
   
   async searchWorkoutPlans(query: string, category?: string, limit?: number): Promise<WorkoutPlan[]> {
     try {
-      // In a real app, use full-text search
-      let plans = await db
-        .select()
-        .from(workoutPlans)
-        .where(eq(workoutPlans.isPublished, true));
+      // Use raw SQL to avoid schema column naming issues
+      const { pool } = await import('./db');
       
-      // Filter by search query
-      plans = plans.filter(plan => {
-        const titleMatch = plan.title.toLowerCase().includes(query.toLowerCase());
-        const descriptionMatch = plan.description.toLowerCase().includes(query.toLowerCase());
-        const goalsMatch = plan.goals.toLowerCase().includes(query.toLowerCase());
-        
-        return titleMatch || descriptionMatch || goalsMatch;
-      });
+      let sql = `
+        SELECT 
+          id, coach_id, title, description, price, duration_weeks, 
+          difficulty_level, category, featured_image_url, goals, equipment,
+          is_featured, is_sold_out, is_published, created_at, updated_at,
+          sales, rating, ratings_count
+        FROM workout_plans
+        WHERE is_published = true
+      `;
       
-      // Apply category filter if provided
+      const params: any[] = [];
+      
+      // Add search filter
+      if (query) {
+        sql += ` AND (
+          LOWER(title) LIKE $${params.length + 1} OR 
+          LOWER(description) LIKE $${params.length + 1} OR 
+          LOWER(goals) LIKE $${params.length + 1}
+        )`;
+        params.push(`%${query.toLowerCase()}%`);
+      }
+      
+      // Add category filter
       if (category) {
-        plans = plans.filter(plan => 
-          plan.category.toLowerCase() === category.toLowerCase()
-        );
+        sql += ` AND LOWER(category) = $${params.length + 1}`;
+        params.push(category.toLowerCase());
       }
       
-      // Apply limit if provided
+      sql += ` ORDER BY created_at DESC`;
+      
+      // Add limit
       if (limit && limit > 0) {
-        plans = plans.slice(0, limit);
+        sql += ` LIMIT $${params.length + 1}`;
+        params.push(limit);
       }
+      
+      const result = await pool.query(sql, params);
+      
+      if (!result || !result.rows) {
+        return [];
+      }
+      
+      // Convert from snake_case to camelCase
+      const plans = result.rows.map(row => ({
+        id: row.id,
+        coachId: row.coach_id,
+        title: row.title,
+        description: row.description,
+        price: row.price,
+        durationWeeks: row.duration_weeks,
+        difficultyLevel: row.difficulty_level,
+        category: row.category,
+        featuredImageUrl: row.featured_image_url,
+        goals: row.goals,
+        equipment: row.equipment,
+        isFeatured: row.is_featured,
+        isSoldOut: row.is_sold_out,
+        isPublished: row.is_published,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        sales: row.sales,
+        rating: row.rating,
+        ratingsCount: row.ratings_count
+      }));
       
       return plans;
     } catch (error) {
