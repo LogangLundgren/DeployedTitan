@@ -3184,9 +3184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (query) {
         // For marketplace search, only show published plans by default
         plans = await storage.searchWorkoutPlans(query, category, limit);
-        console.log("MARKETPLACE DEBUG - Results after DB query:", 
-          plans.map(p => ({id: p.id, title: p.title, isPublished: p.isPublished}))
-        );
+        console.log("MARKETPLACE DEBUG - Search results for query:", query, "found", plans.length, "plans");
       } else {
         // For general browsing in marketplace
         console.log("MARKETPLACE DEBUG - Fetching ALL plans with published flag:", publishedOnly);
