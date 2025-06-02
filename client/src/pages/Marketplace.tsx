@@ -106,83 +106,68 @@ export default function Marketplace() {
     enabled: !!currentUser?.id,
   });
 
-  // Fetch all published workout plans
+  // Determine if we're searching
+  const isSearching = searchQuery.trim().length > 0;
+  
+  // Fetch workout plans (either all or search results)
   const { 
-    data: allPlans = [], 
+    data: workoutPlans = [], 
     isLoading: plansLoading,
     error: plansError
   } = useQuery({
-    queryKey: ['/api/workout-plans', { publishedOnly: true }],
-    queryFn: () => fetch(`/api/workout-plans?publishedOnly=true`).then(res => {
-      if (!res.ok) {
-        throw new Error("Failed to fetch plans");
+    queryKey: ['/api/workout-plans', { 
+      publishedOnly: true, 
+      query: isSearching ? searchQuery : undefined,
+      category: selectedCategory 
+    }],
+    queryFn: () => {
+      let url = `/api/workout-plans?publishedOnly=true`;
+      if (isSearching) {
+        url += `&query=${encodeURIComponent(searchQuery)}`;
       }
-      return res.json();
-    }),
+      if (selectedCategory) {
+        url += `&category=${encodeURIComponent(selectedCategory)}`;
+      }
+      return fetch(url).then(res => {
+        if (!res.ok) {
+          throw new Error("Failed to fetch plans");
+        }
+        return res.json();
+      });
+    },
     enabled: activeTab === "plans"
   });
 
-  // Fetch featured coaches
+  // Fetch coaches (either featured or search results)
   const { 
-    data: featuredCoaches = [], 
+    data: coaches = [], 
     isLoading: coachesLoading,
     error: coachesError
   } = useQuery({
-    queryKey: ['/api/coaches', { featured: true }],
-    queryFn: () => fetch(`/api/coaches?featured=true&limit=6`).then(res => res.json()),
+    queryKey: ['/api/coaches', { 
+      featured: !isSearching, 
+      query: isSearching ? searchQuery : undefined,
+      category: selectedCategory 
+    }],
+    queryFn: () => {
+      let url = `/api/coaches`;
+      if (isSearching) {
+        url += `?query=${encodeURIComponent(searchQuery)}`;
+        if (selectedCategory) {
+          url += `&category=${encodeURIComponent(selectedCategory)}`;
+        }
+      } else {
+        url += `?featured=true&limit=6`;
+      }
+      return fetch(url).then(res => res.json());
+    },
     enabled: activeTab === "coaches"
   });
 
-  // Search for workout plans
-  const { 
-    data: searchPlansResults = [], 
-    isLoading: searchPlansLoading,
-    refetch: refetchSearchPlans
-  } = useQuery({
-    queryKey: ['/api/workout-plans/search', searchQuery, selectedCategory],
-    queryFn: () => {
-      let url = `/api/workout-plans?query=${encodeURIComponent(searchQuery)}`;
-      if (selectedCategory) {
-        url += `&category=${encodeURIComponent(selectedCategory)}`;
-      }
-      return fetch(url).then(res => res.json());
-    },
-    enabled: false // Don't fetch automatically
-  });
-
-  // Search for coaches
-  const { 
-    data: searchCoachesResults = [], 
-    isLoading: searchCoachesLoading,
-    refetch: refetchSearchCoaches
-  } = useQuery({
-    queryKey: ['/api/coaches/search', searchQuery, selectedCategory],
-    queryFn: () => {
-      let url = `/api/coaches?query=${encodeURIComponent(searchQuery)}`;
-      if (selectedCategory) {
-        url += `&category=${encodeURIComponent(selectedCategory)}`;
-      }
-      return fetch(url).then(res => res.json());
-    },
-    enabled: false // Don't fetch automatically
-  });
-
-  // Handle search
-  const handleSearch = () => {
-    if (searchQuery.trim() === "") {
-      toast({
-        title: "Search query required",
-        description: "Please enter a search term",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (activeTab === "plans") {
-      refetchSearchPlans();
-    } else {
-      refetchSearchCoaches();
-    }
+  // Clear search
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSelectedCategory(null);
   };
 
   // Categories for filtering
@@ -469,45 +454,29 @@ export default function Marketplace() {
               className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             />
           </div>
-          <Button onClick={handleSearch} className="md:w-auto w-full">
-            Search
-          </Button>
+          {isSearching && (
+            <Button onClick={clearSearch} variant="outline" className="md:w-auto w-full">
+              Clear Search
+            </Button>
+          )}
         </div>
 
         <TabsContent value="plans">
-          {/* Search Results for Plans */}
-          {searchQuery && searchPlansResults.length > 0 && (
-            <>
-              <h2 className="text-2xl font-bold mb-4">Search Results</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {searchPlansResults.map((plan: WorkoutPlan) => (
-                  <WorkoutPlanCard key={plan.id} plan={plan} />
-                ))}
-              </div>
-              <Separator className="my-8" />
-            </>
-          )}
-
-          {/* All Published Plans */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold flex items-center">
               <Award className="mr-2 h-6 w-6 text-amber-500" />
-              Available Workout Plans
+              {isSearching ? `Search Results for "${searchQuery}"` : "Available Workout Plans"}
             </h2>
-            <Button 
-              variant="link" 
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory(null);
-                setActiveTab("plans");
-                refetchSearchPlans();
-              }}
-            >
-              View all
-            </Button>
+            {isSearching && (
+              <Button 
+                variant="link" 
+                onClick={clearSearch}
+              >
+                View all
+              </Button>
+            )}
           </div>
 
           {plansLoading ? (
@@ -518,13 +487,13 @@ export default function Marketplace() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {allPlans.length > 0 ? (
-                allPlans.map((plan: WorkoutPlan) => (
+              {workoutPlans.length > 0 ? (
+                workoutPlans.map((plan: WorkoutPlan) => (
                   <WorkoutPlanCard key={plan.id} plan={plan} />
                 ))
               ) : (
                 <div className="col-span-3 text-center py-8">
-                  No workout plans found. Check back later!
+                  {isSearching ? `No workout plans found for "${searchQuery}"` : "No workout plans found. Check back later!"}
                 </div>
               )}
             </div>
@@ -534,36 +503,19 @@ export default function Marketplace() {
         </TabsContent>
 
         <TabsContent value="coaches">
-          {/* Search Results for Coaches */}
-          {searchQuery && searchCoachesResults.length > 0 && (
-            <>
-              <h2 className="text-2xl font-bold mb-4">Search Results</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {searchCoachesResults.map((coach: CoachProfile) => (
-                  <CoachCard key={coach.id} coach={coach} />
-                ))}
-              </div>
-              <Separator className="my-8" />
-            </>
-          )}
-
-          {/* Featured Coaches */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold flex items-center">
               <Award className="mr-2 h-6 w-6 text-amber-500" />
-              Featured Coaches
+              {isSearching ? `Search Results for "${searchQuery}"` : "Featured Coaches"}
             </h2>
-            <Button 
-              variant="link" 
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory(null);
-                setActiveTab("coaches");
-                refetchSearchCoaches();
-              }}
-            >
-              View all
-            </Button>
+            {isSearching && (
+              <Button 
+                variant="link" 
+                onClick={clearSearch}
+              >
+                View all
+              </Button>
+            )}
           </div>
 
           {coachesLoading ? (
@@ -574,19 +526,17 @@ export default function Marketplace() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredCoaches.length > 0 ? (
-                featuredCoaches.map((coach: CoachProfile) => (
+              {coaches.length > 0 ? (
+                coaches.map((coach: CoachProfile) => (
                   <CoachCard key={coach.id} coach={coach} />
                 ))
               ) : (
                 <div className="col-span-3 text-center py-8">
-                  No coaches found. Check back later!
+                  {isSearching ? `No coaches found for "${searchQuery}"` : "No coaches found. Check back later!"}
                 </div>
               )}
             </div>
           )}
-
-
         </TabsContent>
       </Tabs>
 
