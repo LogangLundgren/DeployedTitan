@@ -447,7 +447,7 @@ export default function Marketplace() {
 
         {/* Search Bar */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="relative flex-grow">
+          <div className="relative flex-grow" data-tour="search">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
             <Input
               placeholder={`Search ${activeTab === "plans" ? "workout plans" : "coaches"}...`}

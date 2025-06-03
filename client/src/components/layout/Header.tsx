@@ -82,6 +82,7 @@ export default function Header() {
                 </div>
                 <Link 
                   href="/profile" 
+                  data-tour="profile"
                   className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors" 
                   onClick={() => setDropdownOpen(false)}
                 >

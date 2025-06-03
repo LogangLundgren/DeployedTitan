@@ -35,6 +35,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useOnboarding } from "@/hooks/use-onboarding";
+import { HelpCircle } from "lucide-react";
 
 // Define the type for our filtered workout data
 interface WorkoutData {
@@ -312,6 +314,7 @@ function UserFeedbackForm() {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { startTour } = useOnboarding();
   
   // State for chart controls
   const [selectedExercise, setSelectedExercise] = useState<number | null>(null);
@@ -459,26 +462,51 @@ export default function Dashboard() {
   };
 
   return (
-    <main className="flex-grow container mx-auto px-4 py-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>
-        <p className="text-gray-500">Welcome to your fitness dashboard</p>
+    <main className="flex-grow container mx-auto px-4 py-6" data-tour="dashboard">
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>
+          <p className="text-gray-500">Welcome to your fitness dashboard</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={startTour}
+          className="flex items-center gap-2"
+        >
+          <HelpCircle className="h-4 w-4" />
+          Take Tour
+        </Button>
       </div>
       
       {/* Goals Section - using real data from API */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Your Goals</h2>
-          <Link href="/goals">
-            <span className="text-primary hover:underline font-medium flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v8" />
-                <path d="M8 12h8" />
-              </svg>
-              Manage Goals
-            </span>
-          </Link>
+          <div className="flex gap-3">
+            <Link href="/workouts">
+              <Button variant="outline" size="sm" data-tour="workout-log" className="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14" strokeWidth="2.2" />
+                  <rect x="1" y="8.5" width="2.6" height="7" rx="1.3" fill="currentColor" />
+                  <rect x="20.4" y="8.5" width="2.6" height="7" rx="1.3" fill="currentColor" />
+                  <rect x="4.5" y="10" width="2" height="4" rx="1" fill="currentColor" />
+                  <rect x="17.5" y="10" width="2" height="4" rx="1" fill="currentColor" />
+                </svg>
+                Log Workout
+              </Button>
+            </Link>
+            <Link href="/goals">
+              <span className="text-primary hover:underline font-medium flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v8" />
+                  <path d="M8 12h8" />
+                </svg>
+                Manage Goals
+              </span>
+            </Link>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
