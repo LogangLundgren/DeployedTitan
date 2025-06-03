@@ -117,6 +117,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   }, [user, hasCompletedOnboarding, isActive]);
 
   const startTour = () => {
+    console.log("startTour called, setting isActive to true");
     setIsActive(true);
     setCurrentStep(0);
   };

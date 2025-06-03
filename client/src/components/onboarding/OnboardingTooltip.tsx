@@ -28,6 +28,7 @@ export function OnboardingTooltip() {
   const currentStepData = steps[currentStep];
 
   useEffect(() => {
+    console.log("OnboardingTooltip effect - isActive:", isActive, "currentStepData:", currentStepData);
     if (!isActive || !currentStepData) {
       setIsVisible(false);
       return;
@@ -35,8 +36,10 @@ export function OnboardingTooltip() {
 
     const updatePosition = () => {
       const targetElement = document.querySelector(currentStepData.target);
+      console.log("Looking for target:", currentStepData.target, "Found element:", targetElement);
       
       if (!targetElement || !tooltipRef.current) {
+        console.log("Target element or tooltip ref not found, hiding tooltip");
         setIsVisible(false);
         return;
       }

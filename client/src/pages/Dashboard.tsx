@@ -471,7 +471,10 @@ export default function Dashboard() {
         <Button
           variant="outline"
           size="sm"
-          onClick={startTour}
+          onClick={() => {
+            console.log("Take Tour button clicked");
+            startTour();
+          }}
           className="flex items-center gap-2"
         >
           <HelpCircle className="h-4 w-4" />
