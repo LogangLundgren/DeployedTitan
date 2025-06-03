@@ -17,7 +17,7 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg">
+    <header className="bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg app-header">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-3">
           <div className="bg-white rounded-full p-1.5 shadow-inner">

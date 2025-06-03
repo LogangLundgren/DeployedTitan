@@ -98,7 +98,7 @@ export default function Navigation() {
   ];
   
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-10 border-b border-gray-100">
+    <nav className="bg-white shadow-md sticky top-0 z-10 border-b border-gray-100" data-tour="navigation">
       <div className="container mx-auto px-4">
         <div 
           className="flex items-center overflow-x-auto hide-scrollbar"
@@ -107,10 +107,19 @@ export default function Navigation() {
           {links.map((link) => {
             const isActive = location === link.href;
             
+            // Add data-tour attributes for onboarding
+            const getTourAttribute = () => {
+              if (link.href === '/marketplace') return 'marketplace';
+              if (link.href === '/messages') return 'messages';
+              if (link.href === '/') return 'dashboard';
+              return undefined;
+            };
+
             return (
               <Link 
                 key={link.href} 
                 href={link.href}
+                data-tour={getTourAttribute()}
                 className={`flex items-center gap-2 px-4 py-3.5 whitespace-nowrap transition-all duration-200 ${
                   isActive
                     ? 'text-primary font-medium relative bg-primary/5'

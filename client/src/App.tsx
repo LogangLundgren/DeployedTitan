@@ -37,9 +37,8 @@ import { CommentsProvider } from "./context/comments-context";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { User } from "@shared/schema";
 import { ProtectedRoute } from "@/lib/protected-route";
-import { OnboardingProvider } from "./context/onboarding-context";
+import { OnboardingProvider } from "@/hooks/use-onboarding";
 import { OnboardingTooltip } from "./components/onboarding/OnboardingTooltip";
-import { WelcomeScreen } from "./components/onboarding/WelcomeScreen";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { FeedbackWidget } from "./components/FeedbackWidget";
 import { initializeErrorMonitoring } from "./lib/errorMonitoring";
@@ -124,12 +123,7 @@ function Router() {
         {!isAuthPage && user && <Footer />}
         
         {/* Onboarding components */}
-        {user && (
-          <>
-            <WelcomeScreen />
-            <OnboardingTooltip />
-          </>
-        )}
+        {user && <OnboardingTooltip />}
       </NotificationsProvider>
     </div>
   );
