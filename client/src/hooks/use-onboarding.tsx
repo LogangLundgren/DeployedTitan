@@ -32,7 +32,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
     id: 'welcome',
     title: 'Welcome to Titan Fitness!',
     content: 'Let\'s take a quick tour to help you get started with tracking your fitness journey.',
-    target: '.app-header',
+    target: 'header.app-header',
     position: 'bottom'
   },
   {

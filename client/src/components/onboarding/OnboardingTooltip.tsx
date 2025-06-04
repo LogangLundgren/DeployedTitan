@@ -37,10 +37,20 @@ export function OnboardingTooltip() {
     const updatePosition = () => {
       const targetElement = document.querySelector(currentStepData.target);
       console.log("Looking for target:", currentStepData.target, "Found element:", targetElement);
+      console.log("Tooltip ref current:", tooltipRef.current);
       
-      if (!targetElement || !tooltipRef.current) {
-        console.log("Target element or tooltip ref not found, hiding tooltip");
-        setIsVisible(false);
+      if (!targetElement) {
+        console.log("Target element not found, retrying in 500ms");
+        // Retry after a short delay to allow DOM to update
+        setTimeout(updatePosition, 500);
+        return;
+      }
+      
+      if (!tooltipRef.current) {
+        console.log("Tooltip ref not ready, showing tooltip first");
+        setIsVisible(true);
+        // Retry positioning after tooltip renders
+        setTimeout(updatePosition, 100);
         return;
       }
 

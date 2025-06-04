@@ -433,11 +433,15 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
     setExercises(prev => {
       const updated = [...prev];
       const sets = [...updated[exerciseIndex].sets];
+      
+      // Find the maximum order in existing sets and add 1
+      const maxOrder = sets.length > 0 ? Math.max(...sets.map(set => set.order)) : 0;
+      
       sets.push({
         weight: sets[sets.length - 1]?.weight || 0,
         reps: sets[sets.length - 1]?.reps || 0,
         notes: null,
-        order: sets.length + 1
+        order: maxOrder + 1
       });
       updated[exerciseIndex] = { ...updated[exerciseIndex], sets };
       return updated;
