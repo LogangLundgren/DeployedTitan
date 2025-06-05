@@ -88,7 +88,6 @@ export default function TemplateSelector({ userId, onWorkoutCreated }: TemplateS
   // Open start workout dialog
   const openStartWorkoutDialog = (templateId: number) => {
     setSelectedTemplateId(templateId);
-    setIsPublic(false); // Reset to private by default
     setIsStartWorkoutDialogOpen(true);
   };
   
