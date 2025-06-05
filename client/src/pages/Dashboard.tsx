@@ -333,7 +333,7 @@ export default function Dashboard() {
     
     const checkForSavedWorkout = () => {
       try {
-        const savedData = localStorage.getItem(`titan_workout_draft_${user.id}`);
+        const savedData = localStorage.getItem(`titan_fitness_active_workout_${user.id}`);
         if (!savedData) return;
 
         const parsedData = JSON.parse(savedData);
@@ -500,7 +500,7 @@ export default function Dashboard() {
 
   const handleDismissRecovery = () => {
     if (user?.id) {
-      localStorage.removeItem(`titan_workout_draft_${user.id}`);
+      localStorage.removeItem(`titan_fitness_active_workout_${user.id}`);
       setPendingWorkoutData(null);
       setShowRecoveryBanner(false);
     }
