@@ -78,6 +78,8 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
   const [exercises, setExercises] = useState<ExerciseWithSets[]>([]);
   const [workoutId, setWorkoutId] = useState<number | undefined>(workout?.id);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Fetch exercises for the modal
   const { data: availableExercises } = useQuery<Exercise[]>({
@@ -93,6 +95,8 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
   const saveToLocalStorage = () => {
     if (!userId || !autoSaveEnabled) return;
     
+    setIsSaving(true);
+    
     const workoutData: StoredWorkoutData = {
       workoutId,
       workoutName,
@@ -104,9 +108,17 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
     
     try {
       localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(workoutData));
+      setLastSavedTime(new Date());
       console.log('Workout data saved to local storage');
     } catch (error) {
       console.error('Error saving workout data to local storage:', error);
+      toast({
+        title: "Auto-save failed",
+        description: "Unable to save workout data locally. Please save manually.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
   
@@ -423,10 +435,20 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       }
     ]);
     setShowAddExerciseModal(false);
+    
+    // Save immediately when adding exercises
+    if (autoSaveEnabled) {
+      saveToLocalStorage();
+    }
   };
   
   const handleRemoveExercise = (index: number) => {
     setExercises(prev => prev.filter((_, i) => i !== index));
+    
+    // Save immediately when removing exercises
+    if (autoSaveEnabled) {
+      saveToLocalStorage();
+    }
   };
   
   const handleAddSet = (exerciseIndex: number) => {
@@ -446,6 +468,11 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       updated[exerciseIndex] = { ...updated[exerciseIndex], sets };
       return updated;
     });
+    
+    // Save immediately when adding sets
+    if (autoSaveEnabled) {
+      saveToLocalStorage();
+    }
   };
   
   const handleRemoveSet = (exerciseIndex: number, setIndex: number) => {
@@ -459,6 +486,11 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       updated[exerciseIndex] = { ...updated[exerciseIndex], sets };
       return updated;
     });
+    
+    // Save immediately when removing sets
+    if (autoSaveEnabled) {
+      saveToLocalStorage();
+    }
   };
   
   const handleUpdateSet = (exerciseIndex: number, setIndex: number, field: 'weight' | 'reps' | 'notes', value: number | string | null) => {
@@ -473,10 +505,15 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       return updated;
     });
     
-    // Save to local storage after a short delay to avoid excessive saves
-    // when the user is typing rapidly
+    // Save immediately to local storage for critical data like weights and reps
     if (autoSaveEnabled) {
-      debouncedSaveToLocalStorage();
+      if (field === 'weight' || field === 'reps') {
+        // For weight and reps, save immediately
+        saveToLocalStorage();
+      } else {
+        // For notes, use debounced save to avoid excessive saves while typing
+        debouncedSaveToLocalStorage();
+      }
     }
   };
   
@@ -487,10 +524,10 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       clearTimeout(window.saveToLocalStorageTimeout);
     }
     
-    // Set a new timeout
+    // Set a new timeout with much shorter delay
     window.saveToLocalStorageTimeout = setTimeout(() => {
       saveToLocalStorage();
-    }, 500); // 500ms delay
+    }, 150); // Reduced to 150ms delay for faster saves
   };
   
   const calculateTotalVolume = () => {
