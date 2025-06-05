@@ -37,6 +37,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { HelpCircle } from "lucide-react";
+import { WorkoutRecoveryBanner } from "@/components/workout/WorkoutRecoveryBanner";
 
 // Define the type for our filtered workout data
 interface WorkoutData {
@@ -321,6 +322,36 @@ export default function Dashboard() {
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('weight');
   const [dateRange, setDateRange] = useState<number>(30); // Days
   const [chartData, setChartData] = useState<WorkoutData[]>([]);
+  
+  // Workout recovery state
+  const [pendingWorkoutData, setPendingWorkoutData] = useState<any>(null);
+  const [showRecoveryBanner, setShowRecoveryBanner] = useState(false);
+  
+  // Check for saved workout data on component mount
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const checkForSavedWorkout = () => {
+      try {
+        const savedData = localStorage.getItem(`titan_workout_draft_${user.id}`);
+        if (!savedData) return;
+
+        const parsedData = JSON.parse(savedData);
+        
+        // Check if the saved workout is recent (within last 24 hours)
+        const isRecent = Date.now() - parsedData.lastUpdated < 24 * 60 * 60 * 1000;
+        
+        if (isRecent && parsedData.exercises.length > 0) {
+          setPendingWorkoutData(parsedData);
+          setShowRecoveryBanner(true);
+        }
+      } catch (error) {
+        console.error('Error checking for saved workout:', error);
+      }
+    };
+
+    checkForSavedWorkout();
+  }, [user?.id]);
 
   // Fetch recent workouts - these should be for the authenticated user only
   const { data: recentWorkouts, isLoading: workoutsLoading, refetch: refetchWorkouts } = useQuery<WorkoutWithDetails[]>({
@@ -461,8 +492,31 @@ export default function Dashboard() {
     }));
   };
 
+  const handleRestoreWorkout = () => {
+    // The WorkoutRecoveryBanner will navigate to /workout-logger
+    // and the WorkoutForm will automatically load the data
+    setShowRecoveryBanner(false);
+  };
+
+  const handleDismissRecovery = () => {
+    if (user?.id) {
+      localStorage.removeItem(`titan_workout_draft_${user.id}`);
+      setPendingWorkoutData(null);
+      setShowRecoveryBanner(false);
+    }
+  };
+
   return (
     <main className="flex-grow container mx-auto px-4 py-6" data-tour="dashboard">
+      {/* Workout Recovery Banner */}
+      {showRecoveryBanner && pendingWorkoutData && (
+        <WorkoutRecoveryBanner
+          workoutData={pendingWorkoutData}
+          onRestore={handleRestoreWorkout}
+          onDismiss={handleDismissRecovery}
+        />
+      )}
+      
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>
