@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Plus, Trash2, Clock, Save } from "lucide-react";
 import { WorkoutWithDetails, Exercise, Workout } from "@shared/schema";
 import { format } from "date-fns";
+import { useLocation } from "wouter";
 
 // Extend Window interface for timeout
 declare global {
@@ -56,6 +57,7 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   
   // Use authenticated user ID
   const userId = user?.id;
@@ -317,6 +319,11 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
           console.error("Error fetching complete workout details:", error);
         }
       }
+      
+      // Redirect to history page after successful workout save
+      setTimeout(() => {
+        setLocation('/history');
+      }, 1000); // Small delay to let the toast show
       
       // Workout saved successfully - no popup needed
     },
