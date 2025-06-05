@@ -42,6 +42,7 @@ import { OnboardingTooltip } from "./components/onboarding/OnboardingTooltip";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { FeedbackWidget } from "./components/FeedbackWidget";
 import { initializeErrorMonitoring } from "./lib/errorMonitoring";
+import { useWorkoutRecovery } from "@/hooks/use-workout-recovery";
 import Admin from "./pages/Admin"; // New Admin page
 import CoachDashboard from "./pages/CoachDashboard";
 import ClientManagement from "./pages/ClientManagement";
@@ -58,6 +59,9 @@ function Router() {
   // Determine whether to show the main layout based on current route
   // Don't show header/nav/footer on auth page
   const isAuthPage = window.location.pathname === '/auth';
+  
+  // Initialize workout recovery for authenticated users
+  useWorkoutRecovery();
   
   // Track when a user has just logged in or registered
   // This helps show the onboarding immediately after authentication
