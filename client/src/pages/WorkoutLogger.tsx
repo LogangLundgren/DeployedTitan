@@ -427,7 +427,30 @@ export default function WorkoutLogger() {
           const parsedData = JSON.parse(savedData);
           console.log('Parsed workout data:', parsedData);
           
-          // If there's saved workout data, automatically start the workout form
+          // Create a minimal workout object to satisfy rendering conditions
+          const restoredWorkout: WorkoutWithDetails = {
+            id: parsedData.workoutId || 0,
+            name: parsedData.workoutName || "Restored Workout",
+            date: new Date(parsedData.workoutDate || new Date()),
+            notes: parsedData.workoutNotes || "",
+            userId: user.id,
+            category: "Strength",
+            isPublic: false,
+            caption: "",
+            mediaUrls: null,
+            isComplete: false,
+            coachNotes: null,
+            coachShared: false,
+            duration: null,
+            updatedAt: new Date(),
+            exercises: parsedData.exercises || [],
+            totalSets: 0,
+            totalExercises: parsedData.exercises?.length || 0,
+            volume: 0
+          };
+          
+          // Set both workout and started state to show the form
+          setCurrentWorkout(restoredWorkout);
           setIsWorkoutStarted(true);
           setActiveTab('new');
           
