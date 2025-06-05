@@ -414,6 +414,33 @@ export default function WorkoutLogger() {
   // Get authenticated user's ID
   const { user } = useAuth();
   
+  // Check for saved workout data on component mount and auto-restore
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const checkForSavedWorkout = () => {
+      try {
+        const savedData = localStorage.getItem(`titan_fitness_active_workout_${user.id}`);
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          // If there's saved workout data, automatically start the workout form
+          setIsWorkoutStarted(true);
+          setActiveTab('new');
+          
+          toast({
+            title: "Workout Restored",
+            description: "Your previous workout has been automatically restored.",
+            variant: "default",
+          });
+        }
+      } catch (error) {
+        console.error('Error checking for saved workout:', error);
+      }
+    };
+    
+    checkForSavedWorkout();
+  }, [user?.id]);
+  
   // Handle when a new workout is created from template
   const handleWorkoutCreated = (workout: WorkoutWithDetails) => {
     setCurrentWorkout(workout);
