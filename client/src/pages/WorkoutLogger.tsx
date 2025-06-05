@@ -421,8 +421,12 @@ export default function WorkoutLogger() {
     const checkForSavedWorkout = () => {
       try {
         const savedData = localStorage.getItem(`titan_fitness_active_workout_${user.id}`);
+        console.log('Checking for saved workout data:', savedData ? 'Found' : 'Not found');
+        
         if (savedData) {
           const parsedData = JSON.parse(savedData);
+          console.log('Parsed workout data:', parsedData);
+          
           // If there's saved workout data, automatically start the workout form
           setIsWorkoutStarted(true);
           setActiveTab('new');
@@ -438,7 +442,9 @@ export default function WorkoutLogger() {
       }
     };
     
-    checkForSavedWorkout();
+    // Add a small delay to ensure user data is loaded
+    const timeoutId = setTimeout(checkForSavedWorkout, 100);
+    return () => clearTimeout(timeoutId);
   }, [user?.id]);
   
   // Handle when a new workout is created from template
