@@ -22,8 +22,8 @@ export function WorkoutRecoveryBanner({ workoutData, onRestore, onDismiss }: Wor
   const [, setLocation] = useLocation();
 
   const handleRestore = () => {
-    // Navigate to workout log page if not already there
-    setLocation('/log');
+    // Navigate to workout page if not already there
+    setLocation('/workouts');
     onRestore();
   };
 
