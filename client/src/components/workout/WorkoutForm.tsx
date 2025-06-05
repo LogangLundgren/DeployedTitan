@@ -572,7 +572,29 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
           </div>
         </div>
         <div>
-          <label htmlFor="workout-notes" className="block text-sm font-medium text-gray-400 mb-1">Notes (optional)</label>
+          <div className="flex justify-between items-center mb-1">
+            <label htmlFor="workout-notes" className="block text-sm font-medium text-gray-400">Notes (optional)</label>
+            {autoSaveEnabled && (
+              <div className="flex items-center text-xs text-gray-500">
+                {isSaving ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin h-3 w-3 border border-primary border-t-transparent rounded-full mr-1"></div>
+                    Saving...
+                  </div>
+                ) : lastSavedTime ? (
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 bg-green-500 rounded-full mr-1"></div>
+                    Saved {lastSavedTime.toLocaleTimeString()}
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 bg-gray-400 rounded-full mr-1"></div>
+                    Auto-save enabled
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <textarea 
             id="workout-notes" 
             className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
