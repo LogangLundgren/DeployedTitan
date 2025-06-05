@@ -119,15 +119,10 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
     window.saveToLocalStorageTimeout = setTimeout(() => {
       saveToLocalStorage();
       setIsSaving(false);
-    }, 150); // 150ms debounce
+    }, 150) as any; // 150ms debounce
   };
 
-  // Extend the Window interface to include our custom timeout
-  declare global {
-    interface Window {
-      saveToLocalStorageTimeout?: number;
-    }
-  }
+
 
   // Load workout data from localStorage
   const loadFromLocalStorage = () => {
