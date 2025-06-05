@@ -1,31 +1,26 @@
-import { useState, useEffect, useCallback } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, parseISO } from "date-fns";
-import { 
-  Exercise, 
-  InsertWorkout, 
-  WorkoutWithDetails, 
-  Workout, 
-  WorkoutExercise 
-} from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import ExerciseCard from "./ExerciseCard";
-import AddExerciseModal from "./AddExerciseModal";
-import WorkoutSummary from "./WorkoutSummary";
-import WorkoutCoachModal from "./WorkoutCoachModal";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Save } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { Plus, Trash2, Clock, Save } from "lucide-react";
+import { WorkoutWithDetails, Exercise, Workout } from "@shared/schema";
+import { format } from "date-fns";
 
-// Extend window interface to include our custom property
+// Extend Window interface for timeout
 declare global {
   interface Window {
     saveToLocalStorageTimeout?: number;
   }
 }
 
-export interface ExerciseWithSets {
+interface ExerciseWithSets {
   id?: number;
   exerciseId: number;
   exerciseDetails: Exercise;
@@ -35,6 +30,7 @@ export interface ExerciseWithSets {
     reps: number | null;
     notes: string | null;
     order: number;
+    isCompleted?: boolean;
   }[];
   order: number;
 }
@@ -42,10 +38,9 @@ export interface ExerciseWithSets {
 interface WorkoutFormProps {
   workout?: WorkoutWithDetails;
   onWorkoutCreated?: (workout: WorkoutWithDetails) => void;
-  onWorkoutSaved?: () => void;
+  onWorkoutSaved?: (workout: WorkoutWithDetails) => void;
 }
 
-// Interface for the workout data to be stored in localStorage
 interface StoredWorkoutData {
   workoutId?: number;
   workoutName: string;
@@ -66,7 +61,6 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
   const userId = user?.id;
   
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
-  const [showSocialModal, setShowSocialModal] = useState(false);
   const [savedWorkout, setSavedWorkout] = useState<Workout | null>(null);
   const [workoutName, setWorkoutName] = useState(workout?.name || "Monday Push Day");
   const [workoutDate, setWorkoutDate] = useState(
@@ -90,14 +84,12 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
       return res.json();
     }
   });
-  
-  // Save workout data to localStorage
+
+  // Auto-save to localStorage with debouncing
   const saveToLocalStorage = () => {
     if (!userId || !autoSaveEnabled) return;
     
-    setIsSaving(true);
-    
-    const workoutData: StoredWorkoutData = {
+    const dataToSave: StoredWorkoutData = {
       workoutId,
       workoutName,
       workoutDate,
@@ -107,21 +99,36 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
     };
     
     try {
-      localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(workoutData));
+      localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(dataToSave));
       setLastSavedTime(new Date());
       console.log('Workout data saved to local storage');
     } catch (error) {
-      console.error('Error saving workout data to local storage:', error);
-      toast({
-        title: "Auto-save failed",
-        description: "Unable to save workout data locally. Please save manually.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
+      console.error('Error saving to local storage:', error);
     }
   };
-  
+
+  // Debounced save function
+  const debouncedSaveToLocalStorage = () => {
+    setIsSaving(true);
+    // Clear existing timeout
+    if (window.saveToLocalStorageTimeout) {
+      clearTimeout(window.saveToLocalStorageTimeout);
+    }
+    
+    // Set new timeout
+    window.saveToLocalStorageTimeout = setTimeout(() => {
+      saveToLocalStorage();
+      setIsSaving(false);
+    }, 150); // 150ms debounce
+  };
+
+  // Extend the Window interface to include our custom timeout
+  declare global {
+    interface Window {
+      saveToLocalStorageTimeout?: number;
+    }
+  }
+
   // Load workout data from localStorage
   const loadFromLocalStorage = () => {
     if (!userId || !autoSaveEnabled) return;
@@ -165,9 +172,10 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
         exerciseDetails: ex.exerciseDetails,
         sets: ex.sets.map(set => ({
           id: set.id,
-          weight: set.weight,
           reps: set.reps,
-          notes: set.notes,
+          weight: set.weight,
+          isCompleted: set.isCompleted || false,
+          notes: set.notes || "",
           order: set.order
         })),
         order: ex.order
@@ -249,73 +257,51 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
           }
         }
         
-        // Fetch the updated workout
-        const response = await apiRequest<WorkoutWithDetails>('GET', `/api/workouts/${workoutId}`);
-        return response;
+        // Return updated workout data
+        const response = await apiRequest('GET', `/api/workouts/${workoutId}`);
+        return await response.json();
       } else {
-        // Create a new workout
-        const workoutData: InsertWorkout = {
+        // Create new workout
+        const workoutData = {
           name: workoutName,
-          date: new Date(workoutDate), // Convert string date to Date object
+          date: new Date(workoutDate),
           notes: workoutNotes || null,
-          userId,
-          category: 'Strength'  // Could be made dynamic in a more complete implementation
-        };
-        
-        const workout = await apiRequest<Workout>('POST', '/api/workouts', workoutData);
-        console.log("New workout created:", workout);
-        
-        // Create workout exercises and sets
-        for (const exercise of exercises) {
-          const workoutExerciseData = {
-            workoutId: workout.id,
+          category: "Strength",
+          isPublic: false, // Always default to private
+          exercises: exercises.map((exercise) => ({
             exerciseId: exercise.exerciseId,
-            order: exercise.order
-          };
-          
-          const workoutExercise = await apiRequest<WorkoutExercise>('POST', '/api/workout-exercises', workoutExerciseData);
-          
-          // Create sets for each workout exercise
-          for (const set of exercise.sets) {
-            const setData = {
-              workoutExerciseId: workoutExercise.id,
+            sets: exercise.sets.map((set, index) => ({
               weight: set.weight,
               reps: set.reps,
               notes: set.notes || null,
-              order: set.order
-            };
-            
-            await apiRequest('POST', '/api/sets', setData);
-          }
-        }
-        
-        // Fetch the complete workout with details for both new and updated workouts
-        const completeWorkout = await apiRequest<WorkoutWithDetails>('GET', `/api/workouts/${workout.id}`);
-        console.log("Fetched complete workout:", completeWorkout);
-        return completeWorkout;
+              order: index + 1,
+            })),
+            order: exercise.order,
+          })),
+        };
+
+        const response = await apiRequest('POST', '/api/workouts', workoutData);
+        const data = await response.json();
+        return data;
       }
     },
     onSuccess: async (data) => {
+      // Clear auto-saved data after successful save
+      if (userId) {
+        localStorage.removeItem(`${STORAGE_KEY}_${userId}`);
+        console.log('Workout data cleared from local storage after successful save');
+      }
+      
       toast({
-        title: workoutId ? "Workout updated successfully" : "Workout saved successfully",
-        description: workoutId ? "Your changes have been saved" : "Your workout has been logged",
+        title: workoutId ? "Workout Updated!" : "Workout Saved!",
+        description: `Your workout "${workoutName}" has been ${workoutId ? 'updated' : 'saved'} successfully.`,
         variant: "default",
       });
       
-      // Clear local storage after successful save
-      if (userId) {
-        try {
-          localStorage.removeItem(`${STORAGE_KEY}_${userId}`);
-          console.log('Workout data cleared from local storage after successful save');
-        } catch (error) {
-          console.error('Error clearing workout data from local storage:', error);
-        }
-      }
-      
-      // If it's a new workout, reset the form
+      // Reset form
       if (!workoutId) {
+        setWorkoutName("My Workout");
         setExercises([]);
-        setWorkoutName("");
         setWorkoutNotes("");
         setWorkoutDate(format(new Date(), "yyyy-MM-dd"));
       }
@@ -331,82 +317,13 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
           const workoutWithDetails = await apiRequest<WorkoutWithDetails>(
             'GET', `/api/workouts/${data.id}`
           );
-          onWorkoutCreated(workoutWithDetails);
+          onWorkoutCreated(await workoutWithDetails.json());
         } catch (error) {
           console.error("Error fetching complete workout details:", error);
         }
       }
       
-      // FORCED MODAL APPROACH WITH TIMEOUT
-      console.log("Starting social modal logic");
-      if (data && data.id) {
-        try {
-          console.log("Setting up workout for social modal. Workout ID:", data.id);
-          
-          // Create a complete workout object with all fields explicitly defined
-          const workoutForModal = {
-            id: data.id,
-            name: data.name || workoutName || "My Workout",
-            date: data.date || new Date(workoutDate),
-            notes: data.notes || workoutNotes || "",
-            userId: userId || 0,
-            category: data.category || "Strength",
-            isPublic: false,
-            caption: "",
-            mediaUrls: null,
-            isComplete: true,
-            coachNotes: null,
-            coachShared: false,
-            updatedAt: new Date()
-          };
-          
-          console.log("Prepared workout for social modal:", workoutForModal);
-          
-          // First set the workout data
-          setSavedWorkout(workoutForModal);
-          
-          // Using a timeout to ensure state updates have time to process
-          console.log("Using timeout to show social modal");
-          setTimeout(() => {
-            console.log("TIMEOUT EXECUTED - Setting modal state to true");
-            setShowSocialModal(true);
-          }, 300);
-        } catch (error) {
-          console.error("Error preparing workout details for social modal:", error);
-        }
-      } else {
-        console.error("Missing workout data or ID for social modal", data);
-        
-        // Fallback approach - try with just workoutId if available
-        if (workoutId) {
-          console.log("Attempting fallback with workoutId:", workoutId);
-          const fallbackWorkout = {
-            id: workoutId,
-            name: workoutName || "My Workout",
-            date: new Date(workoutDate),
-            notes: workoutNotes || "",
-            userId: userId || 0,
-            category: "Strength",
-            isPublic: false,
-            caption: "",
-            mediaUrls: null,
-            isComplete: true,
-            coachNotes: null,
-            coachShared: false,
-            updatedAt: new Date()
-          };
-          
-          setSavedWorkout(fallbackWorkout);
-          
-          setTimeout(() => {
-            console.log("FALLBACK TIMEOUT - Setting modal state to true");
-            setShowSocialModal(true);
-          }, 300);
-        }
-      }
-      
-      // Navigate to history tab after saving only if the user closes the social modal without sharing
-      // This is now handled in the social modal's onClose
+      // Workout saved successfully - no popup needed
     },
     onError: (error) => {
       toast({
@@ -452,22 +369,22 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
   };
   
   const handleAddSet = (exerciseIndex: number) => {
-    setExercises(prev => {
-      const updated = [...prev];
-      const sets = [...updated[exerciseIndex].sets];
-      
-      // Find the maximum order in existing sets and add 1
-      const maxOrder = sets.length > 0 ? Math.max(...sets.map(set => set.order)) : 0;
-      
-      sets.push({
-        weight: sets[sets.length - 1]?.weight || 0,
-        reps: sets[sets.length - 1]?.reps || 0,
-        notes: null,
-        order: maxOrder + 1
-      });
-      updated[exerciseIndex] = { ...updated[exerciseIndex], sets };
-      return updated;
-    });
+    setExercises(prev => prev.map((exercise, i) => 
+      i === exerciseIndex 
+        ? {
+            ...exercise,
+            sets: [
+              ...exercise.sets,
+              {
+                weight: exercise.sets[exercise.sets.length - 1]?.weight || 0,
+                reps: exercise.sets[exercise.sets.length - 1]?.reps || 0,
+                notes: null,
+                order: exercise.sets.length + 1
+              }
+            ]
+          }
+        : exercise
+    ));
     
     // Save immediately when adding sets
     if (autoSaveEnabled) {
@@ -476,16 +393,14 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
   };
   
   const handleRemoveSet = (exerciseIndex: number, setIndex: number) => {
-    setExercises(prev => {
-      const updated = [...prev];
-      const sets = updated[exerciseIndex].sets.filter((_, i) => i !== setIndex);
-      // Reorder sets
-      sets.forEach((set, i) => {
-        set.order = i + 1;
-      });
-      updated[exerciseIndex] = { ...updated[exerciseIndex], sets };
-      return updated;
-    });
+    setExercises(prev => prev.map((exercise, i) => 
+      i === exerciseIndex 
+        ? {
+            ...exercise,
+            sets: exercise.sets.filter((_, i) => i !== setIndex)
+          }
+        : exercise
+    ));
     
     // Save immediately when removing sets
     if (autoSaveEnabled) {
@@ -493,220 +408,255 @@ export default function WorkoutForm({ workout, onWorkoutCreated, onWorkoutSaved 
     }
   };
   
-  const handleUpdateSet = (exerciseIndex: number, setIndex: number, field: 'weight' | 'reps' | 'notes', value: number | string | null) => {
-    setExercises(prev => {
-      const updated = [...prev];
-      const sets = [...updated[exerciseIndex].sets];
-      sets[setIndex] = { 
-        ...sets[setIndex], 
-        [field]: field === 'notes' ? value : Number(value) 
-      };
-      updated[exerciseIndex] = { ...updated[exerciseIndex], sets };
-      return updated;
-    });
+  const handleSetChange = (exerciseIndex: number, setIndex: number, field: 'weight' | 'reps' | 'notes', value: number | string | null) => {
+    setExercises(prev => prev.map((exercise, i) => 
+      i === exerciseIndex 
+        ? {
+            ...exercise,
+            sets: exercise.sets.map((set, i) => 
+              i === setIndex 
+                ? { ...set, [field]: value }
+                : set
+            )
+          }
+        : exercise
+    ));
     
-    // Save immediately to local storage for critical data like weights and reps
+    // Save immediately when modifying sets
     if (autoSaveEnabled) {
-      if (field === 'weight' || field === 'reps') {
-        // For weight and reps, save immediately
-        saveToLocalStorage();
-      } else {
-        // For notes, use debounced save to avoid excessive saves while typing
-        debouncedSaveToLocalStorage();
-      }
+      // Use debounced save for input changes
+      debouncedSaveToLocalStorage();
     }
   };
-  
-  // Setup a debounced version of saveToLocalStorage
-  const debouncedSaveToLocalStorage = () => {
-    // Clear any existing timeout
-    if (window.saveToLocalStorageTimeout) {
-      clearTimeout(window.saveToLocalStorageTimeout);
-    }
-    
-    // Set a new timeout with much shorter delay
-    window.saveToLocalStorageTimeout = setTimeout(() => {
-      saveToLocalStorage();
-    }, 150); // Reduced to 150ms delay for faster saves
-  };
-  
-  const calculateTotalVolume = () => {
-    let volume = 0;
-    exercises.forEach(exercise => {
-      exercise.sets.forEach(set => {
-        if (set.weight && set.reps) {
-          volume += set.weight * set.reps;
-        }
-      });
-    });
-    return volume;
-  };
-  
+
+  // Calculate total workout statistics
   const totalSets = exercises.reduce((total, exercise) => total + exercise.sets.length, 0);
-  
+  const totalVolume = exercises.reduce((total, exercise) => {
+    const exerciseVolume = exercise.sets.reduce((setTotal, set) => {
+      const weight = set.weight || 0;
+      const reps = set.reps || 0;
+      return setTotal + (weight * reps);
+    }, 0);
+    return total + exerciseVolume;
+  }, 0);
+
   return (
-    <>
-      {/* Workout Details */}
-      <div className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label htmlFor="workout-name" className="block text-sm font-medium text-gray-400 mb-1">Workout Name</label>
-            <input 
-              type="text" 
-              id="workout-name" 
-              className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-              placeholder="e.g., Upper Body Strength"
-              value={workoutName}
-              onChange={(e) => setWorkoutName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="workout-date" className="block text-sm font-medium text-gray-400 mb-1">Date</label>
-            <input 
-              type="date" 
-              id="workout-date" 
-              className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-              value={workoutDate}
-              onChange={(e) => setWorkoutDate(e.target.value)}
-            />
-          </div>
-        </div>
-        <div>
-          <div className="flex justify-between items-center mb-1">
-            <label htmlFor="workout-notes" className="block text-sm font-medium text-gray-400">Notes (optional)</label>
-            {autoSaveEnabled && (
-              <div className="flex items-center text-xs text-gray-500">
-                {isSaving ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin h-3 w-3 border border-primary border-t-transparent rounded-full mr-1"></div>
-                    Saving...
-                  </div>
-                ) : lastSavedTime ? (
-                  <div className="flex items-center">
-                    <div className="h-2 w-2 bg-green-500 rounded-full mr-1"></div>
-                    Saved {lastSavedTime.toLocaleTimeString()}
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <div className="h-2 w-2 bg-gray-400 rounded-full mr-1"></div>
-                    Auto-save enabled
-                  </div>
-                )}
-              </div>
+    <div className="space-y-6">
+      {/* Workout Header Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Workout Details
+            {lastSavedTime && (
+              <Badge variant="secondary" className="ml-auto text-xs">
+                {isSaving ? "Saving..." : `Saved ${format(lastSavedTime, "HH:mm:ss")}`}
+              </Badge>
             )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="workout-name">Workout Name</Label>
+              <Input
+                id="workout-name"
+                value={workoutName}
+                onChange={(e) => setWorkoutName(e.target.value)}
+                placeholder="Enter workout name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="workout-date">Date</Label>
+              <Input
+                id="workout-date"
+                type="date"
+                value={workoutDate}
+                onChange={(e) => setWorkoutDate(e.target.value)}
+              />
+            </div>
           </div>
-          <textarea 
-            id="workout-notes" 
-            className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-            rows={2}
-            placeholder="Add any notes about this workout..."
-            value={workoutNotes}
-            onChange={(e) => setWorkoutNotes(e.target.value)}
-          />
-        </div>
-      </div>
-      
-      {/* Exercise List */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium">Exercises</h3>
-          <Button 
-            onClick={() => setShowAddExerciseModal(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Exercise
-          </Button>
-        </div>
-        
-        {exercises.length > 0 ? (
-          exercises.map((exercise, index) => (
-            <ExerciseCard
-              key={index}
-              exercise={exercise}
-              onRemove={() => handleRemoveExercise(index)}
-              onAddSet={() => handleAddSet(index)}
-              onRemoveSet={(setIndex) => handleRemoveSet(index, setIndex)}
-              onUpdateSet={(setIndex, field, value) => handleUpdateSet(index, setIndex, field, value)}
+          <div className="space-y-2">
+            <Label htmlFor="workout-notes">Notes</Label>
+            <Textarea
+              id="workout-notes"
+              value={workoutNotes}
+              onChange={(e) => setWorkoutNotes(e.target.value)}
+              placeholder="Add any notes about your workout..."
+              rows={3}
             />
-          ))
-        ) : (
-          <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-gray-200 mb-2"
-            >
-              <path d="M6.3 12.3a5 5 0 0 0 7.4 6.8" />
-              <path d="M3.34 7A15.12 15.12 0 0 0 2 12c0 5.56 3.8 10.73 9.5 12" />
-              <path d="M7 17.2A15.12 15.12 0 0 0 12 22c2.72 0 5.4-.95 7.6-2.77" />
-              <path d="M19 13.8a15.12 15.12 0 0 0 1-3.8c0-.76-.07-1.51-.2-2.24" />
-              <path d="M13.73 2.32A15.1 15.1 0 0 0 12 2C6.44 2 2.2 5.88 2 10.5" />
-              <path d="M21.49 5.5C20.45 4.9 19.2 4.5 18 4.5c-1 0-2.38.18-3.5.5" />
-              <path d="M12.5 7v5.25L15 15" />
-            </svg>
-            <p className="text-gray-400 mb-4 text-center">Add exercises to your workout</p>
-            <Button
-              onClick={() => setShowAddExerciseModal(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
+          </div>
+          
+          {/* Workout Stats */}
+          <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{exercises.length}</div>
+              <div className="text-sm text-muted-foreground">Exercises</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{totalSets}</div>
+              <div className="text-sm text-muted-foreground">Total Sets</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{totalVolume.toLocaleString()}</div>
+              <div className="text-sm text-muted-foreground">Volume (lbs)</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Exercises Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Exercises</CardTitle>
+            <Button onClick={() => setShowAddExerciseModal(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
               Add Exercise
             </Button>
           </div>
-        )}
-      </div>
-      
-      {/* Workout Summary */}
-      {exercises.length > 0 && (
-        <WorkoutSummary 
-          volume={calculateTotalVolume()}
-          totalSets={totalSets}
-          totalExercises={exercises.length}
-        />
-      )}
-      
-      {/* Form Actions */}
-      <div className="flex flex-col sm:flex-row-reverse gap-3">
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {exercises.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No exercises added yet. Click "Add Exercise" to get started!</p>
+            </div>
+          ) : (
+            exercises.map((exercise, exerciseIndex) => (
+              <div key={exerciseIndex} className="border rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">{exercise.exerciseDetails.name}</h3>
+                    <p className="text-sm text-muted-foreground">{exercise.exerciseDetails.category}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveExercise(exerciseIndex)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {/* Sets */}
+                <div className="space-y-2">
+                  <div className="grid grid-cols-12 gap-2 text-sm font-medium text-muted-foreground">
+                    <div className="col-span-2">Set</div>
+                    <div className="col-span-3">Weight (lbs)</div>
+                    <div className="col-span-3">Reps</div>
+                    <div className="col-span-3">Notes</div>
+                    <div className="col-span-1"></div>
+                  </div>
+                  
+                  {exercise.sets.map((set, setIndex) => (
+                    <div key={setIndex} className="grid grid-cols-12 gap-2 items-center">
+                      <div className="col-span-2 text-sm font-medium">
+                        {setIndex + 1}
+                      </div>
+                      <div className="col-span-3">
+                        <Input
+                          type="number"
+                          value={set.weight || ''}
+                          onChange={(e) => handleSetChange(exerciseIndex, setIndex, 'weight', e.target.value ? Number(e.target.value) : null)}
+                          placeholder="0"
+                          min="0"
+                          step="0.5"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Input
+                          type="number"
+                          value={set.reps || ''}
+                          onChange={(e) => handleSetChange(exerciseIndex, setIndex, 'reps', e.target.value ? Number(e.target.value) : null)}
+                          placeholder="0"
+                          min="0"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Input
+                          value={set.notes || ''}
+                          onChange={(e) => handleSetChange(exerciseIndex, setIndex, 'notes', e.target.value)}
+                          placeholder="Notes"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        {exercise.sets.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveSet(exerciseIndex, setIndex)}
+                            className="text-destructive hover:text-destructive p-1"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddSet(exerciseIndex)}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Set
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
         <Button 
           onClick={() => saveWorkoutMutation.mutate()}
-          disabled={saveWorkoutMutation.isPending}
+          disabled={saveWorkoutMutation.isPending || exercises.length === 0}
+          size="lg"
         >
-          {saveWorkoutMutation.isPending ? "Saving..." : workoutId ? "Update Workout" : "Save Workout"}
-        </Button>
-        <Button variant="outline" onClick={() => window.location.href = '/workouts'}>
-          Cancel
+          {saveWorkoutMutation.isPending ? (
+            <>
+              <Clock className="mr-2 h-4 w-4 animate-spin" />
+              {workoutId ? "Updating..." : "Saving..."}
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              {workoutId ? "Update Workout" : "Save Workout"}
+            </>
+          )}
         </Button>
       </div>
-      
-      {/* Exercise Modal */}
-      <AddExerciseModal 
-        isOpen={showAddExerciseModal}
-        onClose={() => setShowAddExerciseModal(false)}
-        exercises={availableExercises || []}
-        onAddExercise={handleAddExercise}
-      />
-      
-      {/* Coach Sharing Modal */}
-      {savedWorkout && (
-        <WorkoutCoachModal 
-          workout={savedWorkout}
-          isOpen={showSocialModal}
-          onClose={() => {
-            setShowSocialModal(false);
-            setSavedWorkout(null);
-            // Now that the user has closed the modal, proceed with the original navigation
-            if (onWorkoutSaved) {
-              onWorkoutSaved();
-            }
-          }}
-        />
+
+      {/* Add Exercise Modal */}
+      {showAddExerciseModal && availableExercises && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Add Exercise</h2>
+              <Button variant="ghost" onClick={() => setShowAddExerciseModal(false)}>
+                ×
+              </Button>
+            </div>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {availableExercises.map((exercise) => (
+                <div
+                  key={exercise.id}
+                  onClick={() => handleAddExercise(exercise)}
+                  className="p-3 border rounded-lg hover:bg-muted cursor-pointer"
+                >
+                  <div className="font-medium">{exercise.name}</div>
+                  <div className="text-sm text-muted-foreground">{exercise.category}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
-    </>
+    </div>
   );
 }
